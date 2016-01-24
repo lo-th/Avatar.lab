@@ -201,7 +201,7 @@ function init3D() {
     map = imagesLoader.load( 'textures/avatar.jpg' );
     map.flipY = false;
     map.wrapS = THREE.MirroredRepeatWrapping;
-    map.wrapT = THREE.RepeatWrapping;//MirroredRepeatWrapping
+    //map.wrapT = THREE.RepeatWrapping;//MirroredRepeatWrapping
 
     //mapgi = imagesLoader.load( 'textures/avatar_gi.jpg' );
     //mapgi.flipY = false;
@@ -210,13 +210,7 @@ function init3D() {
     mapn.flipY = false;
     //mapn.wrapS = THREE.RepeatWrapping;
     mapn.wrapS = THREE.MirroredRepeatWrapping
-    mapn.wrapT = THREE.MirroredRepeatWrapping
-
-    //mapd = imagesLoader.load( 'textures/avatar_d.jpg' );
-    //mapd.flipY = false;
-
-    //maps = imagesLoader.load( 'textures/avatar_s.jpg' );
-    //maps.flipY = false;
+    //mapn.wrapT = THREE.MirroredRepeatWrapping
 
     
     //maps.flipY = false;
@@ -258,8 +252,6 @@ function init3D() {
 
     var bgmaps = imagesLoader.load( 'textures/bg.png' );
     back = new THREE.Mesh( new THREE.IcosahedronGeometry(300,3), new THREE.MeshBasicMaterial( { map:bgmaps, side:THREE.BackSide, depthWrite: false }  ));
-    //var back = new THREE.Mesh( new THREE.IcosahedronGeometry(300,3), new THREE.MeshBasicMaterial( { map:gradTexture([[0.75,0.5,0.45, 0.2], ['#909090','#808080','#808080', '#444444']]), side:THREE.BackSide, depthWrite: false }  ));
-    //back.geometry.applyMatrix(new THREE.Matrix4().makeRotationZ(5*ToRad));
     scene.add( back );
     
     var groundMaterial = new THREE.MeshBasicMaterial( { color: 0xFFFFFF, transparent: true } );
@@ -269,27 +261,23 @@ function init3D() {
     ground.rotation.x = - Math.PI / 2;
     ground.receiveShadow = true;
     scene.add( ground );
-    
-    /*var helper = new THREE.GridHelper( 100, 50 );
-    helper.setColors( 0x909090, 0x606060 );
-    scene.add( helper );*/
-
 
     // post-processing
     if(isWithPosEffect) initPostEffect();
     
 
     stats = new Stats();
-            stats.domElement.style.position = 'absolute';
-            stats.domElement.style.top = '0px';
-            document.body.appendChild( stats.domElement );
+    stats.domElement.style.position = 'absolute';
+    stats.domElement.style.top = '0px';
+    document.body.appendChild( stats.domElement );
 
 
     window.addEventListener( 'resize', resize, false );
 
     initBVH();
     if(isWithPhysics) initOimo();
-    loadSea3dBody()
+    loadSea3dBody();
+
 }
 
 function initPostEffect(){
@@ -979,13 +967,17 @@ function switchGender(){
 }
 
 function helperVisibility(){
+
     if(helperSquel.visible){helperSquel.visible=false; document.getElementById("b6").value = "show helper"}
     else{ helperSquel.visible=true; document.getElementById("b6").value = "hide helper";}
+
 }
 
 function heroVisibility() {
+
     if(hero.visible){hero.visible=false; document.getElementById("b3").value = "show model"}
     else{ hero.visible=true; document.getElementById("b3").value = "hide model";}
+
 }
 
 
@@ -1047,8 +1039,8 @@ function updateSkin(){
                         if(name==='LeftUpArm'  || name==='RightUpArm' ) scaleMtx.scale( new THREE.Vector3(0.90,1.18,1.18));
                         if(name==='LeftLowArm' || name==='RightLowArm') scaleMtx.scale( new THREE.Vector3(0.90,1.2,1.2));
                     } else {
-                        if(name==='Chest' ) scaleMtx.scale(new THREE.Vector3(1,1.18,1));
-                        if(name==='Spine1') scaleMtx.scale(new THREE.Vector3(1,1.2,1));
+                        if(name==='Chest' ) scaleMtx.scale(new THREE.Vector3(1,1.1,1));
+                        if(name==='Spine1') scaleMtx.scale(new THREE.Vector3(1,1.15,1));
                         //if(name==='LeftCollar' || name==='RightCollar') scaleMtx.scale(new THREE.Vector3(0.75,1,1));
                         if(name==='LeftUpLeg'  || name==='RightUpLeg' ) scaleMtx.scale( new THREE.Vector3(1,1.2,1.2) );
                         if(name==='LeftLowLeg' || name==='RightLowLeg') scaleMtx.scale( new THREE.Vector3(1,1.25,1.25) );
