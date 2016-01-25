@@ -30,6 +30,7 @@ canvas { position: absolute; top:0; left:0; pointer-events:auto; width:100%; hei
 #b5 { position:absolute; top:66px; right:6px; width:90px; height:20px; border:1px solid #ccc; cursor:pointer; }
 #b6 { position:absolute; top:96px; right:6px; width:90px; height:20px; border:1px solid #ccc; cursor:pointer; }
 #b7 { position:absolute; top:126px; right:6px; width:90px; height:20px; border:1px solid #ccc; cursor:pointer;}
+#b8 { position:absolute; top:156px; right:6px; width:90px; height:20px; border:1px solid #ccc; cursor:pointer;}
 </style>
 </head>
 <body>
@@ -42,11 +43,18 @@ canvas { position: absolute; top:0; left:0; pointer-events:auto; width:100%; hei
 <script src="js/postprocessing/RenderPass.js"></script>
 <script src="js/postprocessing/ShaderPass.js"></script>
 <script src="js/postprocessing/MaskPass.js"></script>
+<script src="js/postprocessing/BloomPass.js"></script>
+<script src="js/postprocessing/BokehPass.js"></script>
 <script src="js/postprocessing/EffectComposer.js"></script>
+
 <script src="js/shaders/CopyShader.js"></script>
 <script src="js/shaders/SSAOShader.js"></script>
 <script src="js/shaders/ColorCorrectionShader.js"></script>
 <script src="js/shaders/VignetteShader.js"></script>
+<script src="js/shaders/HorizontalBlurShader.js"></script>
+<script src="js/shaders/VerticalBlurShader.js"></script>
+<script src="js/shaders/ConvolutionShader.js"></script>
+<script src="js/shaders/BokehShader2.js"></script>
 
 <script src="js/OrbitControls.js"></script>
 <script src="js/oimo.min.js"></script>
@@ -75,6 +83,7 @@ canvas { position: absolute; top:0; left:0; pointer-events:auto; width:100%; hei
 <input type="submit" value="show helper" id="b6">
 
 <input type="submit" value="Man/Woman" id="b7">
+<input type="submit" value="postEffect" id="b8">
 
 <div id="BVHhubs"></div>
 <div id="out1"></div>
@@ -98,7 +107,7 @@ var helperSquel = null;
 var bones = null;
 var preservesBoneSize = true;
 
-var isWithPosEffect = true;
+var isWithPosEffect = false;
 
 var normHelper;
 
@@ -145,6 +154,7 @@ function init() {
     document.getElementById("b5").addEventListener( 'click', function ( e ) { physicsVisibility(); }, false );
     document.getElementById("b6").addEventListener( 'click', function ( e ) { helperVisibility(); }, false );
     document.getElementById("b7").addEventListener( 'click', function ( e ) { switchGender(); }, false );
+    document.getElementById("b8").addEventListener( 'click', function ( e ) { if(isWithPosEffect) isWithPosEffect = false; else isWithPosEffect = true; }, false );
     
     vsize = new THREE.Vector3(window.innerWidth, window.innerHeight, 0);
     vsize.z = vsize.x / vsize.y;
@@ -263,7 +273,8 @@ function init3D() {
     scene.add( ground );
 
     // post-processing
-    if(isWithPosEffect) initPostEffect();
+    //if(isWithPosEffect) 
+        initPostEffect();
     
 
     stats = new Stats();
@@ -319,6 +330,27 @@ function initPostEffect(){
 
     var vignettePass = new THREE.ShaderPass( THREE.VignetteShader );
     vignettePass.uniforms[ "darkness" ].value = 1;
+
+    var effectHBlur = new THREE.ShaderPass( THREE.HorizontalBlurShader );
+    var effectVBlur = new THREE.ShaderPass( THREE.VerticalBlurShader );
+    effectHBlur.uniforms[ 'h' ].value = 1 / window.innerWidth;
+    effectVBlur.uniforms[ 'v' ].value = 1 / window.innerHeight;
+
+    //effectHBlur.uniforms[ 'tDiffuse' ].value = depthRenderTarget;
+    //effectVBlur.uniforms[ 'tDiffuse' ].value = depthRenderTarget;
+
+    var effectBloom = new THREE.BloomPass( 0.6 );
+
+    var clearMask = new THREE.ClearMaskPass();
+
+    /*var bokehPass = new THREE.BokehPass( scene, camera, {
+                    focus:      0.01,
+                    aperture:   0.05,
+                    maxblur:    0.1,
+
+                    width: window.innerWidth ,
+                    height: window.innerHeight
+                } );*/
     
 
     
@@ -332,13 +364,18 @@ function initPostEffect(){
     composer.addPass( vignettePass );
     //composer.addPass( copyPass );
     composer.addPass( ssaoPass );
+    composer.addPass( effectBloom )
+    //composer.addPass( bokehPass )
+    composer.addPass( effectHBlur );
+    composer.addPass( effectVBlur );
+    composer.addPass( clearMask );
     //composer.addPass( renderPass );
     //
     
     //
     //copyPass.renderToScreen = true;
 
-    ssaoPass.renderToScreen = true;
+    clearMask.renderToScreen = true;
 
 
 }
@@ -872,7 +909,7 @@ function addSkinModel( gender ){
           //  bumpMap: map, bumpScale: 0.3,
             //metalnessMap:maps,
             //morphNormals:true,
-            normalMap:mapn, normalScale:new THREE.Vector2( 1.5, 1.5 ),
+           // normalMap:mapn, normalScale:new THREE.Vector2( 1.5, 1.5 ),
             //displacementMap: mapgi, displacementScale:1,
             //lightMap:mapgi, lightMapIntensity:1,
             //roughnessMap:envmap, 
@@ -932,7 +969,7 @@ function addSkinModel( gender ){
         // normHelper = new THREE.VertexNormalsHelper( hero, 1 );
         // scene.add( normHelper );
 
-        //hero.position.set(0,40,0)
+        hero.position.set(0,40,0);
         //console.log(hero.position)
         decal = new THREE.Vector3(0,-11.5,0);
         hero.frustumCulled = false;
