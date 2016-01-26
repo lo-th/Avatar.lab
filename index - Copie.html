@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Avatar lab</title>
+<meta name="Description" content="" />
+<meta name="Keywords"  content="" />
+<style>
+* { margin: 0; padding: 0; border: 0; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: -moz-none; -o-user-select: none; user-select: none; }
+body { 
+    background: #000; 
+    font-family: "Lucida Console", Monaco, monospace;
+    font-size: 11px; 
+    color:#fff; 
+    text-shadow:1px 1px 0px #000; 
+    overflow:hidden; 
+}
+canvas { position: absolute; top:0; left:0; pointer-events:auto; width:100%; height:100%; }
+#container { position:absolute; top:0; left:0; }
+#guiContener { position:absolute; overflow-x:auto; height:100%; width:215px; top: 0; left: 0;}
+#out2 { position:absolute; bottom:50px; right:6px; text-align: right; pointer-events:none; line-height: 14px; }
+#out1 { position:absolute; bottom:50px; left:6px; text-align: left; pointer-events:none; line-height: 14px; }
+
+#debug { position:absolute; top:6px; left:100px; text-align:left; pointer-events:none;}
+#b1 { position:absolute; top:70px; left:6px; width:50px; height:20px; border:1px solid #ccc; cursor:pointer; }
+#b2 { position:absolute; top:70px; left:66px; width:50px; height:20px; border:1px solid #ccc; cursor:pointer; }
+
+#b3 { position:absolute; top:6px; right:6px; width:90px; height:20px; border:1px solid #ccc; cursor:pointer; }
+#b4 { position:absolute; top:36px; right:6px; width:90px; height:20px; border:1px solid #ccc; cursor:pointer; }
+#b5 { position:absolute; top:66px; right:6px; width:90px; height:20px; border:1px solid #ccc; cursor:pointer; }
+#b6 { position:absolute; top:96px; right:6px; width:90px; height:20px; border:1px solid #ccc; cursor:pointer; }
+#b7 { position:absolute; top:126px; right:6px; width:90px; height:20px; border:1px solid #ccc; cursor:pointer;}
+#b8 { position:absolute; top:156px; right:6px; width:90px; height:20px; border:1px solid #ccc; cursor:pointer;}
+</style>
+</head>
+<body>
+<!-- Copyright Lo-Th -->
+<script src="js/extract.js"></script>
+<script src="js/three.min.js"></script>
+<script src="js/stats.min.js"></script>
+
+<script src="js/postprocessing/EffectComposer.js"></script>
+<script src="js/postprocessing/RenderPass.js"></script>
+<script src="js/postprocessing/ShaderPass.js"></script>
+<script src="js/postprocessing/MaskPass.js"></script>
+<script src="js/postprocessing/BloomPass.js"></script>
+<script src="js/postprocessing/BokehPass.js"></script>
+<script src="js/postprocessing/EffectComposer.js"></script>
+
+<script src="js/shaders/CopyShader.js"></script>
+<script src="js/shaders/SSAOShader.js"></script>
+<script src="js/shaders/ColorCorrectionShader.js"></script>
+<script src="js/shaders/VignetteShader.js"></script>
+<script src="js/shaders/HorizontalBlurShader.js"></script>
+<script src="js/shaders/VerticalBlurShader.js"></script>
+<script src="js/shaders/ConvolutionShader.js"></script>
+<script src="js/shaders/BokehShader2.js"></script>
+
+<script src="js/OrbitControls.js"></script>
+<script src="js/oimo.min.js"></script>
+
+<script src="js/MorphAnimMesh.js"></script>
+<script src="js/loaders/collada/Animation.js"></script>
+<script src="js/loaders/collada/AnimationHandler.js"></script>
+<script src="js/loaders/collada/KeyFrameAnimation.js"></script>
+<script src="js/loaders/sea3d/SEA3D.js"></script>
+<script src="js/loaders/sea3d/SEA3DLoader.js"></script>
+<script src="js/loaders/sea3d/SEA3DLegacy.js"></script>
+<script src="js/loaders/sea3d/SEA3DLZMA.js"></script>
+
+<script src="js/bvh.js"></script>
+<script src="js/loadordrag.js"></script>
+<script src="js/SimpleBox.js"></script>
+<script src="js/Avatar.js"></script>
+
+<canvas id="canvas"></canvas>
+<div id="debug"></div>
+<!--<input type="file" id="files" />-->
+<input type="submit" value="action" id="b1">
+<input type="submit" value="story" id="b2">
+<input type="submit" value="hide model" id="b3">
+<input type="submit" value="show skeleton" id="b4">
+<input type="submit" value="show physics" id="b5">
+<input type="submit" value="show helper" id="b6">
+
+<input type="submit" value="Man/Woman" id="b7">
+<input type="submit" value="postEffect" id="b8">
+
+<div id="BVHhubs"></div>
+<div id="out1"></div>
+<div id="out2"></div>
+
+<script>
+window.onload = init;
+
+//var bodyLink = "models/avatar_low.sea";
+var bodyLink = "models/avatar.sea";
+
+var avatar;
+
+var isTJS = false;
+
+var out1, out2, debug, loadordrag, stats;
+var vsize, camPos, mouse;
+var camera, canvas, scene, renderer, delta, center, centerLight, clock, controls, imagesLoader, envmap, map, mapgi, mapn;
+var ToRad = Math.PI / 180;
+var ToDeg = 180 / Math.PI;
+var hero, heroMaterial, decal;
+var helperSquel = null;
+var bones = null;
+var preservesBoneSize = true;
+
+var isWithPosEffect = false;
+
+var normHelper;
+
+var geos = {};
+
+var GoodLink = [];
+
+// bvh var
+var bvhReader;
+var BVHanimConfig = { debug:true, speed:0.5, size:1, px:0, py:0, pz:0, boneSize:0.4, visible:false };
+
+var composer, ssaoPass, depthMaterial, depthRenderTarget;
+//oimo var
+var world = null;
+var collisionGroupes = {};
+var bodysquel = null;
+var meshsquel = null;
+var linksquel = null;
+var meshs = null;
+var bodys = null;
+var isWithSqueleton = false;
+var isWithPhysics = false;
+var currentNames = null;
+var currentDistance = null;
+var distanceByName = null;
+
+var eyeGroup;
+var back, ground;
+
+var currentGender;
+
+var isPhysicsVisible = false;
+
+function init() {
+
+    out1 = document.getElementById("ou1");
+    out2 = document.getElementById("out2");
+    debug = document.getElementById("debug");
+
+    document.getElementById("b1").addEventListener( 'click', function ( e ) { BVHanimConfig.speed=0.5; loadBVH("bvh/action.z"); }, false );
+    document.getElementById("b2").addEventListener( 'click', function ( e ) { BVHanimConfig.speed=1; loadBVH("bvh/story.z"); }, false ); 
+    document.getElementById("b3").addEventListener( 'click', function ( e ) { heroVisibility(); }, false );
+    document.getElementById("b4").addEventListener( 'click', function ( e ) { skeletonVisibility(); }, false );
+    document.getElementById("b5").addEventListener( 'click', function ( e ) { physicsVisibility(); }, false );
+    document.getElementById("b6").addEventListener( 'click', function ( e ) { helperVisibility(); }, false );
+    document.getElementById("b7").addEventListener( 'click', function ( e ) { switchGender(); }, false );
+    document.getElementById("b8").addEventListener( 'click', function ( e ) { if(isWithPosEffect) isWithPosEffect = false; else isWithPosEffect = true; }, false );
+    
+    vsize = new THREE.Vector3(window.innerWidth, window.innerHeight, 0);
+    vsize.z = vsize.x / vsize.y;
+    
+    init3D();
+    animate();
+
+}
+
+function handleFileSelect(evt) {
+    var f = evt.target.files[0];
+    var reader = new FileReader();
+    reader.onload = (function(theFile) { return function(e) { bvhReader.parseData(e.target.result.split(/\s+/g));}; })(f);
+    reader.readAsText(f);
+}
+
+function debugTell(s) {
+    debug.innerHTML = s;
+}
+
+function init3D() {
+
+    canvas = document.getElementById( 'canvas' );
+    clock = new THREE.Clock();
+    
+    renderer = new THREE.WebGLRenderer({ canvas:canvas, antialias: true });
+    renderer.setSize( vsize.x, vsize.y );
+
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.soft = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.cullFace = THREE.CullFaceBack;
+
+    renderer.gammaInput = true;
+    renderer.gammaOutput = true;
+
+    scene = new THREE.Scene();
+    
+    camera = new THREE.PerspectiveCamera( 35, vsize.z, 0.1, 2000 );
+    camera.position.set(0,60,200);
+    //camera.setLens(40);
+
+    //console.log(camera.fov)
+
+    controls = new THREE.OrbitControls( camera, canvas );
+    controls.target.set(0,40,0);
+    controls.update();
+
+    imagesLoader = new THREE.TextureLoader();
+
+    envmap = imagesLoader.load( 'textures/red.jpg' );
+    envmap.mapping = THREE.SphericalReflectionMapping;
+
+    map = imagesLoader.load( 'textures/avatar.jpg' );
+    map.flipY = false;
+    map.wrapS = THREE.MirroredRepeatWrapping;
+    //map.wrapT = THREE.RepeatWrapping;//MirroredRepeatWrapping
+
+    //mapgi = imagesLoader.load( 'textures/avatar_gi.jpg' );
+    //mapgi.flipY = false;
+
+    mapn = imagesLoader.load( 'textures/avatar_n.jpg' );
+    mapn.flipY = false;
+    //mapn.wrapS = THREE.RepeatWrapping;
+    mapn.wrapS = THREE.MirroredRepeatWrapping
+    //mapn.wrapT = THREE.MirroredRepeatWrapping
+
+    
+    //maps.flipY = false;
+
+    
+    scene.add( new THREE.AmbientLight( 0x606060 ) );
+    
+    var light = new THREE.SpotLight( 0xFFFFFF, 1.8, 0, Math.PI/2, 1 );
+    light.position.set(100,500,100);
+    light.lookAt(new THREE.Vector3(0,20,0));
+    light.castShadow = true;
+    //light.onlyShadow = false;
+    light.shadowCameraNear = 100;
+    light.shadowCameraFar = 700;
+    //light.shadowCameraFov = 35;
+    light.shadowBias = -0.005;
+    light.shadowMapWidth = light.shadowMapHeight = 2048;
+    light.shadowDarkness = 0.5;
+    scene.add( light );
+
+    var light1 = new THREE.SpotLight( 0x334480, 0.6, 0, Math.PI/2, 1 );
+    light1.position.set(-300, 1, -300);
+    light1.lookAt(new THREE.Vector3(0,20,0));
+    scene.add( light1 );
+
+    var light2 = new THREE.SpotLight( 0x554433, 0.4, 0, Math.PI/2, 1 );
+    light2.position.set(300, 100, 300);
+    light2.lookAt(new THREE.Vector3(0,20,0));
+    scene.add( light2 );
+
+    /*var pointLight = new THREE.PointLight( 0x334455, 0.2, 1000 );
+    pointLight.position.set(-100, 10, -300)
+    scene.add( pointLight );
+
+    var pointLight2 = new THREE.PointLight( 0x554433, 0.1, 1000 );
+    pointLight2.position.set(300, 50, 100)
+    scene.add( pointLight2 );
+*/
+
+    var bgmaps = imagesLoader.load( 'textures/bg.png' );
+    back = new THREE.Mesh( new THREE.IcosahedronGeometry(300,3), new THREE.MeshBasicMaterial( { map:bgmaps, side:THREE.BackSide, depthWrite: false }  ));
+    scene.add( back );
+    
+    var groundMaterial = new THREE.MeshBasicMaterial( { color: 0xFFFFFF, transparent: true } );
+    groundMaterial.blending = THREE[ "MultiplyBlending" ];
+    ground = new THREE.Mesh(new THREE.PlaneGeometry( 1000, 1000, 4, 4 ), groundMaterial);
+    ground.position.set( 0, 0, 0 );
+    ground.rotation.x = - Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add( ground );
+
+    // post-processing
+    //if(isWithPosEffect) 
+        initPostEffect();
+    
+
+    stats = new Stats();
+    stats.domElement.style.position = 'absolute';
+    stats.domElement.style.top = '0px';
+    document.body.appendChild( stats.domElement );
+
+
+    window.addEventListener( 'resize', resize, false );
+
+    initBVH();
+    if(isWithPhysics) initOimo();
+    loadSea3dBody();
+
+}
+
+function initPostEffect(){
+
+    composer = new THREE.EffectComposer( renderer );
+    composer.setSize( window.innerWidth, window.innerHeight );
+
+    var renderPass = new THREE.RenderPass( scene, camera );
+    var copyPass = new THREE.ShaderPass( THREE.CopyShader );
+    //composer.addPass( renderPass );
+
+    // Setup depth pass
+    var depthShader = THREE.ShaderLib[ "depthRGBA" ];
+    var depthUniforms = THREE.UniformsUtils.clone( depthShader.uniforms );
+
+    depthMaterial = new THREE.ShaderMaterial( { fragmentShader: depthShader.fragmentShader, vertexShader: depthShader.vertexShader,
+        uniforms: depthUniforms, blending: THREE.NoBlending, skinning: true, morphTargets:true } );
+
+    var pars = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter };
+    depthRenderTarget = new THREE.WebGLRenderTarget( window.innerWidth, window.innerHeight, pars );
+
+    // Setup SSAO pass
+    ssaoPass = new THREE.ShaderPass( THREE.SSAOShader );
+    ssaoPass.renderToScreen = true;
+    //ssaoPass.uniforms[ "tDiffuse" ].value will be set by ShaderPass
+    ssaoPass.uniforms[ "tDepth" ].value = depthRenderTarget;
+    ssaoPass.uniforms[ 'size' ].value.set( window.innerWidth, window.innerHeight );
+    ssaoPass.uniforms[ 'cameraNear' ].value = camera.near;
+    ssaoPass.uniforms[ 'cameraFar' ].value = camera.far;
+    ssaoPass.uniforms[ 'onlyAO' ].value = 0;//( composer.renderMode == 1 );
+    ssaoPass.uniforms[ 'aoClamp' ].value = 0.5;//3;
+    ssaoPass.uniforms[ 'lumInfluence' ].value = 1;//0.5;
+
+    var vh = 1.4, vl = 1.2;
+
+    var colorCorrectionPass = new THREE.ShaderPass( THREE.ColorCorrectionShader );
+    colorCorrectionPass.uniforms[ "powRGB" ].value = new THREE.Vector3( vh, vh, vh );
+    colorCorrectionPass.uniforms[ "mulRGB" ].value = new THREE.Vector3( vl, vl, vl );
+
+    var vignettePass = new THREE.ShaderPass( THREE.VignetteShader );
+    vignettePass.uniforms[ "darkness" ].value = 1;
+
+    var effectHBlur = new THREE.ShaderPass( THREE.HorizontalBlurShader );
+    var effectVBlur = new THREE.ShaderPass( THREE.VerticalBlurShader );
+    effectHBlur.uniforms[ 'h' ].value = 1 / window.innerWidth;
+    effectVBlur.uniforms[ 'v' ].value = 1 / window.innerHeight;
+
+    //effectHBlur.uniforms[ 'tDiffuse' ].value = depthRenderTarget;
+    //effectVBlur.uniforms[ 'tDiffuse' ].value = depthRenderTarget;
+
+    var effectBloom = new THREE.BloomPass( 0.6 );
+
+    var clearMask = new THREE.ClearMaskPass();
+
+    /*var bokehPass = new THREE.BokehPass( scene, camera, {
+                    focus:      0.01,
+                    aperture:   0.05,
+                    maxblur:    0.1,
+
+                    width: window.innerWidth ,
+                    height: window.innerHeight
+                } );*/
+    
+
+    
+
+   // Add pass to effect composer
+   // effectComposer = new THREE.EffectComposer( renderer );
+
+    composer.addPass( renderPass );
+    
+    //composer.addPass( colorCorrectionPass );
+    composer.addPass( vignettePass );
+    //composer.addPass( copyPass );
+    composer.addPass( ssaoPass );
+    composer.addPass( effectBloom )
+    //composer.addPass( bokehPass )
+    composer.addPass( effectHBlur );
+    composer.addPass( effectVBlur );
+    composer.addPass( clearMask );
+    //composer.addPass( renderPass );
+    //
+    
+    //
+    //copyPass.renderToScreen = true;
+
+    clearMask.renderToScreen = true;
+
+
+}
+
+function animate() {
+
+    requestAnimationFrame( animate );
+
+    /*delta = clock.getDelta();
+    THREE.SEA3D.AnimationHandler.update( delta );
+    THREE.AnimationHandler.update( delta );*/
+    if(bvhReader !== null) bvhReader.update();
+    //updateBVH();
+    if(isWithPhysics) updaeOimo();
+    //if(normHelper) normHelper.update();
+    //render();
+
+    if(isWithPosEffect){
+        scene.overrideMaterial = depthMaterial;
+        back.visible = false; 
+        ground.visible = false;
+        if(eyeGroup) eyeGroup.visible = false;
+
+        renderer.render( scene, camera, depthRenderTarget, true );
+        back.visible = true; 
+        ground.visible = true;
+        if(eyeGroup) eyeGroup.visible = true;
+        // Render renderPass and SSAO shaderPass
+        scene.overrideMaterial = null;
+        composer.render();
+    } else {
+        renderer.render( scene, camera );
+    }
+    
+        
+                    
+
+    
+
+    //renderer.render( scene, camera );
+    
+
+    stats.update();
+}
+
+/*function render() {
+    renderer.clear();
+    renderer.render( scene, camera );
+}*/
+
+function resize( event ) {
+    vsize.x = window.innerWidth;
+    vsize.y = window.innerHeight;
+    vsize.z = vsize.x / vsize.y;
+    camera.aspect = vsize.z;
+    camera.updateProjectionMatrix();
+
+    // Resize renderTargets
+    if( isWithPosEffect ){
+        ssaoPass.uniforms[ 'size' ].value.set( vsize.x, vsize.y );
+        depthRenderTarget.setSize( vsize.x, vsize.y );
+        composer.setSize(vsize.x, vsize.y );
+    }
+    renderer.setSize( vsize.x, vsize.y );
+}
+
+//----------------------------------
+//  OIMO PHYSICS
+//----------------------------------
+
+function initOimo(){
+    // The Bit of a collision group
+    collisionGroupes = {
+        group1 : 1 << 0,  // 00000000 00000000 00000000 00000001
+        group2 : 1 << 1,  // 00000000 00000000 00000000 00000010
+        group3 : 1 << 2,  // 00000000 00000000 00000000 00000100
+        all : 0xffffffff  // 11111111 11111111 11111111 11111111
+    }
+    buffgeoSphere = new THREE.BufferGeometry();
+    buffgeoSphere.fromGeometry( new THREE.SphereGeometry( 1, 20, 10 ) );
+
+    buffgeoBox = new THREE.BufferGeometry();
+    buffgeoBox.fromGeometry( new THREE.BoxGeometry( 1, 1, 1 ) );
+
+    matSphere = new THREE.MeshLambertMaterial( { color: 0x00FFCC, name:'sph' } );
+    matBox = new THREE.MeshLambertMaterial( {  color:  0x00FF00, name:'box' } );
+    matSphereSleep = new THREE.MeshLambertMaterial( { color:  0x004411, name:'ssph' } );
+    matBoxSleep = new THREE.MeshLambertMaterial( {  color:  0x004400, name:'sbox' } );
+
+    world = new OIMO.World(1/60, 2, 8, true);
+    world.gravity = new OIMO.Vec3(0, -1, 0);
+
+    // reset old
+    bodys = [];
+    meshs = [];
+
+
+    //populate();
+    //setInterval(updateOimoPhysics, 1000/60);
+}
+
+function DistanceTest ( p1, p2 ) {
+    var x = p2.x-p1.x;
+    var y = p2.y-p1.y;
+    var z = p2.z-p1.z;
+    var d = Math.sqrt(x*x + y*y + z*z);
+    if(d<=0)d=0.1;
+    return d;
+}
+
+function createOimoSqueleton () {
+    if(currentNames!==null) deleteOldSkeleton();
+
+    bodysquel = {};
+    meshsquel = {};
+    linksquel = [];
+    distanceByName = {};
+    currentNames = [];
+    currentDistance = [];
+
+    var node, name;
+
+    var w=4, h = 4;
+    var distance = 2;
+    var boneMaterial = new THREE.MeshBasicMaterial( { color: 0xFFFF33, transparent:true, opacity:0.4, wireframe:true } );
+    var boneHeadMaterial = new THREE.MeshBasicMaterial( { color: 0x33FF33, transparent:true, opacity:0.4 } )
+
+    var config = [10,0.4,0.2, collisionGroupes.group1, collisionGroupes.group2];
+
+    //var bvh = bvhReader;//.Nodes;
+    var n, mul = 1;
+    //var i = bvh.nodes.length;
+    var i = bones.length, j;
+    while(i--){
+        //node = bvh.nodes[i];
+        node = bones[i];
+        name = node.name;
+        if(name !=='Site' && name!=='Top' && name!=='RightHandEnd' && name!=='LeftHandEnd' && name!=='RightToeEnd' && name!=='LeftToeEnd'){
+            /*if(bvh.ParentNodes[name] !== null){
+                var p1 = node.position;//new THREE.Vector3().setFromMatrixPosition( node.matrixWorld )
+                var p2 = bvh.ParentNodes[name].position;//new THREE.Vector3().setFromMatrixPosition( childNodes[name].matrixWorld );
+                distance = DistanceTest(p1, p2);
+            }*/
+            //if(bvh.ChildNodes[name] !== null){
+            if(node.children.length){
+                n = 0
+                if(name==='Chest' || name==='Hips') {
+                    var j = node.children.length;
+                    while(j--){
+                        //console.log(node.children[j].name)
+                        if(node.children[j].name === 'Spine1'){ GoodLink[0] = j; n = j; }
+                        if(node.children[j].name === 'Neck'){ GoodLink[1] = j; n = j; }
+                    }
+                }
+             
+                // get distance to child
+                var p1 = new THREE.Vector3().setFromMatrixPosition( node.matrixWorld );
+                //var p2 = bvh.ChildNodes[name].position;
+                var p2 = new THREE.Vector3().setFromMatrixPosition( node.children[n].matrixWorld );//node.parent.position;
+                //var p2 = new THREE.Vector3().setFromMatrixPosition( bvh.ChildNodes[name].matrix );
+                distance = DistanceTest(p1, p2);
+            } else {
+                distance = 2;
+            }
+            currentNames.push(name);
+            currentDistance[i] = distance;
+            distanceByName[name] = distance;
+
+            if(name=='Head'){
+                bodysquel[name] = world.add({type:'sphere', name:node.name, size:[w], move:true, noSleep:true});//, world:world, config:config});
+                meshsquel[name] = new THREE.Mesh( buffgeoSphere, boneHeadMaterial );
+                meshsquel[name].scale.set( w, w, w );
+            } else {
+                if(name==='Chest' || name==='Hips' || name==='Spine1') mul = 2.5;
+                else if(name==='LeftHand' || name==='RightHand') mul = 0.5;
+                else mul = 1;
+                bodysquel[name] = world.add({type:'box', name:name, size:[w*mul,h,distance], move:true, noSleep:true });
+                //bodysquel[name] = world.add({type:'box', name:name, size:[distance,w*mul ,  h], move:true, noSleep:true });
+                //, world:world, config:config});
+                //bodysquel[name] = world.add({type:'box', name:node.name, size:[w,distance,h], move:true, noSleep:true});//, world:world, config:config});
+                meshsquel[name] = new THREE.SimpleBox();//new THREE.Mesh( buffgeoBox, boneMaterial );
+                //helpersquel[name] = new THREE.BoxHelper(meshsquel[name]);
+                meshsquel[name].scale.set( w*mul, h, distance  );
+                //meshsquel[name].scale.set( distance,w*mul ,  h );
+                //meshsquel[name].scale.set( w, distance, h);
+            }
+            meshsquel[name].castShadow = false;
+            meshsquel[name].receiveShadow = false;
+            meshsquel[name].visible = false;
+            scene.add( meshsquel[name] );
+            //scene.add( helpersquel[name] );
+        }
+    }
+    // test link
+
+    //joints[k+7] = 
+    linksquel[0] = world.add({type:"joint", body1:'RightUpLeg', body2:'RightLowLeg', pos1:[0,0,distanceByName['RightUpLeg']*0.5], pos2:[0,0,-distanceByName['RightLowLeg']*0.5], axe1:[0,0,1], axe2:[0,0,1], collision:false});
+    linksquel[1] = world.add({type:"joint", body1:'LeftUpLeg', body2:'LeftLowLeg', pos1:[0,0,distanceByName['LeftUpLeg']*0.5], pos2:[0,0,-distanceByName['LeftLowLeg']*0.5], axe1:[0,0,1], axe2:[0,0,1], collision:false});
+
+
+
+
+    isWithSqueleton = true;
+    isPhysicsVisible = false;
+}
+
+function physicsVisibility(){
+
+    if(!isWithPhysics) return;
+
+    if( isPhysicsVisible ){ 
+        isPhysicsVisible = false; 
+        document.getElementById("b5").value = "show physics";
+        for(var oo in meshsquel) meshsquel[oo].visible = false;
+    }else{ 
+        isPhysicsVisible = true; 
+        document.getElementById("b5").value = "hide physics";
+         for(var oo in meshsquel) meshsquel[oo].visible = true;
+    }
+
+}
+
+function deleteOldSkeleton() {
+    isWithSqueleton = false;
+    var i = currentNames.length;
+    var name;
+    while (i--){
+        name = currentNames[i];
+        scene.remove(meshsquel[name]);
+        bodysquel[name].dispose();
+    }
+
+    i = linksquel.length;
+    while (i--){
+        linksquel.dispose();
+    }
+}
+
+function updatePhySquel(){
+     if(!isWithSqueleton) return;
+        var mtx = new THREE.Matrix4();
+        var mtx2  = new THREE.Matrix4();
+        var mtx3  = new THREE.Matrix4();
+        var node, name;
+        var pos = new THREE.Vector3(), quat = new THREE.Quaternion();
+        var pos_base = new THREE.Vector3();
+        var pos_base2 = new THREE.Vector3();
+        var pos_target = new THREE.Vector3();
+        var quat_base = new THREE.Quaternion();
+
+        //var i = bvh.nodes.length;
+        var i = bones.length, n;
+        while(i--){
+            node = bones[i];//bvh.nodes[i];
+            name = node.name;
+            if(name!=='Site' && name!=='Top' && name!=='RightHandEnd' && name!=='LeftHandEnd' && name!=='RightToeEnd' && name!=='LeftToeEnd'){
+                mtx.identity();// = new THREE.Matrix4();
+                // get position of node
+                pos_base.setFromMatrixPosition( node.matrixWorld );
+                quat_base.setFromRotationMatrix( node.matrixWorld );
+
+                //pos_base2.set(pos_base.y, pos_base.z, pos_base.x)
+                // apply position on matrix
+               // mtx.makeRotationFromQuaternion( quat );
+                mtx.setPosition( pos_base );
+                //mtx.makeTranslation(pos_base.x, pos_base.y, pos_base.z);
+
+                //mtx.multiply( node.matrixWorld );
+
+                //if( bvh.ParentNodes[name] !== null ){
+                //}
+                //if(bvh.ChildNodes[name] !== null){
+                if(node.children.length){
+                    if(name==='Chest') n = GoodLink[1];
+                    else if(name==='Hips') n= GoodLink[0];
+                    else n=0;
+                    // get orientation look at child node
+                    //pos_target.setFromMatrixPosition( bvh.ChildNodes[name].matrixWorld );
+                    //quat.setFromRotationMatrix( node.children[0].matrixWorld );
+                    pos_target.setFromMatrixPosition( node.children[n].matrixWorld );
+
+                    mtx3 = new THREE.Matrix4();
+                    mtx3.lookAt( pos_target, pos_base, new THREE.Vector3(0, 0, 1) );
+                    mtx.multiply( mtx3 );
+
+                    //mtx.multiply( node.children[0].matrix );
+                }
+
+               
+
+                // lock rotationZ
+                mtx2 = new THREE.Matrix4();
+                mtx2.makeRotationZ( 0 );
+                mtx.multiply( mtx2 );
+
+                // translate to middle of node
+                mtx2 = new THREE.Matrix4();
+                mtx2.makeTranslation( 0,0,currentDistance[i]*0.5);
+                //mtx2.makeTranslation(0,currentDistance[i]*0.5,0);
+                mtx.multiply( mtx2 );
+
+                pos.setFromMatrixPosition( mtx );
+                quat.setFromRotationMatrix( mtx );
+                //quat.setFromRotationMatrix( node.matrix );
+
+                if(bodysquel[name]!==null && meshsquel[name]!==null){
+                    bodysquel[name].setPosition(pos);
+                    bodysquel[name].setQuaternion(quat);
+                    meshsquel[name].position.copy(pos);
+                    meshsquel[name].quaternion.copy(quat);
+                }
+            }
+        }
+    
+}
+
+function updatePhysicsBone(name, mtx){
+    if(!isWithSqueleton) return;
+    if(bodysquel[name] !== null && meshsquel[name] !== null){
+
+        var mtx1 = new THREE.Matrix4();
+                //mtx2.makeTranslation( 0,0,currentDistance[i]*0.5);
+                mtx1.makeRotationZ( -Math.PI*0.5 );
+                mtx.multiply( mtx1 );
+
+                var mtx0 = new THREE.Matrix4();
+                //mtx2.makeTranslation( 0,0,currentDistance[i]*0.5);
+                mtx0.makeRotationX( Math.PI );
+                mtx.multiply( mtx0 )
+
+        // translate to middle of node
+                var mtx2 = new THREE.Matrix4();
+                //mtx2.makeTranslation( 0,0,currentDistance[i]*0.5);
+                mtx2.makeTranslation(distanceByName[name]*0.5,0,0);
+                mtx.multiply( mtx2 );
+
+        var quat = new THREE.Quaternion().setFromRotationMatrix( mtx );
+        var pos = new THREE.Vector3().setFromMatrixPosition( mtx );
+        bodysquel[name].setPosition(pos);
+        bodysquel[name].setQuaternion(quat);
+        meshsquel[name].position.copy(pos);
+        meshsquel[name].quaternion.copy(quat);
+    }
+
+}
+
+function updateOimo() {
+
+    if(world==null) return;
+
+    world.step();
+
+   // update dynamique object
+
+    var x, y, z, mesh, body, i = bodys.length;
+
+    while (i--){
+
+        body = bodys[i];
+        mesh = meshs[i];
+
+        if(!body.sleeping){
+
+            mesh.position.copy(body.getPosition());
+            mesh.quaternion.copy(body.getQuaternion());
+
+            // change material
+            if(mesh.material.name === 'sbox') mesh.material = matBox;
+            if(mesh.material.name === 'ssph') mesh.material = matSphere; 
+
+            // reset position
+            if(mesh.position.y<-100){
+                x = -100 + Math.random()*200;
+                z = -100 + Math.random()*200;
+                y = 100 + Math.random()*1000;
+                body.resetPosition(x,y,z);
+            }
+        } else {
+            if(mesh.material.name === 'box') mesh.material = matBoxSleep;
+            if(mesh.material.name === 'sph') mesh.material = matSphereSleep;
+        }
+    }
+}
+
+function populate() {
+
+    // reset old
+    bodys = [];
+    meshs = [];
+
+    var config = [0,0.4,0.2];//, collisionGroupes.group3, collisionGroupes.all & ~ collisionGroupes.group1];
+
+    //add ground
+    world.add({type:'box', size:[400, 40, 400], pos:[0,-20,0]});//, config:config});
+    // wall
+   /*var w0 = world.add({ type:"box", size:[200,500,50], pos:[0,250,-100], config:config });
+    var w1 = world.add({ type:"box", size:[200,500,50], pos:[0,250, 100], config:config });
+    var w2 = world.add({ type:"box", size:[50,500,200], pos:[-100,250,0], config:config });
+    var w3 = world.add({ type:"box", size:[50,500,200], pos:[100,250,0], config:config });
+*/
+    config = [1,0.4,0.2]//, collisionGroupes.group2, collisionGroupes.all];
+
+    // now add object
+    var x, y, z, w, h, d;
+    var i = 20;
+
+    while (i--){
+        t = 1//Math.floor(Math.random()*2)+1;
+        x = -100 + Math.random()*200;;
+        z = -100 + Math.random()*200;
+        y = 100 + Math.random()*500;
+        w = 10 + Math.random()*10;
+        h = 5 + Math.random()*10;
+        d = 5 + Math.random()*10;
+
+        if(t===1){
+            bodys[i] = world.add({type:'sphere', size:[w*0.5], pos:[x,y,z], move:true});//, config:config});
+            meshs[i] = new THREE.Mesh( buffgeoSphere, matSphere );
+            meshs[i].scale.set( w*0.5, w*0.5, w*0.5 );
+        } else if(t===2){
+           
+            bodys[i] = world.add({type:'box', size:[w,h,d], pos:[x,y,z], move:true});//, config:config});
+            meshs[i] = new THREE.Mesh( buffgeoBox, matBox );
+            meshs[i].scale.set( w, h, d );
+        }
+
+        meshs[i].castShadow = true;
+        meshs[i].receiveShadow = true;
+        scene.add( meshs[i] );
+    }
+}
+
+
+//===============================================
+//  INIT BVH
+//===============================================
+
+
+function initBVH() {
+
+    bvhReader = new BVH.Reader();
+    loadordrag = new LoadorDrag( function(r,fname) {bvhReader.read(r,fname);}, true );
+    loadBVH("bvh/action.z");
+
+}
+
+function loadBVH(file) {
+
+    bvhReader.boneSize = BVHanimConfig.boneSize;
+    bvhReader.speed = BVHanimConfig.speed;
+    bvhReader.load(file);
+
+}
+
+function updateBVH() {
+    //if(!bvhReader.isComplete) return;
+
+    if(!isWithSqueleton && isWithPhysics ) createOimoSqueleton();
+
+    //var delta = clock.getDelta();
+    //THREE.SEA3D.AnimationHandler.update( delta*0.6 );
+    //THREE.AnimationHandler.update( delta*0.6 );
+
+    avatar.updateSkin();
+
+    //if( bones !== null ) updateSkin();
+    //if( helperSquel !== null ) helperSquel.update();
+
+    updatePhySquel();
+    
+    
+}
+
+function skeletonVisibility() {
+    if( bvhReader.skeleton.visible){ bvhReader.skeleton.visible=false; document.getElementById("b4").value = "show skeleton"}
+    else{ bvhReader.skeleton.visible=true; document.getElementById("b4").value = "hide skeleton";}
+}
+
+//===============================================
+//  SEA3D
+//===============================================
+
+function loadSea3dBody(){
+
+    avatar = new THREE.Avatar();
+    
+    var loader = new THREE.SEA3D();
+    loader.onComplete = function( e ) {
+
+        var i = loader.meshes.length, m;
+        while(i--){
+            if(loader.meshes[i].name == 'man') geos['man'] = loader.meshes[i].geometry;
+            if(loader.meshes[i].name == 'woman') geos['woman'] = loader.meshes[i].geometry;
+            if(loader.meshes[i].name == 'eye') geos['eye'] = loader.meshes[i].geometry;
+        }
+
+        reversUV( geos['woman'] );
+        reversUV( geos['man'] );
+
+        avatar.init( geos, bvhReader );
+        scene.add( avatar );
+
+        avatar.material.map = map;
+        avatar.material.normalMap = mapn;
+        avatar.material.envMap = envmap;
+
+        avatar.eyeMaterial.map = imagesLoader.load( 'textures/eye.png' );;
+        avatar.eyeMaterial.normalMap = imagesLoader.load( 'textures/eye_n.png' );
+        avatar.eyeMaterial.envMap = envmap;
+
+
+        //addSkinModel();
+        console.log( "SEA3D Loaded:", loader.file.timer.elapsedTime + "ms" );
+    }
+
+    loader.load( bodyLink );
+
+}
+
+function reversUV( geometry ){
+
+    var uv = geometry.attributes.uv.array;
+    var i = uv.length * 0.25;
+    while( i-- ) uv[i*2]*=-1;
+    geometry.attributes.uv.needsUpdate = true;
+
+}
+
+/*
+function addSkinModel( gender ){
+
+    gender = gender == undefined ? 'woman' : gender;
+
+    currentGender = gender;
+
+
+    if( !hero ){ 
+
+        heroMaterial = new THREE.MeshStandardMaterial({ 
+            map:map,
+            skinning: true, 
+            morphTargets:true,
+            metalness:0.4, roughness:0.5, 
+            //aoMap:mapgi, aoMapIntensity:1,
+          //  bumpMap: map, bumpScale: 0.3,
+            //metalnessMap:maps,
+            //morphNormals:true,
+            normalMap:mapn, normalScale:new THREE.Vector2( 0.5, 0.5 ),
+            //displacementMap: mapgi, displacementScale:1,
+            //lightMap:mapgi, lightMapIntensity:1,
+            //roughnessMap:envmap, 
+            
+            envMap:envmap
+        });
+
+
+        var eyeMap = imagesLoader.load( 'textures/eye.png' );
+        //eyeMap.flipY = false;
+
+        var eyeNorm = imagesLoader.load( 'textures/eye_n.png' );
+        //eyeNorm.flipY = false;
+
+        var eyeMaterial = new THREE.MeshStandardMaterial({ 
+            map:eyeMap,
+            metalness:0.7, roughness:0.3,
+            normalMap:eyeNorm, normalScale:new THREE.Vector2( 1.5, 1.5 ),
+            envMap:envmap
+        });
+
+        //geos['eye'].applyMatrix(new THREE.Matrix4().makeRotationY(Math.PI));
+
+
+
+        eyeGroup = new THREE.Group();
+        var eyeL = new THREE.Mesh( geos['eye'], eyeMaterial );
+        var eyeR = new THREE.Mesh( geos['eye'], eyeMaterial );
+        var eyeCenter = new THREE.Group();
+        eyeL.position.y = -1.39;
+        eyeR.position.y = 1.39;
+
+        eyeCenter.position.z = -40;// distance
+        eyeCenter.position.x = 0;//-5; // up/down
+        //eyeCenter.position.y = 10; // left/right
+
+        eyeGroup.add( eyeL );
+        eyeGroup.add( eyeR );
+
+        eyeL.lookAt( eyeCenter.position );
+        eyeR.lookAt( eyeCenter.position );
+
+
+        eyeGroup.add( eyeCenter );
+        eyeGroup.position.set(-3.57, 0, -3.1895);
+
+        //scene.add(eyeGroup);
+
+
+        hero = new THREE.SkinnedMesh( geos[gender], heroMaterial, true );
+        hero.castShadow = true;
+        hero.receiveShadow = true;
+        var size = 1;
+        hero.scale.set( size, size, size );
+
+
+        // normHelper = new THREE.VertexNormalsHelper( hero, 1 );
+        // scene.add( normHelper );
+
+        hero.position.set(0,40,0);
+        //console.log(hero.position)
+        decal = new THREE.Vector3(0,-11.5,0);
+        hero.frustumCulled = false;
+        helperSquel = new THREE.SkeletonHelper(hero);
+        helperSquel.visible = false;
+        bones = hero.skeleton.bones;
+        for(var i=0; i<bones.length; i++){ 
+            bones[i].matrixAutoUpdate = false;
+            //if(bones[i].name === "Hips") bones[i].matrixWorld.makeTranslation(0,-5,0)
+            if(bones[i].name === "Head") bones[i].add(eyeGroup);
+
+            //console.log(bones[i].name)
+        }
+        preservesBoneSize = true;
+
+        scene.add(helperSquel);
+        scene.add(hero);
+
+    } else{ 
+
+        hero.geometry = geos[gender];
+        updateSkin();
+
+    }
+
+}*/
+
+function switchGender(){
+
+    avatar.switchGender();
+
+    //if(currentGender == 'woman') addSkinModel( 'man' );
+    //else addSkinModel( 'woman' );
+
+};
+
+function helperVisibility(){
+
+    if(helperSquel.visible){helperSquel.visible=false; document.getElementById("b6").value = "show helper"}
+    else{ helperSquel.visible=true; document.getElementById("b6").value = "hide helper";}
+
+};
+
+function heroVisibility() {
+
+    if(avatar.visible){avatar.visible=false; document.getElementById("b3").value = "show model"}
+    else{ avatar.visible=true; document.getElementById("b3").value = "hide model";}
+
+};
+
+
+function updateSkin(){
+
+    avatar.updateSkin();
+
+    /*var matrixWorldInv = new THREE.Matrix4().getInverse( hero.matrixWorld );
+    var bone, node, name;
+    var nodes = bvhReader.Nodes;
+    var len = bones.length;
+    var parentMtx, tmpMtx, worldMtx;
+    var globalMtx = new THREE.Matrix4();
+    var localMtx = new THREE.Matrix4();
+    var globalQuat = new THREE.Quaternion();
+    var globalPos = new THREE.Vector3();
+    var tmpPos = new THREE.Vector3();
+    var revers = new THREE.Vector3(-1,1,-1); // for tjs
+
+    var scaleMtx = new THREE.Matrix4();
+
+    //var i = len;
+    //while(i--){
+    for(var i=0; i<len; i++){
+        bone = bones[i];
+        name = bone.name;
+        worldMtx = bone.parent.matrixWorld || matrixWorldInv;
+        parentMtx = bone.parent ? bone.parent.matrixWorld : worldMtx;
+        if ( node = nodes[name] ){
+            
+            // LOCAL TO GLOBAL
+            tmpMtx = node.matrixWorld.clone();
+            if( isTJS ) tmpMtx.scale(revers);
+            globalPos.setFromMatrixPosition( tmpMtx );
+            globalQuat.setFromRotationMatrix( tmpMtx );
+
+            if( name === 'Hips' ) globalPos.add(decal);
+
+            // PREPARES MATRIX
+            if ( !bone.rootMatrix ) bone.rootMatrix = bone.matrixWorld.clone();
+            
+            // MODIFY TRANSFORM
+            globalMtx.identity();
+            globalMtx.makeRotationFromQuaternion( globalQuat );
+            globalMtx.multiply( bone.rootMatrix );
+            globalMtx.setPosition( globalPos );
+            
+            // GLOBAL TO LOCAL
+            tmpMtx.identity().getInverse( worldMtx );
+            localMtx.multiplyMatrices( tmpMtx, globalMtx );
+            globalMtx.multiplyMatrices( worldMtx, localMtx );
+
+            // PRESERVES BONE SIZE
+            if( preservesBoneSize ){
+                if( name !== 'Hips' ){
+                    tmpMtx.identity().getInverse( parentMtx );
+                    scaleMtx.identity();
+                    if(currentGender == 'woman'){
+                        if(name==='LeftCollar' || name==='RightCollar') scaleMtx.scale( new THREE.Vector3(0.75,1,1));
+                        if(name==='LeftUpArm'  || name==='RightUpArm' ) scaleMtx.scale( new THREE.Vector3(0.90,1.18,1.18));
+                        if(name==='LeftLowArm' || name==='RightLowArm') scaleMtx.scale( new THREE.Vector3(0.90,1.2,1.2));
+                    } else {
+                        if(name==='Chest' ) scaleMtx.scale(new THREE.Vector3(1,1.1,1));
+                        if(name==='Spine1') scaleMtx.scale(new THREE.Vector3(1,1.15,1));
+                        //if(name==='LeftCollar' || name==='RightCollar') scaleMtx.scale(new THREE.Vector3(0.75,1,1));
+                        if(name==='LeftUpLeg'  || name==='RightUpLeg' ) scaleMtx.scale( new THREE.Vector3(1,1.2,1.2) );
+                        if(name==='LeftLowLeg' || name==='RightLowLeg') scaleMtx.scale( new THREE.Vector3(1,1.1,1.1) );
+                        if(name==='LeftUpArm'  || name==='RightUpArm' ) scaleMtx.scale( new THREE.Vector3(0.90,1.2,1.2) );
+                        if(name==='LeftLowArm' || name==='RightLowArm') scaleMtx.scale( new THREE.Vector3(0.90,1.25,1.25) );
+                    }
+
+                    tmpPos.setFromMatrixPosition( bone.matrix );
+                    localMtx.multiplyMatrices( tmpMtx, globalMtx );
+                    localMtx.multiplyMatrices( localMtx, scaleMtx );
+                    localMtx.setPosition( tmpPos );
+
+                    globalMtx.multiplyMatrices( parentMtx, localMtx );
+                } else { // hips scale
+                    scaleMtx.identity();
+                    scaleMtx.scale( new THREE.Vector3(1,1,1) );
+                    globalMtx.multiplyMatrices( globalMtx, scaleMtx );
+                }
+
+
+            }
+        } else { // other Bone
+            globalMtx.multiplyMatrices( parentMtx, bone.matrix );
+        }
+
+        // UPDATE BONE
+        bone.matrixWorld.copy( globalMtx );
+        bone.matrix.getInverse( bone.parent.matrixWorld );
+        bone.matrix.multiply( bone.matrixWorld );
+        //bone.matrixAutoUpdate = false;
+        //
+
+        //if(node = nodes[name] )updatePhysicsBone(name, bone.matrix.clone());
+        
+    }*/
+}
+
+//===============================================
+//  AUTO TEXTURE
+//===============================================
+
+/*function gradTexture(color) {
+    var c = document.createElement("canvas");
+    var ct = c.getContext("2d");
+    c.width = 16; c.height = 512;
+    var gradient = ct.createLinearGradient(0,0,0,256);
+    var i = color[0].length;
+    while(i--){ gradient.addColorStop(color[0][i],color[1][i]); }
+    ct.fillStyle = gradient;
+    ct.fillRect(0,0,16,512);
+    var texture = new THREE.Texture(c);
+    texture.needsUpdate = true;
+    return texture;
+}*/
+
+
+</script>
+</body>
+</html>
