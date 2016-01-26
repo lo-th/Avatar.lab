@@ -119,7 +119,7 @@ var GoodLink = [];
 var bvhReader;
 var BVHanimConfig = { debug:true, speed:0.5, size:1, px:0, py:0, pz:0, boneSize:0.4, visible:false };
 
-var composer, ssaoPass, depthMaterial, depthRenderTarget;;
+var composer, ssaoPass, depthMaterial, depthRenderTarget;
 //oimo var
 var world = null;
 var collisionGroupes = {};
@@ -434,7 +434,7 @@ function resize( event ) {
     camera.updateProjectionMatrix();
 
     // Resize renderTargets
-    if(isWithPosEffect){
+    if( isWithPosEffect ){
         ssaoPass.uniforms[ 'size' ].value.set( vsize.x, vsize.y );
         depthRenderTarget.setSize( vsize.x, vsize.y );
         composer.setSize(vsize.x, vsize.y );
@@ -815,12 +815,11 @@ function populate() {
 
 
 function initBVH() {
+
     bvhReader = new BVH.Reader();
     loadordrag = new LoadorDrag( function(r,fname) {bvhReader.read(r,fname);}, true );
-    //loadBVH("images/action.png");
     loadBVH("bvh/action.z");
-    //loadBVH("ActionPak.BVH");
-    //initBVHGui();
+
 }
 
 function loadBVH(file) {
@@ -828,6 +827,7 @@ function loadBVH(file) {
     bvhReader.boneSize = BVHanimConfig.boneSize;
     bvhReader.speed = BVHanimConfig.speed;
     bvhReader.load(file);
+
 }
 
 function updateBVH() {
@@ -841,8 +841,8 @@ function updateBVH() {
 
     
 
-    if( bones!==null ) updateSkin();
-    if( helperSquel!==null ) helperSquel.update();
+    if( bones !== null ) updateSkin();
+    if( helperSquel !== null ) helperSquel.update();
 
     updatePhySquel();
     
@@ -909,7 +909,7 @@ function addSkinModel( gender ){
           //  bumpMap: map, bumpScale: 0.3,
             //metalnessMap:maps,
             //morphNormals:true,
-           // normalMap:mapn, normalScale:new THREE.Vector2( 1.5, 1.5 ),
+            normalMap:mapn, normalScale:new THREE.Vector2( 0.7, 0.7 ),
             //displacementMap: mapgi, displacementScale:1,
             //lightMap:mapgi, lightMapIntensity:1,
             //roughnessMap:envmap, 
@@ -949,8 +949,8 @@ function addSkinModel( gender ){
         eyeGroup.add( eyeL );
         eyeGroup.add( eyeR );
 
-        eyeL.lookAt(eyeCenter.position);
-        eyeR.lookAt(eyeCenter.position);
+        eyeL.lookAt( eyeCenter.position );
+        eyeR.lookAt( eyeCenter.position );
 
 
         eyeGroup.add( eyeCenter );
