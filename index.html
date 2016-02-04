@@ -37,7 +37,7 @@ canvas { position: absolute; top:0; left:0; pointer-events:auto; width:100%; hei
 <!-- Copyright Lo-Th -->
 <script src="js/extract.js"></script>
 <script src="js/three.min.js"></script>
-<script src="js/stats.min.js"></script>
+<script src="js/Stats.js"></script>
 
 <script src="js/postprocessing/EffectComposer.js"></script>
 <script src="js/postprocessing/RenderPass.js"></script>
@@ -61,7 +61,7 @@ canvas { position: absolute; top:0; left:0; pointer-events:auto; width:100%; hei
 <script src="js/MorphAnimMesh.js"></script>
 <script src="js/loaders/collada/Animation.js"></script>
 <script src="js/loaders/collada/AnimationHandler.js"></script>
-<script src="js/loaders/collada/KeyFrameAnimation.js"></script>
+<!--<script src="js/loaders/collada/KeyFrameAnimation.js"></script>-->
 <script src="js/loaders/sea3d/SEA3D.js"></script>
 <script src="js/loaders/sea3d/SEA3DLoader.js"></script>
 <script src="js/loaders/sea3d/SEA3DLegacy.js"></script>
@@ -98,17 +98,20 @@ var avatar;
 
 var isTJS = false;
 
-var out1, out2, debug, loadordrag, stats;
+var out1, out2, debug, loadordrag, stats, clock;
 var vsize, camPos, mouse;
-var camera, canvas, scene, renderer, delta, center, centerLight, clock, controls, imagesLoader, envmap, back, ground;
+var camera, canvas, scene, renderer, delta, center, centerLight, clock, controls, textureLoader, envmap, back, ground;
 var composer, ssaoPass, depthMaterial, depthRenderTarget;
 var ToRad = Math.PI / 180;
 var ToDeg = 180 / Math.PI;
 
 var isWithPosEffect = false;
+var isPostInitialised = false;
+
+var isShadow = true;
 
 // bvh var
-var bvhReader;
+var bvhReader = null;
 var BVHanimConfig = { debug:true, speed:0.5, size:1, px:0, py:0, pz:0, boneSize:0.4, visible:false };
 
 
@@ -127,7 +130,7 @@ function init() {
     document.getElementById("b5").addEventListener( 'click', function ( e ) { physicsVisibility(); }, false );
     document.getElementById("b6").addEventListener( 'click', function ( e ) { helperVisibility(); }, false );
     document.getElementById("b7").addEventListener( 'click', function ( e ) { switchGender(); }, false );
-    document.getElementById("b8").addEventListener( 'click', function ( e ) { if(isWithPosEffect) isWithPosEffect = false; else isWithPosEffect = true; }, false );
+    document.getElementById("b8").addEventListener( 'click', function ( e ) { if(isWithPosEffect) isWithPosEffect = false; else { if(!isPostInitialised)initPostEffect(); isWithPosEffect = true;} }, false );
     
     vsize = new THREE.Vector3(window.innerWidth, window.innerHeight, 0);
     vsize.z = vsize.x / vsize.y;
@@ -150,16 +153,21 @@ function debugTell(s) {
 
 function init3D() {
 
+    clock = new THREE.Clock();
+
     canvas = document.getElementById( 'canvas' );
     clock = new THREE.Clock();
     
-    renderer = new THREE.WebGLRenderer({ canvas:canvas, antialias: true });
+    renderer = new THREE.WebGLRenderer({ canvas:canvas, antialias: true , logarithmicDepthBuffer: false });
     renderer.setSize( vsize.x, vsize.y );
 
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.soft = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.shadowMap.cullFace = THREE.CullFaceBack;
+    if(isShadow){
+        renderer.shadowMap.enabled = true;
+        //renderer.shadowMap.soft = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.shadowMap.cullFace = THREE.CullFaceBack;
+    }
+    
 
     renderer.gammaInput = true;
     renderer.gammaOutput = true;
@@ -168,18 +176,15 @@ function init3D() {
     
     camera = new THREE.PerspectiveCamera( 35, vsize.z, 0.1, 2000 );
     camera.position.set(0,60,200);
-    //camera.setLens(40);
-
-    //console.log(camera.fov)
 
     controls = new THREE.OrbitControls( camera, canvas );
     controls.target.set(0,40,0);
     controls.update();
 
-    imagesLoader = new THREE.TextureLoader();
+    textureLoader = new THREE.TextureLoader();
+    //textureLoader.addEventListener('load', textureComplete );
 
-    envmap = imagesLoader.load( 'textures/red.jpg' );
-    envmap.mapping = THREE.SphericalReflectionMapping;
+    
 
     
     //mapn.wrapT = THREE.MirroredRepeatWrapping
@@ -188,22 +193,29 @@ function init3D() {
     //maps.flipY = false;
 
     
-    scene.add( new THREE.AmbientLight( 0x606060 ) );
+    scene.add( new THREE.AmbientLight( 0x404040 ) );
     
     var light = new THREE.SpotLight( 0xFFFFFF, 1.8, 0, Math.PI/2, 1 );
+    //var light = new THREE.DirectionalLight( 0xFFFFFF, 1.8 );
+    //var light = new THREE.PointLight( 0xFFFFFF, 1.8, 1000 );
+
     light.position.set(100,500,100);
     light.lookAt(new THREE.Vector3(0,20,0));
-    light.castShadow = true;
-    //light.onlyShadow = false;
-    light.shadowCameraNear = 100;
-    light.shadowCameraFar = 700;
-    //light.shadowCameraFov = 35;
-    light.shadowBias = -0.005;
-    light.shadowMapWidth = light.shadowMapHeight = 2048;
-    light.shadowDarkness = 0.5;
+
+    if(isShadow){
+
+        light.castShadow = true;
+        light.shadowCameraNear = 100;
+        light.shadowCameraFar = 800;
+        light.shadowCameraFov = 50;
+        light.shadowBias = -0.005;
+        //light.shadowMapWidth = light.shadowMapHeight = 2048;
+
+    }
+
     scene.add( light );
 
-    var light1 = new THREE.SpotLight( 0x334480, 0.6, 0, Math.PI/2, 1 );
+    /*var light1 = new THREE.SpotLight( 0x334480, 0.6, 0, Math.PI/2, 1 );
     light1.position.set(-300, 1, -300);
     light1.lookAt(new THREE.Vector3(0,20,0));
     scene.add( light1 );
@@ -211,32 +223,40 @@ function init3D() {
     var light2 = new THREE.SpotLight( 0x554433, 0.4, 0, Math.PI/2, 1 );
     light2.position.set(300, 100, 300);
     light2.lookAt(new THREE.Vector3(0,20,0));
-    scene.add( light2 );
+    scene.add( light2 );*/
 
-    /*var pointLight = new THREE.PointLight( 0x334455, 0.2, 1000 );
+    var pointLight = new THREE.PointLight( 0x334455, 0.2, 1000 );
     pointLight.position.set(-100, 10, -300)
     scene.add( pointLight );
 
     var pointLight2 = new THREE.PointLight( 0x554433, 0.1, 1000 );
     pointLight2.position.set(300, 50, 100)
     scene.add( pointLight2 );
-*/
 
-    var bgmaps = imagesLoader.load( 'textures/bg.png' );
-    back = new THREE.Mesh( new THREE.IcosahedronGeometry(300,3), new THREE.MeshBasicMaterial( { map:bgmaps, side:THREE.BackSide, depthWrite: false }  ));
+
+
+
+    //var bgmaps = textureLoader.load( 'textures/bg.png' );
+    //back = new THREE.Mesh( new THREE.IcosahedronGeometry(300,3), new THREE.MeshBasicMaterial( { map:bgmaps, side:THREE.BackSide, depthWrite: false, depthTest: false }  ));
+    //scene.add( back );
+
+    back = new THREE.Mesh( new THREE.IcosahedronGeometry(300,3), new THREE.MeshPhongMaterial( { color: 0xFFFFFF, side:THREE.BackSide, depthWrite: false, depthTest: false }  ));
     scene.add( back );
     
-    var groundMaterial = new THREE.MeshBasicMaterial( { color: 0xFFFFFF, transparent: true } );
-    groundMaterial.blending = THREE[ "MultiplyBlending" ];
-    ground = new THREE.Mesh(new THREE.PlaneGeometry( 1000, 1000, 4, 4 ), groundMaterial);
+    //var groundMaterial = new THREE.MeshBasicMaterial( { color: 0xFFFFFF, transparent: true, blending:THREE.MultiplyBlending } );
+    var groundMaterial = new THREE.MeshPhongMaterial( { color: 0xFFFFFF, transparent: true, blending:THREE.MultiplyBlending } );
+    ground = new THREE.Mesh(new THREE.PlaneGeometry( 800, 800, 4, 4 ), groundMaterial);
     ground.position.set( 0, 0, 0 );
     ground.rotation.x = - Math.PI / 2;
+
+    ground.castShadow = false;
     ground.receiveShadow = true;
+
     scene.add( ground );
 
     // post-processing
     //if(isWithPosEffect) 
-        initPostEffect();
+     //   initPostEffect();
     
 
     stats = new Stats();
@@ -262,11 +282,13 @@ function initPostEffect(){
     //composer.addPass( renderPass );
 
     // Setup depth pass
+    avatar.initDepth();
+    /*
     var depthShader = THREE.ShaderLib[ "depthRGBA" ];
     var depthUniforms = THREE.UniformsUtils.clone( depthShader.uniforms );
 
     depthMaterial = new THREE.ShaderMaterial( { fragmentShader: depthShader.fragmentShader, vertexShader: depthShader.vertexShader,
-        uniforms: depthUniforms, blending: THREE.NoBlending, skinning: true, morphTargets:true } );
+        uniforms: depthUniforms, blending: THREE.NoBlending, skinning: true, morphTargets:true } );*/
 
     var pars = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter };
     depthRenderTarget = new THREE.WebGLRenderTarget( window.innerWidth, window.innerHeight, pars );
@@ -338,30 +360,43 @@ function initPostEffect(){
 
     clearMask.renderToScreen = true;
 
+    isPostInitialised = true;
+
 
 }
 
 function animate() {
 
+    var delta = clock.getDelta();
+
     requestAnimationFrame( animate );
+
+    if(avatar) avatar.updateAnimation(delta);
 
     if(bvhReader !== null) bvhReader.update();
 
     if(isWithPosEffect){
-        scene.overrideMaterial = depthMaterial;
-        back.visible = false; 
-        ground.visible = false;
-        if(eyeGroup) eyeGroup.visible = false;
+        if(avatar) avatar.depthPass();
+
+        //scene.overrideMaterial = depthMaterial;
+        if(back) back.visible = false; 
+        if(ground) ground.visible = false;
+        //if(avatar.eyeGroup) avatar.eyeGroup.visible = false;
 
         renderer.render( scene, camera, depthRenderTarget, true );
-        back.visible = true; 
-        ground.visible = true;
-        if(eyeGroup) eyeGroup.visible = true;
+        if(back) back.visible = true; 
+        if(ground) ground.visible = true;
+        //if(avatar.eyeGroup) avatar.eyeGroup.visible = true;
+
+        if(avatar) avatar.normalPass();
+
         // Render renderPass and SSAO shaderPass
-        scene.overrideMaterial = null;
+        //scene.overrideMaterial = null;
         composer.render();
     } else {
+
         renderer.render( scene, camera );
+
     }
     
     stats.update();
@@ -407,13 +442,13 @@ function loadBVH(file) {
 
 function updateBVH() {
 
-    avatar.updateSkin();
+    avatar.updateBones();
     
 }
 
 function skeletonVisibility() {
     if( bvhReader.skeleton.visible){ bvhReader.skeleton.visible=false; document.getElementById("b4").value = "show skeleton"}
-    else{ bvhReader.skeleton.visible=true; document.getElementById("b4").value = "hide skeleton";}
+    else{ bvhReader.skeleton.visible = true; document.getElementById("b4").value = "hide skeleton";}
 }
 
 //===============================================
@@ -442,30 +477,71 @@ function loadSea3dBody(){
         avatar.init( geos, bvhReader );
         scene.add( avatar );
 
-        var map = imagesLoader.load( 'textures/avatar.jpg' );
-        map.flipY = false;
-        map.wrapS = THREE.MirroredRepeatWrapping;
+        /**/
 
-        var mapn = imagesLoader.load( 'textures/avatar_n.jpg' );
-        mapn.flipY = false;
-        mapn.wrapS = THREE.MirroredRepeatWrapping;
+        loadMap()
 
-        avatar.material.map = map;
-        avatar.material.normalMap = mapn;
-        avatar.material.envMap = envmap;
-
-        avatar.eyeMaterial.map = imagesLoader.load( 'textures/eye.png' );;
-        avatar.eyeMaterial.normalMap = imagesLoader.load( 'textures/eye_n.png' );
-        avatar.eyeMaterial.envMap = envmap;
-
-
-        //addSkinModel();
         console.log( "SEA3D Loaded:", loader.file.timer.elapsedTime + "ms" );
     }
 
     loader.load( bodyLink );
 
 }
+
+function loadMap(){
+
+    textureLoader.load( 'textures/bg.png', textureComplete );
+    textureLoader.load( 'textures/avatar.jpg', textureComplete );
+    textureLoader.load( 'textures/avatar_n.jpg', textureComplete );
+    textureLoader.load( 'textures/eye.png', textureComplete );
+    textureLoader.load( 'textures/eye_n.png', textureComplete );
+    textureLoader.load( 'textures/red.jpg', textureComplete );
+
+};
+
+function textureComplete( tex ){
+
+    var name = tex.image.currentSrc.substring(tex.image.currentSrc.lastIndexOf('/')+1, tex.image.currentSrc.lastIndexOf('.'));
+    tex.name = name;
+
+    if(name === 'bg'){ 
+        back.material.map = tex;
+        back.material.needsUpdate = true;
+    }
+
+    if(name === 'avatar'){
+        tex.flipY = false;
+        tex.wrapS = THREE.MirroredRepeatWrapping;
+        avatar.normalMaterial.map = tex;
+        avatar.normalMaterial.needsUpdate = true;
+    }
+
+    if(name === 'avatar_n'){
+        tex.flipY = false;
+        tex.wrapS = THREE.MirroredRepeatWrapping;
+        avatar.normalMaterial.normalMap = tex;
+        avatar.normalMaterial.needsUpdate = true;
+    }
+
+    if(name === 'eye'){ 
+        avatar.eyeMaterial.map = tex;
+        avatar.eyeMaterial.needsUpdate = true;
+    }
+
+    if(name === 'eye_n'){ 
+        avatar.eyeMaterial.normalMap = tex;
+        avatar.eyeMaterial.needsUpdate = true;
+    }
+
+    if(name === 'red'){ 
+        tex.mapping = THREE.SphericalReflectionMapping;
+        avatar.normalMaterial.envMap = tex;
+        avatar.normalMaterial.needsUpdate = true;
+        avatar.eyeMaterial.envMap = tex;
+        avatar.eyeMaterial.needsUpdate = true;
+    }
+
+};
 
 function reversUV( geometry ){
 
@@ -474,7 +550,7 @@ function reversUV( geometry ){
     while( i-- ) uv[i*2]*=-1;
     geometry.attributes.uv.needsUpdate = true;
 
-}
+};
 
 function switchGender(){
 
@@ -490,7 +566,7 @@ function helperVisibility(){
 
 function heroVisibility() {
 
-    if(avatar.visible){avatar.visible=false; document.getElementById("b3").value = "show model"}
+    if(avatar.visible){ avatar.visible=false; document.getElementById("b3").value = "show model"}
     else{ avatar.visible=true; document.getElementById("b3").value = "hide model";}
 
 };

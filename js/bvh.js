@@ -694,11 +694,7 @@ BVH.Interface.prototype = {
     },
     tDown:function(e){
         this.down = true;
-        //this.frame = Math.floor((e.clientX-20)*this.ratio);
-        //this.parent.gotoFrame(this.frame);
-
-        //console.log(this.frame)
-
+        this.tMove(e);
     },
     tMove:function(e){
         if(this.down){

@@ -2,7 +2,8 @@ THREE.Avatar = function () {
 
     this.gender = "woman";
 
-    //THREE.SkinnedMesh.call( this );
+    this.isAnimation = true;
+    this.speed = 0.5;
 
     this.type = 'Avatar';
     this.isReady = false;
@@ -11,47 +12,144 @@ THREE.Avatar = function () {
 
 };
 
-
-THREE.Avatar.prototype = Object.create( THREE.SkinnedMesh.prototype );
+//THREE.Avatar.prototype = Object.create( THREE.SkinnedMesh.prototype );
+THREE.Avatar.prototype = Object.create( THREE.SEA3D.SkinnedMesh.prototype );
 THREE.Avatar.prototype.constructor = THREE.Avatar;
 
 THREE.Avatar.prototype.init = function ( Geos, Bvh ){
 
-    this.material = new THREE.MeshStandardMaterial({ skinning: true,  morphTargets:true, metalness:0.4, roughness:0.5, normalScale:new THREE.Vector2( 0.5, 0.5 ) });
+    this.normalMaterial = new THREE.MeshStandardMaterial({ skinning: true,  morphTargets:false, metalness:0.4, roughness:0.5, normalScale:new THREE.Vector2( 0.5, 0.5 ) });
+
+    this.material = this.normalMaterial;
 
     this.geos = Geos;
     this.bvh = Bvh;
 
+    //console.log(this.geos['woman'].animations );
+
     this.decal = new THREE.Vector3(0,-11.5,0);
 
-    THREE.SkinnedMesh.call( this, this.geos[this.gender], this.material );
+    var useVertexTexture = false;
+
+    //THREE.SkinnedMesh.call( this, this.geos[this.gender], this.material, useVertexTexture );
+    THREE.SEA3D.SkinnedMesh.call( this, this.geos[this.gender], this.material, useVertexTexture );
+
+    this.morphologia();
+
+    this.initAnimation();
 
     this.castShadow = true;
     this.receiveShadow = true;
     this.preservesBoneSize = true;
 
-    for(var i=0; i<this.skeleton.bones.length; i++){
-        this.skeleton.bones[i].matrixAutoUpdate = false;
-    }
+    this.position.y = this.geometry.boundingBox.max.y;
 
     this.addEyes();
 
     this.isReady = true;
 
+    this.switchToAnimation();
+
+    
+
 };
+
+//-----------------------
+//  for SSAO
+//-----------------------
+
+THREE.Avatar.prototype.initDepth = function (){
+
+    var depthShader = THREE.ShaderLib[ "depthRGBA" ];
+    var depthUniforms = THREE.UniformsUtils.clone( depthShader.uniforms );
+
+    this.depthMaterial = new THREE.ShaderMaterial( { 
+        fragmentShader: depthShader.fragmentShader, vertexShader:depthShader.vertexShader,
+        uniforms: depthUniforms, blending: THREE.NoBlending, 
+        skinning: true, morphTargets:false 
+    });
+
+};
+
+THREE.Avatar.prototype.depthPass = function (){
+
+    this.eyeGroup.visible = false;
+    this.material = this.depthMaterial;
+
+};
+
+THREE.Avatar.prototype.normalPass = function (){
+
+    this.eyeGroup.visible = true;
+    this.material = this.normalMaterial;
+
+};
+
+
+//-----------------------
+//  MORPHOLOGIA
+//-----------------------
+
+THREE.Avatar.prototype.morphologia = function (){
+
+    var i = this.skeleton.bones.length, bone, name;
+
+    if(this.gender === 'woman'){
+
+        while(i--){
+
+            bone = this.skeleton.bones[i];
+            name = bone.name;
+
+            bone.scalling = null;
+
+            if(name === 'LeftCollar' || name === 'RightCollar') bone.scalling = new THREE.Vector3( 0.75, 1, 1 );
+            if(name === 'LeftUpArm'  || name === 'RightUpArm' ) bone.scalling = new THREE.Vector3( 0.90,1.15,1.15 );
+            if(name === 'LeftLowArm' || name === 'RightLowArm') bone.scalling = new THREE.Vector3( 0.90,1.2,1.2 );
+
+        }
+
+    }else{
+
+        while(i--){
+
+            bone = this.skeleton.bones[i];
+            name = bone.name;
+
+            bone.scalling = null;
+
+            if(name==='Chest' ) bone.scalling = new THREE.Vector3(1,1.1,1);
+            if(name==='Spine1') bone.scalling = new THREE.Vector3(1,1.15,1);
+            //if(name==='LeftCollar' || name==='RightCollar') bone.scalling.set( 1,1,1 );
+            if(name==='LeftUpArm'  || name==='RightUpArm' ) bone.scalling = new THREE.Vector3( 0.90,1.2,1.2 );
+            if(name==='LeftLowArm' || name==='RightLowArm') bone.scalling = new THREE.Vector3( 0.90,1.25,1.25 );
+
+            if(name==='LeftUpLeg'  || name==='RightUpLeg' ) bone.scalling = new THREE.Vector3( 1,1.2,1.2 );
+            if(name==='LeftLowLeg' || name==='RightLowLeg') bone.scalling = new THREE.Vector3( 1,1.1,1.1 );
+
+        }
+
+    }
+ 
+};
+
+
+//-----------------------
+//  EYE control
+//-----------------------
 
 THREE.Avatar.prototype.addEyes = function (){
 
     this.eyeMaterial = new THREE.MeshStandardMaterial({ metalness:0.7, roughness:0.3, normalScale:new THREE.Vector2( 1.5, 1.5 ) });
 
-    var eyeGroup = new THREE.Group();
+    this.eyeGroup = new THREE.Group();
     var eyeL = new THREE.Mesh( this.geos['eye'], this.eyeMaterial );
     var eyeR = new THREE.Mesh( this.geos['eye'], this.eyeMaterial );
     eyeL.position.y = -1.39;
     eyeR.position.y = 1.39;
-    eyeGroup.position.set(-3.57, 0, -3.1895);
-    eyeGroup.add( eyeL );
-    eyeGroup.add( eyeR );
+    this.eyeGroup.position.set(-3.57, 0, -3.1895);
+    this.eyeGroup.add( eyeL );
+    this.eyeGroup.add( eyeR );
 
     this.target = new THREE.Vector3();//Group();
     this.target.z = -40;// distance
@@ -62,7 +160,12 @@ THREE.Avatar.prototype.addEyes = function (){
     eyeR.lookAt( this.target );
 
     for(var i=0; i<this.skeleton.bones.length; i++){
-        if(this.skeleton.bones[i].name === "Head") this.skeleton.bones[i].add(eyeGroup);
+        if(this.skeleton.bones[i].name === "Head"){ 
+            this.skeleton.bones[i].add( this.eyeGroup );
+            
+            //this.skeleton.bones[i].scale.y = 1.2;
+            //console.log(this.skeleton.bones[i].scale)
+        }
     }
 
 };
@@ -72,8 +175,29 @@ THREE.Avatar.prototype.switchGender = function (){
     if(this.gender == 'woman') this.gender = 'man';
     else this.gender = 'woman';
 
+    this.stop();
+
     this.geometry = this.geos[this.gender];
-    this.updateSkin();
+
+    this.morphologia();
+
+    this.initAnimation();
+
+    this.updateBones();
+
+};
+
+THREE.Avatar.prototype.initAnimation = function (){
+
+    if ( this.geometry.animations ) {
+
+        this.setAnimations( this.geometry.animations );
+
+    }
+
+    //console.log(this.animations['idle']);
+
+    this.play("walk", 0);//( name, crossfade, offset )
 
 };
 
@@ -91,7 +215,28 @@ THREE.Avatar.prototype.removeHelper = function (){
 
 };
 
-THREE.Avatar.prototype.updateSkin = function (){
+THREE.Avatar.prototype.switchToAnimation = function ( b ){
+
+    this.isAnimation = b === undefined ? false : b;
+
+    var i = this.skeleton.bones.length;
+    while(i--) this.skeleton.bones[i].matrixAutoUpdate = this.isAnimation;
+
+};
+
+THREE.Avatar.prototype.updateAnimation = function (delta){
+
+    if( !this.isAnimation ) return;
+
+    // Update SEA3D Animations
+    THREE.SEA3D.AnimationHandler.update( delta * this.speed );
+
+    // Update Three.JS Animations
+    THREE.AnimationHandler.update( delta * this.speed );
+
+};
+
+THREE.Avatar.prototype.updateBones = function (){
 
     if(!this.isReady) return;
 
@@ -110,9 +255,7 @@ THREE.Avatar.prototype.updateSkin = function (){
 
     var scaleMtx = new THREE.Matrix4();
 
-    //var i = len;
-    //while(i--){
-    for(var i=0; i<len; i++){
+    for(var i=0; i < len; i++){
         bone = bones[i];
         name = bone.name;
         worldMtx = bone.parent.matrixWorld || matrixWorldInv;
@@ -143,38 +286,16 @@ THREE.Avatar.prototype.updateSkin = function (){
             globalMtx.multiplyMatrices( worldMtx, localMtx );
 
             // PRESERVES BONE SIZE
-            if( this.preservesBoneSize ){
-                if( name !== 'Hips' ){
-                    tmpMtx.identity().getInverse( parentMtx );
-                    scaleMtx.identity();
-                    if( this.gender == 'woman' ){
-                        if(name==='LeftCollar' || name==='RightCollar') scaleMtx.scale( new THREE.Vector3(0.75,1,1));
-                        if(name==='LeftUpArm'  || name==='RightUpArm' ) scaleMtx.scale( new THREE.Vector3(0.90,1.18,1.18));
-                        if(name==='LeftLowArm' || name==='RightLowArm') scaleMtx.scale( new THREE.Vector3(0.90,1.2,1.2));
-                    } else {
-                        if(name==='Chest' ) scaleMtx.scale(new THREE.Vector3(1,1.1,1));
-                        if(name==='Spine1') scaleMtx.scale(new THREE.Vector3(1,1.15,1));
-                        //if(name==='LeftCollar' || name==='RightCollar') scaleMtx.scale(new THREE.Vector3(0.75,1,1));
-                        if(name==='LeftUpLeg'  || name==='RightUpLeg' ) scaleMtx.scale( new THREE.Vector3(1,1.2,1.2) );
-                        if(name==='LeftLowLeg' || name==='RightLowLeg') scaleMtx.scale( new THREE.Vector3(1,1.1,1.1) );
-                        if(name==='LeftUpArm'  || name==='RightUpArm' ) scaleMtx.scale( new THREE.Vector3(0.90,1.2,1.2) );
-                        if(name==='LeftLowArm' || name==='RightLowArm') scaleMtx.scale( new THREE.Vector3(0.90,1.25,1.25) );
-                    }
-
-                    tmpPos.setFromMatrixPosition( bone.matrix );
-                    localMtx.multiplyMatrices( tmpMtx, globalMtx );
-                    localMtx.multiplyMatrices( localMtx, scaleMtx );
-                    localMtx.setPosition( tmpPos );
-
-                    globalMtx.multiplyMatrices( parentMtx, localMtx );
-                } else { // hips scale
-                    scaleMtx.identity();
-                    scaleMtx.scale( new THREE.Vector3(1,1,1) );
-                    globalMtx.multiplyMatrices( globalMtx, scaleMtx );
-                }
-
-
+            if( this.preservesBoneSize && name !== 'Hips' ){
+             
+                tmpMtx.identity().getInverse( parentMtx );
+                tmpPos.setFromMatrixPosition( bone.matrix );
+                localMtx.multiplyMatrices( tmpMtx, globalMtx );
+                localMtx.setPosition( tmpPos );
+                globalMtx.multiplyMatrices( parentMtx, localMtx );
+                
             }
+
         } else { // other Bone
             globalMtx.multiplyMatrices( parentMtx, bone.matrix );
         }
@@ -189,7 +310,41 @@ THREE.Avatar.prototype.updateSkin = function (){
         //if(node = nodes[name] )updatePhysicsBone(name, bone.matrix.clone());
     }
 
-    if(this.helper) this.helper.update();
+    if( this.helper ) this.helper.update();
        
 };
 
+//-----------------------
+// force local scalling
+//-----------------------
+
+THREE.Skeleton.prototype.update = ( function () {
+
+    var offsetMatrix = new THREE.Matrix4();
+
+    return function update() {
+
+        // flatten bone matrices to array
+
+        for ( var b = 0, bl = this.bones.length; b < bl; b ++ ) {
+
+            // compute the offset between the current and the original transform
+
+            var matrix = this.bones[ b ] ? this.bones[ b ].matrixWorld : this.identityMatrix;
+
+            if( this.bones[ b ].scalling ) matrix.scale( this.bones[ b ].scalling );
+            
+            offsetMatrix.multiplyMatrices( matrix, this.boneInverses[ b ] );
+            offsetMatrix.flattenToArrayOffset( this.boneMatrices, b * 16 );
+
+        }
+
+        if ( this.useVertexTexture ) {
+
+            this.boneTexture.needsUpdate = true;
+
+        }
+
+    };
+
+} )();
