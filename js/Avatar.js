@@ -34,7 +34,7 @@ THREE.Avatar.prototype.init = function ( Geos, Bvh ){
     //THREE.SkinnedMesh.call( this, this.geos[this.gender], this.material, useVertexTexture );
     THREE.SEA3D.SkinnedMesh.call( this, this.geos[this.gender], this.material, useVertexTexture );
 
-    this.morphologia();
+    this.morphology();
 
     this.initAnimation();
 
@@ -87,10 +87,10 @@ THREE.Avatar.prototype.normalPass = function (){
 
 
 //-----------------------
-//  MORPHOLOGIA
+//  Morphology 
 //-----------------------
 
-THREE.Avatar.prototype.morphologia = function (){
+THREE.Avatar.prototype.morphology = function (){
 
     var i = this.skeleton.bones.length, bone, name;
 
@@ -104,8 +104,8 @@ THREE.Avatar.prototype.morphologia = function (){
             bone.scalling = null;
 
             if(name === 'LeftCollar' || name === 'RightCollar') bone.scalling = new THREE.Vector3( 0.75, 1, 1 );
-            if(name === 'LeftUpArm'  || name === 'RightUpArm' ) bone.scalling = new THREE.Vector3( 0.90,1.15,1.15 );
-            if(name === 'LeftLowArm' || name === 'RightLowArm') bone.scalling = new THREE.Vector3( 0.90,1.2,1.2 );
+            if(name === 'LeftUpArm'  || name === 'RightUpArm' ) bone.scalling = new THREE.Vector3( 0.93, 1.05, 1.05 );
+            if(name === 'LeftLowArm' || name === 'RightLowArm') bone.scalling = new THREE.Vector3( 0.93, 1.05, 1.05 );
 
         }
 
@@ -121,8 +121,8 @@ THREE.Avatar.prototype.morphologia = function (){
             if(name==='Chest' ) bone.scalling = new THREE.Vector3(1,1.1,1);
             if(name==='Spine1') bone.scalling = new THREE.Vector3(1,1.15,1);
             //if(name==='LeftCollar' || name==='RightCollar') bone.scalling.set( 1,1,1 );
-            if(name==='LeftUpArm'  || name==='RightUpArm' ) bone.scalling = new THREE.Vector3( 0.90,1.2,1.2 );
-            if(name==='LeftLowArm' || name==='RightLowArm') bone.scalling = new THREE.Vector3( 0.90,1.25,1.25 );
+            if(name==='LeftUpArm'  || name==='RightUpArm' ) bone.scalling = new THREE.Vector3( 0.93,1.2,1.2 );
+            if(name==='LeftLowArm' || name==='RightLowArm') bone.scalling = new THREE.Vector3( 0.93,1.25,1.25 );
 
             if(name==='LeftUpLeg'  || name==='RightUpLeg' ) bone.scalling = new THREE.Vector3( 1,1.2,1.2 );
             if(name==='LeftLowLeg' || name==='RightLowLeg') bone.scalling = new THREE.Vector3( 1,1.1,1.1 );
@@ -179,7 +179,7 @@ THREE.Avatar.prototype.switchGender = function (){
 
     this.geometry = this.geos[this.gender];
 
-    this.morphologia();
+    this.morphology();
 
     this.initAnimation();
 
