@@ -1,5 +1,3 @@
-'use strict';
-
 THREE.Avatar = function () {
 
     this.gender = "woman";
@@ -13,6 +11,7 @@ THREE.Avatar = function () {
     this.baseMatrix = [];
     this.skeletonCopy = null;
 
+
     this.helper = null;
 
 };
@@ -23,9 +22,7 @@ THREE.Avatar.prototype.constructor = THREE.Avatar;
 
 THREE.Avatar.prototype.init = function ( Geos, Bvh ){
 
-    //this.normalMaterial = new THREE.MeshStandardMaterial({ skinning: true,  morphTargets:false, metalness:0.4, roughness:0.5, normalScale:new THREE.Vector2( 0.5, 0.5 ) });//premultipliedAlpha: true
-    if(isWithMap) this.normalMaterial = new THREE.MeshStandardMaterial({ envMap:textures[0], map:textures[2], normalMap:textures[3], aoMap:textures[6], aoMapIntensity:0.5, skinning: true,  morphTargets:false, metalness:0.4, roughness:0.5, normalScale:new THREE.Vector2( 0.5, 0.5 ) });
-    else this.normalMaterial = new THREE.MeshStandardMaterial({ skinning: true,  morphTargets:false, metalness:0.4, roughness:0.5 });
+    this.normalMaterial = new THREE.MeshStandardMaterial({ skinning: true,  morphTargets:false, metalness:0.4, roughness:0.5, normalScale:new THREE.Vector2( 0.5, 0.5 ) });
 
     this.material = this.normalMaterial;
 
@@ -66,10 +63,8 @@ THREE.Avatar.prototype.init = function ( Geos, Bvh ){
 
     this.switchToAnimation();
 
-};
+    
 
-THREE.Avatar.prototype.setBVH = function ( BVH ){
-    this.bvh = BVH;
 };
 
 //-----------------------
@@ -151,16 +146,15 @@ THREE.Avatar.prototype.morphology = function (){
 
             bone.scalling = null;
 
-            if(name==='LeftBreast' || name==='RightBreast') bone.scalling = new THREE.Vector3( 1.1,1,1 );
-            if(name === 'LeftCollar' || name === 'RightCollar') bone.scalling = new THREE.Vector3( 0.8, 1, 1 );
-            if(name === 'LeftUpArm'  || name === 'RightUpArm' ) bone.scalling = new THREE.Vector3( 0.93, 1, 1 );
-            if(name === 'LeftLowArm' || name === 'RightLowArm') bone.scalling = new THREE.Vector3( 0.93, 1, 1 );
+            if(name === 'LeftCollar' || name === 'RightCollar') bone.scalling = new THREE.Vector3( 0.75, 1, 1 );
+            if(name === 'LeftUpArm'  || name === 'RightUpArm' ) bone.scalling = new THREE.Vector3( 0.93, 1.05, 1.05 );
+            if(name === 'LeftLowArm' || name === 'RightLowArm') bone.scalling = new THREE.Vector3( 2.93, 1.05, 1.05 );
             // hand
-            if(name === 'RightHand' || name === 'LeftHand') bone.scalling = new THREE.Vector3( 0.87, 0.9, 0.9 );
             if(name.substring(0,2) === 'lf' || name.substring(0,2) === 'rf'){ 
-                bone.scalling = new THREE.Vector3( 0.94, 1, 1 );
+               // if(name.substring(5) === '0') { bone.translateX(-1); console.log(bone.position);}//bone.position.x -= 20;//console.log('first finger')
+                bone.scalling = new THREE.Vector3( 0.85, 1, 1 );
             }
-            
+            if(name === 'RightHand' || name === 'LeftHand') bone.scalling = new THREE.Vector3( 0.85, 0.85, 0.85 );
 
             //if(bone.scalling) bone.scale.copy(bone.scalling)
 
@@ -189,20 +183,12 @@ THREE.Avatar.prototype.morphology = function (){
 
             if(name==='Chest' ) bone.scalling = new THREE.Vector3(1,1.1,1);
             if(name==='Spine1') bone.scalling = new THREE.Vector3(1,1.15,1);
-
             if(name==='LeftCollar' || name==='RightCollar') bone.scalling = new THREE.Vector3( 1,1,1 );
             if(name==='LeftUpArm'  || name==='RightUpArm' ) bone.scalling = new THREE.Vector3( 0.93,1.2,1.2 );
             if(name==='LeftLowArm' || name==='RightLowArm') bone.scalling = new THREE.Vector3( 0.93,1.25,1.25 );
 
             if(name==='LeftUpLeg'  || name==='RightUpLeg' ) bone.scalling = new THREE.Vector3( 1,1.2,1.2 );
             if(name==='LeftLowLeg' || name==='RightLowLeg') bone.scalling = new THREE.Vector3( 1,1.1,1.1 );
-
-            // hand
-            if(name === 'RightHand' || name === 'LeftHand') bone.scalling = new THREE.Vector3( 1, 1, 1 );
-            if(name.substring(0,2) === 'lf' || name.substring(0,2) === 'rf'){ 
-                bone.scalling = new THREE.Vector3( 1, 1, 1 );
-            }
-            
 
             //if( bone.scalling ) bone.matrixWorld.scale( bone.scalling );
 
@@ -222,8 +208,7 @@ THREE.Avatar.prototype.morphology = function (){
 
 THREE.Avatar.prototype.addEyes = function (){
 
-    if(isWithMap) this.eyeMaterial = new THREE.MeshStandardMaterial({ envMap:textures[0], map:textures[4], normalMap:textures[5], metalness:0.7, roughness:0.3, normalScale:new THREE.Vector2( 1.5, 1.5 ) });
-    else this.eyeMaterial = new THREE.MeshStandardMaterial({ metalness:0.7, roughness:0.3 });
+    this.eyeMaterial = new THREE.MeshStandardMaterial({ metalness:0.7, roughness:0.3, normalScale:new THREE.Vector2( 1.5, 1.5 ) });
 
     this.eyeGroup = new THREE.Group();
     var eyeL = new THREE.Mesh( this.geos['eye'], this.eyeMaterial );
@@ -340,7 +325,6 @@ THREE.Avatar.prototype.updateBones = function (){
 
     if(!this.isReady) return;
     if(this.isAnimation) return;
-    if(!this.bvh) return;
 
     var matrixWorldInv = new THREE.Matrix4().getInverse( this.matrixWorld );
     var bone, node, name;
@@ -426,6 +410,8 @@ THREE.Avatar.prototype.updateBones = function (){
 // force local scalling
 //-----------------------
 
+
+
 THREE.Skeleton.prototype.update = ( function () {
 
     var offsetMatrix = new THREE.Matrix4();
@@ -434,33 +420,177 @@ THREE.Skeleton.prototype.update = ( function () {
 
     return function update() {
 
+        /*for ( var b = 0, bl = this.bones.length; b < bl; b ++ ) {
+            if( this.bones[ b ].scalling ){ 
+               // var tmp = new THREE.Matrix4().makeScale( this.bones[ b ].scalling.x, this.bones[ b ].scalling.y, this.bones[ b ].scalling.z )
+               // matrix.multiply( tmp );
+               this.bones[ b ].matrix.scale( this.bones[ b ].scalling );
+
+               // matrix.makeScale( this.bones[ b ].scalling.x, this.bones[ b ].scalling.y, this.bones[ b ].scalling.z )
+            }
+        }*/
+
         // flatten bone matrices to array
 
         for ( var b = 0, bl = this.bones.length; b < bl; b ++ ) {
 
             // compute the offset between the current and the original transform
 
-            var matrix = this.bones[ b ] ? this.bones[ b ].matrixWorld: this.identityMatrix;
+            if( this.bones[ b ].parent ){ 
+
+                //if ( this.bones[ b ].parent === null ) {
+
+               // this.bones[ b ].matrixWorld.copy( this.matrix );
+
+            //} else {
+
+              //  this.bones[ b ].matrixWorld.multiplyMatrices( this.bones[ b ].parent.matrixWorld, this.bones[ b ].matrix );
+
+           // }
+
+                //this.bones[ b ].matrixWorld.multiplyMatrices( this.bones[ b ].parent.matrixWorld, this.bones[ b ].matrix );
+               // this.bones[ b ].matrixWorld.scale( new THREE.Vector3(1,1,1).sub(this.bones[ b ].parent.scalling) );
+                //this.bones[ b ].matrixWorld.scale( this.bones[ b ].parent.scalling.clone().sub( new THREE.Vector3(1,1,1) ) );
+                //this.bones[ b ].updateMatrixWorld();
+                //this.bones[ b ].updateMatrix();
+            }
 
             if( this.bones[ b ].scalling ){ 
+             // var tmp = new THREE.Matrix4().scale( this.bones[ b ].scalling );
+            //  this.bones[ b ].matrixWorld.scale( this.bones[ b ].scalling );
+             // this.bones[ b ].matrix.scale( this.bones[ b ].scalling );
+               //this.bones[ b ].updateMatrixWorld(true);
 
-                matrix.scale( this.bones[ b ].scalling );
+              //this.bones[ b ].matrix.scale.copy( this.bones[ b ].scalling );
+            // this.bones[ b ].matrix.scale( this.bones[ b ].scalling );
+            //  this.bones[ b ].matrixWorldNeedsUpdate = true;
+             // this.bones[ b ].updateMatrix()
+             // this.bones[ b ].updateMatrixWorld(  );
+              //this.bones[ b ].updateMatrix();
+              //if(this.bones[ b ].children.length){
 
-                // update position of children
+                //var i = this.bones[ b ].children.length;
+                //while(i--) 
 
-                for ( var i = 0, l = this.bones[ b ].children.length; i < l; i ++ ) {
+                //    this.bones[ b ].children[0].updateMatrixWorld();
 
-                    scaleMatrix = matrix.clone();
-                    scaleMatrix.multiply(this.bones[ b ].children[ i ].matrix.clone() )
-                    //scaleMatrix.multiplyMatrices( matrix , this.bones[ b ].children[ i ].matrix  );
+              //}
+             // console.log(this.bones[ b ])
+             //
+                //this.boneInverses[ b ] = new THREE.Matrix4().getInverse( this.bones[ b ].matrixWorld.scale( this.bones[ b ].scalling ) );
+            }
 
-                    //scaleMatrix.multiplyMatrices( matrix.clone() , this.bones[ b ].children[ i ].matrix.clone()  );
-                    pos.setFromMatrixPosition( scaleMatrix );
-                    this.bones[ b ].children[ i ].matrixWorld.setPosition(pos);
+            var matrix = this.bones[ b ] ? this.bones[ b ].matrixWorld: this.identityMatrix;
 
+           if( this.bones[ b ].scalling ){ 
+
+               matrix.scale( this.bones[ b ].scalling );
+
+             // this.bones[ b ].matrixWorld.copy( matrix );
+        //if( bone.scalling ) bone.matrixWorld.scale( bone.scalling );
+       // this.bones[ b ].matrix.getInverse( this.bones[ b ].parent.matrixWorld );
+       // this.bones[ b ].matrix.multiply( matrix );//this.bones[ b ].matrixWorld );
+
+       // this.bones[ b ].updateMatrix();
+        //this.bones[ b ].updateMatrixWorld();
+
+             //   scaleMatrix.makeScale( this.bones[ b ].scalling.x, this.bones[ b ].scalling.y, this.bones[ b ].scalling.z );
+
+               // this.bones[ b ].scale.copy(this.bones[ b ].scalling);
+               // this.bones[ b ].updateMatrix();
+                //this.bones[ b ].matrix.scale( this.bones[ b ].scalling );
+                //this.bones[ b ].matrix.multiply( scaleMatrix );
+               // matrix.multiplyMatrices( this.bones[ b ].parent.matrixWorld, this.bones[ b ].matrix );
+
+                //if(this.bones[ b ].children[ 0 ])this.bones[ b ].children[ 0 ].updateMatrixWorld();
+
+                if(this.bones[ b ].children[ 0 ]){
+                    //scaleMatrix.getInverse( matrix );
+                    scaleMatrix.multiplyMatrices( matrix, this.bones[ b ].children[ 0 ].matrix );
+                    pos.setFromMatrixPosition( scaleMatrix ); 
+                    //this.bones[ b ].children[ 0 ].matrix.setPosition(pos);
+                    //this.bones[ b ].children[ 0 ].updateMatrix();
+                    this.bones[ b ].children[ 0 ].matrixWorld.setPosition(pos);
+                    //this.bones[ b ].children[ 0 ].updateMatrixWorld();
                 }
 
+              /*  for ( var i = 0, l = this.bones[ b ].children.length; i < l; i ++ ) {
+
+                    scaleMatrix.multiplyMatrices( matrix.clone() , this.bones[ b ].children[ i ].matrix.clone()  );
+                    pos.setFromMatrixPosition( scaleMatrix ); 
+                    //this.bones[ b ].children[ 0 ].matrix.setPosition(pos);
+                    //this.bones[ b ].children[ 0 ].updateMatrix();
+                    this.bones[ b ].children[ i ].matrixWorld.setPosition(pos);
+
+                  //  this.bones[ b ].children[ i ].updateMatrixWorld();
+
+                }*/
+
+               // var tmp = new THREE.Matrix4().makeScale( this.bones[ b ].scalling.x, this.bones[ b ].scalling.y, this.bones[ b ].scalling.z )
+              //  matrix.multiply( tmp );
+             //
+
+              //matrix.scale( this.bones[ b ].scalling );
+              //this.bones[ b ].updateMatrixWorld(true);
+            
+             // this.bones[ b ].updateMatrix()
+               
+              // if(this.bones[ b ].children)this.bones[ b ].children[ 0 ].updateMatrixWorld();
+               //this.boneInverses[ b ] = new THREE.Matrix4().getInverse( this.bones[ b ].matrixWorld.scale( this.bones[ b ].scalling ) );
+
+              // bone.matrixWorld.copy( globalMtx );
+        //if( bone.scalling ) bone.matrixWorld.scale( bone.scalling );
+       // bone.matrix.getInverse( bone.parent.matrixWorld );
+       // bone.matrix.multiply( bone.matrixWorld );
+
+               // matrix.makeScale( this.bones[ b ].scalling.x, this.bones[ b ].scalling.y, this.bones[ b ].scalling.z )
             }
+
+            if( this.bones[ b ].parent.scalling ){ 
+
+                //matrix.multiplyMatrices( this.bones[ b ].parent.matrixWorld, this.bones[ b ].matrix );
+
+
+
+                 //this.bones[ b ].updateMatrix()
+
+                // this.bones[ b ].updateMatrixWorld();
+
+             //   this.bones[ b ].updateMatrixWorld();
+
+                //this.bones[ b ].updateMatrixWorld();
+
+                //this.boneInverses[ b ] = new THREE.Matrix4().getInverse( this.bones[ b ].parent.matrixWorld );
+
+                //new THREE.Matrix4().getInverse( this.bones[ b ].parent.matrixWorld );
+              //  matrix.multiply( new THREE.Matrix4().getInverse( this.bones[ b ].parent.matrixWorld ) );
+                // var tmpPos = new THREE.Vector3().setFromMatrixPosition( matrix );
+                 //var tmpQuat = new THREE.Quaternion().setFromRotationMatrix( matrix );
+
+                 //matrix.identity();
+                 //matrix.setPosition( tmpPos );
+                 /*matrix.scale( this.bones[ b ].scalling );*/
+                 //matrix.makeRotationFromQuaternion( tmpQuat );
+
+                // matrix.identity();
+               // matrix.makeRotationFromQuaternion( tmpQuat );
+               //matrix.multiply( this.bones[ b ].parent.matrixWorld );
+               // matrix.setPosition( tmpPos );
+               // matrix.scale( this.bones[ b ].parent.scalling )
+               // matrix.elements[0] =1;
+               // matrix.elements[5] =1;
+               // matrix.elements[10] =1;
+                //tmpPos.addScaledVector( this.bones[ b ].parent.scalling );
+               // this.boneInverses[ b ].scale( this.bones[ b ].parent.scalling );
+
+                //matrix.setPosition( tmpPos );
+
+                //matrix.makeScale( this.bones[ b ].parent.scalling.x, this.bones[ b ].parent.scalling.y, this.bones[ b ].parent.scalling.z )
+
+                //if( bone.scalling ) matrix.scale( bone.scalling )
+            } 
+
+
             
             offsetMatrix.multiplyMatrices( matrix, this.boneInverses[ b ] );
             offsetMatrix.flattenToArrayOffset( this.boneMatrices, b * 16 );
