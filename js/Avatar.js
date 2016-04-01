@@ -72,6 +72,13 @@ THREE.Avatar.prototype.setBVH = function ( BVH ){
     this.bvh = BVH;
 };
 
+THREE.Avatar.prototype.materialUpdate = function (){
+     this.normalMaterial.needsUpdate = true;
+     this.eyeMaterial.needsUpdate = true;
+     if(this.depthMaterial)this.depthMaterial.needsUpdate = true;
+};
+
+
 //-----------------------
 //  for SSAO
 //-----------------------

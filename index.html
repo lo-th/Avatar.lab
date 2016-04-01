@@ -211,6 +211,14 @@ function init3D() {
 
 };
 
+function setToneMap(v){
+    var tm = { Reinhard:THREE.ReinhardToneMapping, Cineon:THREE.CineonToneMapping,  Linear:THREE.LinearToneMapping, None:THREE.NoToneMapping, Uncharted2:THREE.Uncharted2ToneMapping };
+    renderer.toneMapping = tm[v];
+    if(avatar) avatar.materialUpdate();
+    back.material.needsUpdate = true;
+    ground.material.needsUpdate = true;
+}
+
 function initModel(){
 
     debugTell( 'end Loading texture' );
