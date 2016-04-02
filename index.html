@@ -21,7 +21,7 @@ canvas { position: absolute; top:0; left:0; pointer-events:auto; width:100%; hei
 #out2 { position:absolute; bottom:50px; right:6px; text-align: right; pointer-events:none; line-height: 14px; }
 #out1 { position:absolute; bottom:50px; left:6px; text-align: left; pointer-events:none; line-height: 14px; }
 
-#debug { position:absolute; top:6px; left:100px; text-align:left; pointer-events:none;}
+#debug { position:absolute; bottom:70px; left:100px; text-align:left; pointer-events:none;}
 #b1 { position:absolute; top:70px; left:6px; width:50px; height:20px; border:1px solid #ccc; cursor:pointer; }
 #b2 { position:absolute; top:70px; left:66px; width:50px; height:20px; border:1px solid #ccc; cursor:pointer; }
 
@@ -201,7 +201,7 @@ function init3D() {
 
     stats = new Stats();
     stats.domElement.style.position = 'absolute';
-    stats.domElement.style.top = '0px';
+    stats.domElement.style.bottom = '60px';
     document.body.appendChild( stats.domElement );
 
     window.addEventListener( 'resize', resize, false );
@@ -264,7 +264,7 @@ function addBack(){
 
     scene.add( back );
 
-}
+};
 
 function addGround(){
 
@@ -379,7 +379,7 @@ function initPostEffect(){
     isPostInitialised = true;
 
 
-}
+};
 
 function animate() {
 
@@ -416,7 +416,7 @@ function animate() {
     }
     
     stats.update();
-}
+};
 
 function resize( event ) {
     vsize.x = window.innerWidth;
