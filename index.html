@@ -476,7 +476,8 @@ function loadImages( urls, callback ){
 
         tx.needsUpdate = true;
 
-        textures.push( tx );
+        if(name === env) textures[0] = tx;
+        else textures.push( tx );
 
         urls.shift();
         if( urls.length ) loadImages( urls, callback );
@@ -488,6 +489,28 @@ function loadImages( urls, callback ){
 
 };
 
+function switchEnv(n){
+    env = n;
+    loadImages(['spherical/'+env+'.jpg'], applyEnv );
+};
+
+function applyEnv(){
+
+    avatar.setEnvMap( textures[0] );
+
+};
+
+function setMetalness(v){
+
+    avatar.setMetalness( v );
+
+};
+
+function setRoughness(v){
+
+    avatar.setRoughness( v );
+
+};
 
 //===============================================
 //  INIT BVH

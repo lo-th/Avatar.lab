@@ -78,6 +78,23 @@ THREE.Avatar.prototype.materialUpdate = function (){
      if(this.depthMaterial)this.depthMaterial.needsUpdate = true;
 };
 
+THREE.Avatar.prototype.setEnvMap = function ( tx ){
+    this.normalMaterial.envMap = tx;
+     this.eyeMaterial.envMap = tx;
+
+     this.normalMaterial.needsUpdate = true;
+     this.eyeMaterial.needsUpdate = true;
+};
+
+THREE.Avatar.prototype.setMetalness = function ( v ){
+    this.normalMaterial.metalness = v;
+    this.eyeMaterial.metalness = v;
+};
+
+THREE.Avatar.prototype.setRoughness = function ( v ){
+    this.normalMaterial.roughness = v;
+    this.eyeMaterial.roughness = v;
+};
 
 //-----------------------
 //  for SSAO
