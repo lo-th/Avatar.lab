@@ -46,6 +46,8 @@ var Gui = ( function () {
 
         gr0.add('bool', { name:'PostEffect', p:70, h:20, value:false } ).onChange( function(v){ postEffect(); } );
         gr0.add('bool', { name:'Shadow', p:70, h:20, value:false } ).onChange( function(v){ shadow(); } );
+
+        gr0.add('slide',  { name:'bg alpha',  min:0, max:1, value:0.4, precision:2, fontColor:'#D4B87B' }).onChange( function(v){back.material.opacity = v;} );
     
 
         gr0.add('list',   { name:'ToneMap',  list:['None', 'Linear', 'Reinhard', 'Cineon', 'Uncharted2'], height:30, value:'Uncharted2'}).onChange( function(v){ setToneMap(v);  } );
@@ -56,6 +58,9 @@ var Gui = ( function () {
 
         gr0.add('slide',  { name:'metalness',  min:0, max:1, value:0.4, precision:2, fontColor:'#D4B87B' }).onChange( setMetalness );
         gr0.add('slide',  { name:'roughness',  min:0, max:1, value:0.5, precision:2, fontColor:'#D4B87B' }).onChange( setRoughness );
+
+
+
 
         gr0.open();
 

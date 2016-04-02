@@ -140,7 +140,7 @@ function init3D() {
     renderer = new THREE.WebGLRenderer({ canvas:canvas, antialias: true });// , logarithmicDepthBuffer: false });
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize( vsize.x, vsize.y );
-    renderer.setClearColor( 0x888888, 1 );
+    //renderer.setClearColor( 0x888888, 1 );
 
     renderer.gammaInput = true;
     renderer.gammaOutput = true;
@@ -257,7 +257,7 @@ function shadow(){
 
 function addBack(){
 
-    back = new THREE.Mesh( new THREE.IcosahedronGeometry(300,3), new THREE.MeshBasicMaterial( { map:textures[1], side:THREE.BackSide, depthWrite: false, depthTest: false }  ));
+    back = new THREE.Mesh( new THREE.IcosahedronGeometry(300,3), new THREE.MeshBasicMaterial( { map:textures[1], side:THREE.BackSide, depthWrite: false,  transparent: true, opacity:0.4 }  ));
 
     back.castShadow = false;
     back.receiveShadow = false;
