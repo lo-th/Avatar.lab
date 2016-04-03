@@ -5,13 +5,14 @@ THREE.Avatar = function () {
     this.gender = "woman";
 
     this.isAnimation = true;
+    this.isBvh = false;
     this.speed = 0.5;
 
     this.type = 'Avatar';
     this.isReady = false;
 
-    this.baseMatrix = [];
-    this.skeletonCopy = null;
+    //this.baseMatrix = [];
+    //this.skeletonCopy = null;
 
     this.helper = null;
 
@@ -41,11 +42,11 @@ THREE.Avatar.prototype.init = function ( Geos, Bvh ){
     //THREE.SkinnedMesh.call( this, this.geos[this.gender], this.material, useVertexTexture );
     THREE.SEA3D.SkinnedMesh.call( this, this.geos[this.gender], this.material, useVertexTexture );
 
-    this.skeletonCopy = this.skeleton.clone();
+    //this.skeletonCopy = this.skeleton.clone();
 
 
-    var i = this.skeleton.bones.length;
-    while(i--) this.baseMatrix[i] = this.skeleton.bones[i].matrixWorld.clone();
+    //var i = this.skeleton.bones.length;
+    //while(i--) this.baseMatrix[i] = this.skeleton.bones[i].matrixWorld.clone();
 
     //console.log(this.baseMatrix);
 
@@ -64,7 +65,7 @@ THREE.Avatar.prototype.init = function ( Geos, Bvh ){
 
     this.isReady = true;
 
-    this.switchToAnimation();
+    //this.switchToAnimation();
 
 };
 
@@ -319,7 +320,8 @@ THREE.Avatar.prototype.initAnimation = function (){
 
     //console.log(this.animations['walk']);
 
-    this.play("walk", 0);//( name, crossfade, offset )
+    //this.play("walk", 0);//( name, crossfade, offset )
+    this.play("idle", 0);
 
 };
 
@@ -337,14 +339,66 @@ THREE.Avatar.prototype.removeHelper = function (){
 
 };
 
-THREE.Avatar.prototype.switchToAnimation = function ( b ){
+THREE.Avatar.prototype.reset = function (){
+
+    this.isAnimation = false;
+    this.isBvh = false;
+
+    var i = this.skeleton.bones.length;
+    while(i--) this.skeleton.bones[i].matrixAutoUpdate = true;
+
+    
+    this.play("base", 0);
+    THREE.SEA3D.AnimationHandler.update( 0 );
+    THREE.AnimationHandler.update( 0 );
+
+    this.stop();
+
+   /* var i = this.skeleton.bones.length;
+    while(i--){ 
+        this.skeleton.bones[i].matrixAutoUpdate = this.isAnimation;
+        //this.skeleton.bones[i].matrixWorld = this.baseMatrix[i].clone();
+        this.skeleton.bones[i].matrixWorld.copy( this.baseMatrix[i] );
+    }*/
+};
+
+
+THREE.Avatar.prototype.toBvh = function (){
+
+    this.reset();
+
+    //this.isAnimation = false;
+    this.isBvh = true;
+
+    
+
+    //var i = this.skeleton.bones.length;
+    //while(i--) this.skeleton.bones[i].matrixAutoUpdate = this.isAnimation;
+
+};
+
+THREE.Avatar.prototype.toAnimation = function (){
+
+    this.reset();
+
+    this.isAnimation = true;
+    //this.isBvh = false;
+
+   // var i = this.skeleton.bones.length;
+    //while(i--) this.skeleton.bones[i].matrixAutoUpdate = this.isAnimation;
+
+    this.play("idle", 0);
+
+};
+
+/*THREE.Avatar.prototype.switchToAnimation = function ( b ){
 
     this.isAnimation = b === undefined ? false : b;
 
     var i = this.skeleton.bones.length;
     while(i--) this.skeleton.bones[i].matrixAutoUpdate = this.isAnimation;
 
-};
+};*/
 
 THREE.Avatar.prototype.updateAnimation = function (delta){
 
@@ -363,8 +417,9 @@ THREE.Avatar.prototype.updateAnimation = function (delta){
 THREE.Avatar.prototype.updateBones = function (){
 
     if(!this.isReady) return;
-    if(this.isAnimation) return;
+    if(!this.isBvh) return;
     if(!this.bvh) return;
+    if(!this.bvh.Nodes) return;
 
     var matrixWorldInv = new THREE.Matrix4().getInverse( this.matrixWorld );
     var bone, node, name;
@@ -435,8 +490,12 @@ THREE.Avatar.prototype.updateBones = function (){
         //if( bone.scalling ) bone.matrixWorld.scale( bone.scalling );
         bone.matrix.getInverse( bone.parent.matrixWorld );
         bone.matrix.multiply( bone.matrixWorld );
+
+        //bone.matrixWorldNeedsUpdate = true;
+        //bone.updateMatrixWorld();
+        //bone.updateMatrix();
         
-        //bone.matrixAutoUpdate = true;
+        if( bone.matrixAutoUpdate ) bone.matrixAutoUpdate = false;
         //
 
         //if(node = nodes[name] )updatePhysicsBone(name, bone.matrix.clone());

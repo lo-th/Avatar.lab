@@ -33,7 +33,9 @@ canvas { position: absolute; top:0; left:0; pointer-events:auto; width:100%; hei
 <script src="js/three.min.js"></script>
 <script src="js/sea3d.min.js"></script>
 <script src="js/Stats.js"></script>
-<script src="js/uil.min.js"></script>
+<!-- <script src="js/uil.min.js"></script>-->
+<script src="../uil/build/uil.min.js"></script>
+
 
 <script src="js/postprocessing/EffectComposer.js"></script>
 <script src="js/postprocessing/RenderPass.js"></script>
@@ -61,10 +63,6 @@ canvas { position: absolute; top:0; left:0; pointer-events:auto; width:100%; hei
 
 <canvas id="canvas"></canvas>
 <div id="debug"></div>
-<!--<input type="file" id="files" />-->
-<input type="submit" value="action" id="b1">
-<input type="submit" value="story" id="b2">
-
 <div id="BVHhubs"></div>
 <div id="out1"></div>
 <div id="out2"></div>
@@ -77,11 +75,12 @@ var bodyLink = "models/avatar.sea";
 var env = 'yellow';
 
 var avatar;
+var version = 'v 0.2';
 
 
 var isTJS = false;
 
-var out1, out2, debug, loadordrag, stats, clock;
+var out1, out2, debug, stats, clock;
 var vsize, camPos, mouse;
 var camera, canvas, scene, renderer, delta, center, centerLight, clock, controls, back, ground, light;
 var composer, ssaoPass, depthMaterial, depthRenderTarget;
@@ -106,8 +105,8 @@ function init() {
     out2 = document.getElementById("out2");
     debug = document.getElementById("debug");
 
-    document.getElementById("b1").addEventListener( 'click', function ( e ) { BVHanimConfig.speed=0.5; loadBVH("bvh/action.z"); }, false );
-    document.getElementById("b2").addEventListener( 'click', function ( e ) { BVHanimConfig.speed=1; loadBVH("bvh/story.z"); }, false ); 
+    //document.getElementById("b1").addEventListener( 'click', function ( e ) { BVHanimConfig.speed=0.5; loadBVH("bvh/action.z"); }, false );
+    //document.getElementById("b2").addEventListener( 'click', function ( e ) { BVHanimConfig.speed=1; loadBVH("bvh/story.z"); }, false ); 
 
     vsize = new THREE.Vector3(window.innerWidth, window.innerHeight, 0);
     vsize.z = vsize.x / vsize.y;
@@ -425,6 +424,8 @@ function resize( event ) {
     camera.aspect = vsize.z;
     camera.updateProjectionMatrix();
 
+    Gui.resize( vsize.x );
+
     // Resize renderTargets
     if( isWithPosEffect ){
         ssaoPass.uniforms[ 'size' ].value.set( vsize.x, vsize.y );
@@ -520,20 +521,20 @@ function setRoughness(v){
 function initBVH() {
 
     bvhReader = new BVH.Reader();
-    loadordrag = new LoadorDrag( function(r,fname) { bvhReader.read(r,fname); }, true );
-    loadBVH("bvh/action.z");
+    //loadordrag = new LoadorDrag( function(r,fname) { bvhReader.read(r,fname); }, true );
+    //loadBVH("bvh/action.z");
 
     avatar.setBVH( bvhReader );
 
 }
 
-function loadBVH(file) {
+/*function loadBVH(file) {
 
     bvhReader.boneSize = BVHanimConfig.boneSize;
-    bvhReader.speed = BVHanimConfig.speed;
+    //bvhReader.speed = BVHanimConfig.speed;
     bvhReader.load(file);
 
-}
+}*/
 
 function updateBVH() {
 

@@ -41,7 +41,7 @@ BVH.Reader = function(){
     this.numChannels = 0;
     this.lines = "";
     
-    this.speed = 1;
+    this.speed = 0.5;
 
     this.nodes = null;
     this.order = {};
@@ -87,6 +87,10 @@ BVH.Reader = function(){
 
 BVH.Reader.prototype = {
     constructor: BVH.Reader,
+
+    setSpeed:function(v){
+        this.speed = v;
+    },
 
     read:function(r, fname){
         this.play = false;
@@ -349,7 +353,7 @@ BVH.Reader.prototype = {
             
             s += node.name + " _ "+ i +"<br>"//+" _ "+node.parent.name +" _ "+node.children[0].name+"<br>";
         }
-        if( out2 ) out2.innerHTML = s;
+        //if( out2 ) out2.innerHTML = s;
     },
 
     reScale:function (s) {
