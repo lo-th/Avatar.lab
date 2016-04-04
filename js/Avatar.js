@@ -12,6 +12,8 @@ THREE.Avatar = function () {
     this.isReady = false;
     this.mode = 'free';
 
+    this.animationsNames = [];
+
     this.bonesNames = [];
     this.boneSelect = null;
 
@@ -410,21 +412,18 @@ THREE.Avatar.prototype.initAnimation = function (){
     if ( this.geometry.animations ) {
 
         this.setAnimations( this.geometry.animations );
-
+        
     }
 
-    /*var i = this.skeleton.bones.length, a, j
-    while(i--){
-        if(this.skeleton.bones[i].scalling){
-            a = this.animations['walk'].data.hierarchy[i];
-            j = a.keys.length;
-            while(j--){
-                a.keys[j].scl = this.skeleton.bones[i].scalling.toArray();
-            }
-        } 
-    }*/
+    this.animationsNames = [];
 
-    //console.log(this.animations['walk']);
+    var i, lng = this.animations.length, name;
+    for( i = 0; i<lng ; i++ ){
+        name = this.geometry.animations[i].name;
+        name = name.substring( name.lastIndexOf('/')+1 );
+        this.animationsNames.push(name);
+    }
+
 
     //this.play("walk", 0);//( name, crossfade, offset )
     this.play("idle", 0);
@@ -446,6 +445,8 @@ THREE.Avatar.prototype.removeHelper = function (){
 };
 
 THREE.Avatar.prototype.reset = function (){
+
+    bvhReader.interface.hide();
 
     this.mode = 'free';
 
@@ -483,6 +484,8 @@ THREE.Avatar.prototype.reset = function (){
 THREE.Avatar.prototype.toBvh = function (){
 
     this.reset();
+
+    bvhReader.interface.show();
 
     //this.morphology();
 

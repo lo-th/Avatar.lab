@@ -309,7 +309,10 @@ BVH.Reader.prototype = {
 
         this.isACCAD = false;
 
-        debugTell("BVH "+this.name+"<BR><BR>Frame "+this.numFrames+" | FrameTime "+this.secsPerFrame + "<BR>Node "+ this.nodes.length + " | Channels "+this.numChannels  );
+        debugTell("BVH "+this.name+"<BR><BR>Frame "+this.numFrames+" | FPS "+ (60/Math.round(this.secsPerFrame*60)) + "<BR>Node "+ this.nodes.length + " | Channels "+this.numChannels  );
+        
+
+        //debugTell("BVH "+this.name+"<BR><BR>Frame "+this.numFrames+" | FrameTime "+this.secsPerFrame + " | FPS "+ (60/Math.round(this.secsPerFrame*60)) + "<BR>Node "+ this.nodes.length + " | Channels "+this.numChannels  );
         this.getDistanceList();
         this.getNodeList();
         
@@ -658,16 +661,20 @@ BVH.Interface = function(p){
     this.frame = 0;
     this.ratio = 0;
 
+    this.content = document.createElement('div');
+    this.content.style.cssText = "position:absolute; bottom:0; left:0px; width:100%; height:50px; pointer-events:none; display:none; ";
+    document.body.appendChild(this.content);
+
     this.timeInfo = document.createElement('div');
-    this.timeInfo.style.cssText = "position:absolute; bottom:40px; left:20px; width:200px; height:5px; pointer-events:none;";
-    document.body.appendChild(this.timeInfo);
+    this.timeInfo.style.cssText = "position:absolute; bottom:40px; left:20px; width:200px; height:10px; pointer-events:none;";
+    this.content.appendChild(this.timeInfo);
 
     this.timeline = document.createElement('div');
-    this.timeline.style.cssText = "position:absolute; bottom:20px; left:20px; width:"+this.width+"px; height:5px; border:1px solid #888; pointer-events:auto; cursor:pointer;";
-    document.body.appendChild(this.timeline);
+    this.timeline.style.cssText = "position:absolute; bottom:20px; left:20px; width:"+this.width+"px; height:10px; border:1px solid #888; pointer-events:auto; cursor:pointer;";
+    this.content.appendChild(this.timeline);
 
     this.framer = document.createElement('div');
-    this.framer.style.cssText = "position:absolute; top:Apx; left:0px; width:1px; height:5px; background:#CCC; pointer-events:none;";
+    this.framer.style.cssText = "position:absolute; top:Apx; left:0px; width:1px; height:10px; background:#CCC; pointer-events:none;";
     this.timeline.appendChild(this.framer);
 
     var _this = this;
@@ -678,6 +685,13 @@ BVH.Interface = function(p){
 }
 
 BVH.Interface.prototype = {
+
+    show:function(){
+        this.content.style.display = 'block';
+    },
+    hide:function(){
+        this.content.style.display = 'none';
+    },
     
     setTotalFrame:function(t){
         this.totalFrame = t;
