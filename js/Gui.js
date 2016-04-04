@@ -10,6 +10,8 @@ var Gui = ( function () {
     var content = null;
     var buttons = [];
     var current = 0;
+
+    var sx, sy, sz;
     
 
 
@@ -148,14 +150,24 @@ var Gui = ( function () {
 
         
 
-        avatar.toEdit();
-
         ui.clear();
         ui.add('title', { name:'AVATAR LAB', prefix:version, h:30, r:10 } );
         ui.add('button', { name:'Man/Woman', p:4, h:30, r:10 } ).onChange( function(v){ switchGender(); } );
         ui.add('list',   { name:'Bone',  list:avatar.bonesNames, height:30, value:'Hips'}).onChange( function(v){ avatar.showBones(v); } );
 
+        sx = ui.add('slide',  { name:'scale X',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B' }).onChange( function(v){ avatar.setScalling('x', v); } );
+        sy = ui.add('slide',  { name:'scale Y',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B' }).onChange( function(v){ avatar.setScalling('y', v); } );
+        sz = ui.add('slide',  { name:'scale Z',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B' }).onChange( function(v){ avatar.setScalling('z', v); } );
+
+        avatar.toEdit();
+
     }
+
+    Gui.setScallingValue = function( v ){
+        sx.setValue(v.x);
+        sy.setValue(v.y);
+        sz.setValue(v.z);
+    };
 
     Gui.animationMenu = function(){
 
