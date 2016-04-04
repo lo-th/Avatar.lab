@@ -376,9 +376,11 @@ function animate() {
 
     requestAnimationFrame( animate );
 
+    if(bvhReader !== null) bvhReader.update();
+
     if(avatar) avatar.updateAnimation(delta);
 
-    if(bvhReader !== null) bvhReader.update();
+    
 
     if(isWithPosEffect){
         if(avatar) avatar.depthPass();
