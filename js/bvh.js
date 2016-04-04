@@ -541,7 +541,7 @@ BVH.Reader.prototype = {
 
     clearNode: function (){
         var i;
-        if(out2)out2.innerHTML = "";
+        //if(out2)out2.innerHTML = "";
 
         if(this.nodes){
             for (i=0; i<this.nodes.length; i++){

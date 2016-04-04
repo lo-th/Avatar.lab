@@ -66,6 +66,8 @@ var env = 'yellow';
 var avatar;
 var version = 'v 0.2';
 
+var key = [0,0,0,0,0,0,0,0];
+
 
 var isTJS = false;
 
@@ -139,6 +141,8 @@ function init3D() {
 
     controls = new THREE.OrbitControls( camera, canvas );
     controls.target.set(0,40,0);
+
+    controls.enableKeys = false;
     controls.update();
 
     
@@ -180,6 +184,8 @@ function init3D() {
     document.body.appendChild( stats.domElement );
 
     window.addEventListener( 'resize', resize, false );
+    window.addEventListener( 'keydown', keydown, false );
+    window.addEventListener( 'keyup', keyup, false );
 
 
     loadTextures( initModel );
@@ -558,10 +564,12 @@ function loadSea3dBody(){
         reversUV( geos['woman'] );
         reversUV( geos['man'] );
 
+        debugTell( '3D model loaded in ' + loader.file.timer.elapsedTime + "ms" );
+
         avatar.init( geos );
         scene.add( avatar );
 
-        debugTell( '3D model loaded in ' + loader.file.timer.elapsedTime + "ms" );
+        
 
         if(isWithBVH) initBVH();
 
@@ -598,6 +606,39 @@ function heroVisibility() {
     if(avatar.visible){ avatar.visible=false; }
     else{ avatar.visible=true; }
 
+};
+
+//===============================================
+//  KEYBOARD
+//===============================================
+
+
+function keydown(e) {
+    e = e || window.event;
+    switch ( e.keyCode ) {
+        case 38: case 87: case 90: key[0] = 1; break; // up, W, Z
+        case 40: case 83:          key[1] = 1; break; // down, S
+        case 37: case 65: case 81: key[2] = 1; break; // left, A, Q
+        case 39: case 68:          key[3] = 1; break; // right, D
+        case 17: case 67:          key[4] = 1; break; // ctrl, C
+        case 69:                   key[5] = 1; break; // E
+        case 32:                   key[6] = 1; break; // space
+        case 16:                   key[7] = 1; break; // shift
+    }
+};
+
+function keyup(e) {
+    e = e || window.event;
+    switch( e.keyCode ) {
+        case 38: case 87: case 90: key[0] = 0; break; // up, W, Z
+        case 40: case 83:          key[1] = 0; break; // down, S
+        case 37: case 65: case 81: key[2] = 0; break; // left, A, Q
+        case 39: case 68:          key[3] = 0; break; // right, D
+        case 17: case 67:          key[4] = 0; break; // ctrl, C
+        case 69:                   key[5] = 0; break; // E
+        case 32:                   key[6] = 0; break; // space
+        case 16:                   key[7] = 0; break; // shift
+    }
 };
 
 

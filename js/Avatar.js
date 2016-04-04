@@ -106,6 +106,8 @@ THREE.Avatar.prototype.init = function ( Geos ){
 
     this.isReady = true;
 
+    this.toPlayMode();
+
     //this.switchToAnimation();
 
 };
@@ -267,6 +269,54 @@ THREE.Avatar.prototype.normalPass = function (){
     this.material = this.normalMaterial;
 
 };
+
+
+//-----------------------
+//  Play mode
+//-----------------------
+
+THREE.Avatar.prototype.toPlayMode = function (){
+
+    this.reset();
+
+    this.mode = 'play';
+
+    this.isAnimation = true;
+
+    //console.log(this.animations)
+    //this.isBvh = false;
+
+   // var i = this.skeleton.bones.length;
+    //while(i--) this.skeleton.bones[i].matrixAutoUpdate = this.isAnimation;
+
+    this.play("idle", 0);
+
+    debugTell('use keyboard to control character')
+    //this.play( this.cAnimation, 0);
+
+};
+
+THREE.Avatar.prototype.updateKey = function (){
+    if(this.mode !== 'play') return;
+
+
+    if(!key[0] || !key[1] || !key[2] || !key[3] ) this.play("idle", 0.5);
+
+    if(key[0]) {this.animations.walk.timeScale = 1; this.play("walk", 0.5); }
+
+    if(key[1]) {this.animations.walk.timeScale = -1; this.play("walk", 0.5);  }
+    //else 
+
+    if(key[2]) this.play("step_left", 0.5);
+    //else 
+
+    if(key[3]) this.play("step_right", 0.5);
+
+
+
+
+    //else this.play("idle", 0.5);
+}
 
 
 //-----------------------
@@ -455,7 +505,7 @@ THREE.Avatar.prototype.removeHelper = function (){
 
 THREE.Avatar.prototype.reset = function (){
 
-    bvhReader.interface.hide();
+    if(bvhReader) bvhReader.interface.hide();
 
     this.mode = 'free';
 
@@ -549,6 +599,9 @@ THREE.Avatar.prototype.updateAnimation = function (delta){
     THREE.AnimationHandler.update( delta * this.speed );
 
     if( this.helper ) this.helper.update();
+
+
+    this.updateKey();
 
 };
 

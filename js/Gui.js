@@ -215,6 +215,8 @@ var Gui = ( function () {
 
         ui.clear();
 
+        if(avatar)avatar.toPlayMode();
+
         ui.add('title', { name:'AVATAR LAB', prefix:version, h:30, r:10 } );//.onChange( function(v){ switchGender(); } );
         ui.add('button', { name:'Man/Woman', p:4, h:30, r:10 } ).onChange( function(v){ switchGender(); } );
         ui.add('bool', { name:'Visible', p:70, h:20, value:true } ).onChange( function(v){ heroVisibility(); } );
