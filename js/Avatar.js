@@ -12,6 +12,8 @@ THREE.Avatar = function () {
     this.isReady = false;
     this.mode = 'free';
 
+    this.cAnimation = 'idle';
+
     this.animationsNames = [];
 
     this.bonesNames = [];
@@ -412,7 +414,7 @@ THREE.Avatar.prototype.initAnimation = function (){
     if ( this.geometry.animations ) {
 
         this.setAnimations( this.geometry.animations );
-        
+
     }
 
     this.animationsNames = [];
@@ -426,7 +428,14 @@ THREE.Avatar.prototype.initAnimation = function (){
 
 
     //this.play("walk", 0);//( name, crossfade, offset )
-    this.play("idle", 0);
+    this.play( this.cAnimation, 0);
+
+};
+
+THREE.Avatar.prototype.playAnimation = function ( name ){
+
+    this.cAnimation = name;
+    this.play( this.cAnimation, 0);
 
 };
 
@@ -515,7 +524,8 @@ THREE.Avatar.prototype.toAnimation = function (){
    // var i = this.skeleton.bones.length;
     //while(i--) this.skeleton.bones[i].matrixAutoUpdate = this.isAnimation;
 
-    this.play("idle", 0);
+    //this.play("idle", 0);
+    this.play( this.cAnimation, 0);
 
 };
 

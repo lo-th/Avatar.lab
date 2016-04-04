@@ -176,12 +176,12 @@ var Gui = ( function () {
         ui.clear();
 
         ui.add('title', { name:'AVATAR LAB', prefix:version, h:30, r:10 } );//.onChange( function(v){ switchGender(); } );
-        ui.add('button', { name:'Man/Woman', p:4, h:30, r:10 } ).onChange( function(v){ switchGender(); } );
+        ui.add('button', { name:'Man/Woman', p:4, h:30, r:10 } ).onChange( function(v){ avatar.switchGender(); } );
         ui.add('bool', { name:'Visible', p:70, h:20, value:true } ).onChange( function(v){ heroVisibility(); } );
        // ui.add('bool', { name:'BVH Skeleton', p:70, h:20, value:false } ).onChange( function(v){ skeletonVisibility(); } );
         ui.add('bool', { name:'Helper', p:70, h:20, value:false } ).onChange( function(v){ helperVisibility(); } );
 
-        ui.add('list',   { name:'Animation',  list:avatar.animationsNames, p:40, height:30, value:'idle'}).onChange( function(v){ avatar.play(v, 0); } );
+        ui.add('list',   { name:'Animation',  list:avatar.animationsNames, p:40, height:30, value:avatar.cAnimation}).onChange( function(v){ avatar.playAnimation(v); } );
 
     };
 
