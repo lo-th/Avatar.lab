@@ -26,6 +26,15 @@ THREE.Avatar = function () {
 
     this.helper = null;
 
+    this.isCrouch = false;
+    this.sw = false;
+
+    this.breath = 0;
+    this.breathSide = -1;
+
+    this.chest = null;
+    this.abdomen = null;
+
 };
 
 //THREE.Avatar.prototype = Object.create( THREE.SkinnedMesh.prototype );
@@ -85,6 +94,9 @@ THREE.Avatar.prototype.init = function ( Geos ){
     while(i--){ 
         this.bonesNames[i] = this.skeleton.bones[i].name;
         this.baseMatrix[i] = this.skeleton.bones[i].matrixWorld.clone();
+
+        if(this.skeleton.bones[i].name === 'Chest') this.chest = this.skeleton.bones[i];
+        if(this.skeleton.bones[i].name === 'Spine1') this.abdomen = this.skeleton.bones[i];
     }
 
     //console.log(this.baseMatrix);
@@ -296,21 +308,36 @@ THREE.Avatar.prototype.toPlayMode = function (){
 
 };
 
+THREE.Avatar.prototype.switchCrouch = function (){
+    if(this.sw) return;
+    if(this.isCrouch) this.isCrouch = false;
+    else this.isCrouch = true;
+    this.sw = true;
+}
+
 THREE.Avatar.prototype.updateKey = function (){
     if(this.mode !== 'play') return;
 
+    //if(key[4]) this.isCrouch = true;
+    //else this.isCrouch = false;
 
-    if(!key[0] || !key[1] || !key[2] || !key[3] ) this.play("idle", 0.5);
 
-    if(key[0]) {this.animations.walk.timeScale = 1; this.play("walk", 0.5); }
+    if(!key[0] || !key[1] || !key[2] || !key[3] ){ if(this.isCrouch){ this.play("idle_crouch", 0.5); } else { this.play("idle", 0.5); } }
 
-    if(key[1]) {this.animations.walk.timeScale = -1; this.play("walk", 0.5);  }
-    //else 
+    if(this.isCrouch){
+        if(key[0]) { this.animations.walk_crouch.timeScale = 1;  this.play("walk_crouch", 0.5); }
+        if(key[1]) { this.animations.walk_crouch.timeScale = -1; this.play("walk_crouch", 0.5); }
+    }else{
+        if(key[0]) { this.animations.walk.timeScale = 1; if(key[7]) this.play("run", 0.5); else this.play("walk", 0.5); }
+        if(key[1]) { this.animations.walk.timeScale = -1; this.play("walk", 0.5); }
+    }
+
+    
 
     if(key[2]) this.play("step_left", 0.5);
-    //else 
-
     if(key[3]) this.play("step_right", 0.5);
+
+
 
 
 
@@ -339,6 +366,8 @@ THREE.Avatar.prototype.initMorphology = function (){
         v = null;
 
         //if(name === 'Hips' ) v = new THREE.Vector3( 1,1.2,1 );
+        if(name==='Chest' ) v = new THREE.Vector3(1,1,1);
+        if(name==='Spine1') v = new THREE.Vector3(1,1,1);
 
         if(name === 'LeftBreast' || name === 'RightBreast') v = new THREE.Vector3( 1.1,1,1 );
         if(name === 'LeftCollar' || name === 'RightCollar') v = new THREE.Vector3( 0.8, 1, 1 );
@@ -386,12 +415,39 @@ THREE.Avatar.prototype.initMorphology = function (){
  
 };
 
+THREE.Avatar.prototype.lerp = function (a, b, percent) { return a + (b - a) * percent; };
+
+THREE.Avatar.prototype.breathing = function (){
+
+    if(this.chest && this.abdomen){
+
+
+        
+
+        if(this.breathSide > 0){
+            //console.log( this.breath )
+            this.chest.scalling.z = this.lerp (1,1.16, this.breath*0.02);
+            this.abdomen.scalling.z = this.lerp (1,0.9, this.breath*0.02);
+        }else{
+            // console.log( this.breath )
+            this.chest.scalling.z = this.lerp (1.16,1, this.breath*0.02);
+            this.abdomen.scalling.z = this.lerp (0.9,1, this.breath*0.02);
+        }
+
+        this.breath ++;
+
+        if(this.breath === 50 ){ this.breath = 0; this.breathSide = this.breathSide > 0 ? -1:1; }
+    }
+
+};
+
 THREE.Avatar.prototype.morphology = function (){
 
     var i, bone, name;
 
     i = this.skeleton.bones.length;
-    while(i--){ 
+    while(i--){
+
         if( this[this.gender + 'Scalling'][i] !== null ) this.skeleton.bones[i].scalling = this[ this.gender + 'Scalling' ][i].clone();
         else this.skeleton.bones[i].scalling = null;
     }
@@ -475,6 +531,9 @@ THREE.Avatar.prototype.initAnimation = function (){
         name = name.substring( name.lastIndexOf('/')+1 );
         this.animationsNames.push(name);
     }
+
+    //this.animations.idle_crouch.timeScale = 2;
+    this.animations.idle.timeScale = 0.6;
 
 
     //this.play("walk", 0);//( name, crossfade, offset )
@@ -601,7 +660,9 @@ THREE.Avatar.prototype.updateAnimation = function (delta){
     if( this.helper ) this.helper.update();
 
 
-    this.updateKey();
+    if(this.mode === 'play')this.updateKey();
+
+    this.breathing();
 
 };
 
@@ -709,6 +770,8 @@ THREE.Avatar.prototype.updateBones = function (){
     }
 
     if( this.helper ) this.helper.update();
+
+    this.breathing();
 
   //  console.log(this.skeleton.bones[ 0 ].scalling)
        

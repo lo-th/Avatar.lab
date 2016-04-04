@@ -620,7 +620,7 @@ function keydown(e) {
         case 40: case 83:          key[1] = 1; break; // down, S
         case 37: case 65: case 81: key[2] = 1; break; // left, A, Q
         case 39: case 68:          key[3] = 1; break; // right, D
-        case 17: case 67:          key[4] = 1; break; // ctrl, C
+        case 17: case 67:          key[4] = 1; avatar.switchCrouch(); break; // ctrl, C
         case 69:                   key[5] = 1; break; // E
         case 32:                   key[6] = 1; break; // space
         case 16:                   key[7] = 1; break; // shift
@@ -634,7 +634,7 @@ function keyup(e) {
         case 40: case 83:          key[1] = 0; break; // down, S
         case 37: case 65: case 81: key[2] = 0; break; // left, A, Q
         case 39: case 68:          key[3] = 0; break; // right, D
-        case 17: case 67:          key[4] = 0; break; // ctrl, C
+        case 17: case 67:          key[4] = 0; avatar.sw = false; break; // ctrl, C
         case 69:                   key[5] = 0; break; // E
         case 32:                   key[6] = 0; break; // space
         case 16:                   key[7] = 0; break; // shift
