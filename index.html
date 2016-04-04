@@ -137,7 +137,7 @@ function init3D() {
     renderer = new THREE.WebGLRenderer({ canvas:canvas, antialias: true });// , logarithmicDepthBuffer: false });
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize( vsize.x, vsize.y );
-    //renderer.setClearColor( 0x888888, 1 );
+    renderer.setClearColor( 0x505050, 1 );
 
     renderer.gammaInput = true;
     renderer.gammaOutput = true;
@@ -216,6 +216,8 @@ function initModel(){
     addGround();
 
     loadSea3dBody();
+
+    renderer.setClearColor( 0x000000 , 1 );
 
 };
 
@@ -550,6 +552,14 @@ function loadSea3dBody(){
     avatar = new THREE.Avatar();
     
     var loader = new THREE.SEA3D();
+
+    loader.onDownloadProgress = function( e ) {
+
+        var pp = (Math.floor(e.progress) * 100) + "%";
+        debugTell( 'Loading 3D model ' + pp );
+
+    };
+
     loader.onComplete = function( e ) {
 
         var i = loader.meshes.length, m;
@@ -565,14 +575,12 @@ function loadSea3dBody(){
         avatar.init( geos );
         scene.add( avatar );
 
-        /**/
-
-      //  if(isWithMap) loadMap();
+        debugTell( '3D model loaded in ' + loader.file.timer.elapsedTime + "ms" );
 
         if(isWithBVH) initBVH();
 
-        console.log( "SEA3D Loaded:", loader.file.timer.elapsedTime + "ms" );
-    }
+        //console.log( "SEA3D Loaded:", loader.file.timer.elapsedTime + "ms" );
+    };
 
     loader.load( bodyLink );
 
