@@ -18,14 +18,7 @@ body {
 }
 canvas { position: absolute; top:0; left:0; pointer-events:auto; width:100%; height:100%; }
 #container { position:absolute; top:0; left:0; }
-#guiContener { position:absolute; overflow-x:auto; height:100%; width:215px; top: 0; left: 0;}
-#out2 { position:absolute; bottom:50px; right:6px; text-align: right; pointer-events:none; line-height: 14px; }
-#out1 { position:absolute; bottom:50px; left:6px; text-align: left; pointer-events:none; line-height: 14px; }
-
 #debug { position:absolute; bottom:70px; left:100px; text-align:left; pointer-events:none;}
-#b1 { position:absolute; top:70px; left:6px; width:50px; height:20px; border:1px solid #ccc; cursor:pointer; }
-#b2 { position:absolute; top:70px; left:66px; width:50px; height:20px; border:1px solid #ccc; cursor:pointer; }
-
 </style>
 </head>
 <body>
@@ -62,9 +55,6 @@ canvas { position: absolute; top:0; left:0; pointer-events:auto; width:100%; hei
 
 <canvas id="canvas"></canvas>
 <div id="debug"></div>
-<div id="BVHhubs"></div>
-<div id="out1"></div>
-<div id="out2"></div>
 
 <script>
 window.onload = init;
@@ -79,9 +69,9 @@ var version = 'v 0.2';
 
 var isTJS = false;
 
-var out1, out2, debug, stats, clock;
+var debug, stats;
 var vsize, camPos, mouse;
-var camera, canvas, scene, renderer, delta, center, centerLight, clock, controls, back, ground, light;
+var camera, canvas, scene, renderer, delta, center, centerLight, clock, controls, back, ground, light, clock;;
 var composer, ssaoPass, depthMaterial, depthRenderTarget;
 var ToRad = Math.PI / 180;
 var ToDeg = 180 / Math.PI;
@@ -100,12 +90,7 @@ var BVHanimConfig = { debug:true, speed:0.5, size:1, px:0, py:0, pz:0, boneSize:
 
 function init() {
 
-    out1 = document.getElementById("ou1");
-    out2 = document.getElementById("out2");
     debug = document.getElementById("debug");
-
-    //document.getElementById("b1").addEventListener( 'click', function ( e ) { BVHanimConfig.speed=0.5; loadBVH("bvh/action.z"); }, false );
-    //document.getElementById("b2").addEventListener( 'click', function ( e ) { BVHanimConfig.speed=1; loadBVH("bvh/story.z"); }, false ); 
 
     vsize = new THREE.Vector3(window.innerWidth, window.innerHeight, 0);
     vsize.z = vsize.x / vsize.y;

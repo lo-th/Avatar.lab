@@ -155,9 +155,9 @@ var Gui = ( function () {
         ui.add('button', { name:'Man/Woman', p:4, h:30, r:10 } ).onChange( function(v){ switchGender(); } );
         ui.add('list',   { name:'Bone',  list:avatar.bonesNames, height:30, value:'Hips'}).onChange( function(v){ avatar.showBones(v); } );
 
-        sx = ui.add('slide',  { name:'scale X',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B' }).onChange( function(v){ avatar.setScalling('x', v); } );
-        sy = ui.add('slide',  { name:'scale Y',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B' }).onChange( function(v){ avatar.setScalling('y', v); } );
-        sz = ui.add('slide',  { name:'scale Z',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B' }).onChange( function(v){ avatar.setScalling('z', v); } );
+        sx = ui.add('slide',  { name:'scale X',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ avatar.setScalling('x', v); } );
+        sy = ui.add('slide',  { name:'scale Y',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ avatar.setScalling('y', v); } );
+        sz = ui.add('slide',  { name:'scale Z',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ avatar.setScalling('z', v); } );
 
         avatar.toEdit();
 
@@ -181,6 +181,8 @@ var Gui = ( function () {
        // ui.add('bool', { name:'BVH Skeleton', p:70, h:20, value:false } ).onChange( function(v){ skeletonVisibility(); } );
         ui.add('bool', { name:'Helper', p:70, h:20, value:false } ).onChange( function(v){ helperVisibility(); } );
 
+        ui.add('slide',  { name:'speed',  min:0, max:1, value:0.5, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){avatar.speed = v} );
+
         ui.add('list',   { name:'Animation',  list:avatar.animationsNames, p:40, height:30, value:avatar.cAnimation}).onChange( function(v){ avatar.playAnimation(v); } );
 
     };
@@ -199,7 +201,7 @@ var Gui = ( function () {
 
         ui.add('button', { name:'LOAD', p:4, h:30, r:10, loader:true, drag:true } ).onChange( function(result,fname){ bvhReader.read(result,fname); } );
 
-        ui.add('slide',  { name:'speed',  min:0, max:1, value:0.5, precision:2, fontColor:'#D4B87B' }).onChange( bvhReader.setSpeed );
+        ui.add('slide',  { name:'speed',  min:0, max:1, value:0.5, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( bvhReader.setSpeed );
 
         ui.add('button', { name:'Action', p:4, h:30, r:10 } ).onChange(  function(){ bvhReader.load("bvh/action.z") }  );
         ui.add('button', { name:'Story', p:4, h:30, r:10 } ).onChange(  function(){ bvhReader.load("bvh/story.z") }  );
@@ -230,17 +232,17 @@ var Gui = ( function () {
         ui.add('bool', { name:'PostEffect', p:70, h:20, value:false } ).onChange( function(v){ postEffect(); } );
         ui.add('bool', { name:'Shadow', p:70, h:20, value:false } ).onChange( function(v){ shadow(); } );
 
-        ui.add('slide',  { name:'bg alpha',  min:0, max:1, value:0.4, precision:2, fontColor:'#D4B87B' }).onChange( function(v){back.material.opacity = v;} );
+        ui.add('slide',  { name:'bg alpha',  min:0, max:1, value:0.4, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){back.material.opacity = v;} );
     
 
         ui.add('list',   { name:'ToneMap',  list:['None', 'Linear', 'Reinhard', 'Cineon', 'Uncharted2'], height:30, value:'Uncharted2'}).onChange( function(v){ setToneMap(v);  } );
-        ui.add('slide',  { name:'Exposure',  min:0, max:10, value:3, precision:1, fontColor:'#D4B87B' }).onChange( function(v){ renderer.toneMappingExposure = v; } );
-        ui.add('slide',  { name:'WhiteP',  min:0, max:10, value:5, precision:1, fontColor:'#D4B87B' }).onChange( function(v){ renderer.toneMappingWhitePoint = v; } );
+        ui.add('slide',  { name:'Exposure',  min:0, max:10, value:3, precision:1, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ renderer.toneMappingExposure = v; } );
+        ui.add('slide',  { name:'WhiteP',  min:0, max:10, value:5, precision:1, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ renderer.toneMappingWhitePoint = v; } );
 
         ui.add('list',   { name:'EnvMap',  list:['black', 'brush', 'chrome', 'glow', 'medium', 'metal', 'plastic', 'red', 'skin' ,'sky', 'smooth', 'yellow', 'luma', 'lava'], height:30, value:'yellow'}).onChange( function(v){ switchEnv(v);  } );
 
-        ui.add('slide',  { name:'metalness',  min:0, max:1, value:0.4, precision:2, fontColor:'#D4B87B' }).onChange( setMetalness );
-        ui.add('slide',  { name:'roughness',  min:0, max:1, value:0.5, precision:2, fontColor:'#D4B87B' }).onChange( setRoughness );
+        ui.add('slide',  { name:'metalness',  min:0, max:1, value:0.4, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( setMetalness );
+        ui.add('slide',  { name:'roughness',  min:0, max:1, value:0.5, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( setRoughness );
 
     }
 
