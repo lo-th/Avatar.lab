@@ -11,8 +11,7 @@ THREE.Avatar = function () {
     this.type = 'Avatar';
     this.isReady = false;
 
-    //this.baseMatrix = [];
-    //this.skeletonCopy = null;
+    this.bonesNames = [];
 
     this.helper = null;
 
@@ -22,16 +21,44 @@ THREE.Avatar = function () {
 THREE.Avatar.prototype = Object.create( THREE.SEA3D.SkinnedMesh.prototype );
 THREE.Avatar.prototype.constructor = THREE.Avatar;
 
-THREE.Avatar.prototype.init = function ( Geos, Bvh ){
+THREE.Avatar.prototype.init = function ( Geos ){
+
+    var i, n;
+
+    this.geos = Geos;
+
+    var ccMan = new THREE.Float32Attribute( this.geos['man'].attributes.position.count*3, 3 );
+    var ccWoman = new THREE.Float32Attribute( this.geos['woman'].attributes.position.count*3, 3 );
+
+    i = ccMan.count;
+    while(i--){ 
+        n = i*3
+        ccMan[n] = 1;
+        ccMan[n+1] = 1;
+        ccMan[n+2] = 1;
+    }
+
+    i = ccWoman.count;
+    while(i--){ 
+        n = i*3
+        ccWoman[n] = 1;
+        ccWoman[n+1] = 1;
+        ccWoman[n+2] = 1;
+    }
+
+
+
+    // add color vertrice
+    this.geos['man'].addAttribute( 'color', ccMan );
+    this.geos['woman'].addAttribute( 'color', ccWoman );
 
     //this.normalMaterial = new THREE.MeshStandardMaterial({ skinning: true,  morphTargets:false, metalness:0.4, roughness:0.5, normalScale:new THREE.Vector2( 0.5, 0.5 ) });//premultipliedAlpha: true
-    if(isWithMap) this.normalMaterial = new THREE.MeshStandardMaterial({ envMap:textures[0], map:textures[2], normalMap:textures[3], aoMap:textures[6], aoMapIntensity:0.5, skinning: true,  morphTargets:false, metalness:0.4, roughness:0.5, normalScale:new THREE.Vector2( 0.5, 0.5 ) });
+    if( isWithMap ) this.normalMaterial = new THREE.MeshStandardMaterial({ envMap:textures[0], map:textures[2], normalMap:textures[3], aoMap:textures[6], aoMapIntensity:0.5, skinning: true,  morphTargets:false, metalness:0.4, roughness:0.5, normalScale:new THREE.Vector2( 0.5, 0.5 ) });
     else this.normalMaterial = new THREE.MeshStandardMaterial({ skinning: true,  morphTargets:false, metalness:0.4, roughness:0.5 });
 
     this.material = this.normalMaterial;
 
-    this.geos = Geos;
-    this.bvh = Bvh;
+    
 
     //console.log(this.geos['woman'].animations );
 
@@ -45,8 +72,8 @@ THREE.Avatar.prototype.init = function ( Geos, Bvh ){
     //this.skeletonCopy = this.skeleton.clone();
 
 
-    //var i = this.skeleton.bones.length;
-    //while(i--) this.baseMatrix[i] = this.skeleton.bones[i].matrixWorld.clone();
+    i = this.skeleton.bones.length;
+    while(i--) this.bonesNames[i] = this.skeleton.bones[i].name;
 
     //console.log(this.baseMatrix);
 
@@ -95,6 +122,59 @@ THREE.Avatar.prototype.setMetalness = function ( v ){
 THREE.Avatar.prototype.setRoughness = function ( v ){
     this.normalMaterial.roughness = v;
     this.eyeMaterial.roughness = v;
+};
+
+//-----------------------
+//  for SHOZ BONE
+//-----------------------
+THREE.Avatar.prototype.toEdit = function ( ){
+
+    avatar.reset();
+
+    this.showBones('Hips');
+
+    this.material.vertexColors = THREE.VertexColors;
+    this.material.needsUpdate = true;
+
+
+
+}
+
+THREE.Avatar.prototype.showBones = function ( name ){
+
+    var id = 0, i, lng, n, n4;
+    var w0, w1, w2, w3, x;
+
+    i = this.skeleton.bones.length;
+    while(i--){ 
+        if(this.skeleton.bones[i].name === name){ id = i; break; }
+    }
+
+    var colors = this.geometry.attributes.color.array;
+    var index = this.geometry.attributes.skinIndex.array;
+    var weight = this.geometry.attributes.skinWeight.array;
+
+    lng = colors.length;
+
+    for( i = 0; i<lng; i++){
+
+        n = i*3
+        n4 = i*4;
+
+        w0 = index[n4] === id ? weight[n4] : 0;
+        w1 = index[n4+1] === id ? weight[n4+1] : 0;
+        w2 = index[n4+2] === id ? weight[n4+2] : 0;
+        w3 = index[n4+3] === id ? weight[n4+3] : 0;
+
+        x = w0+w1+w2+w3;
+
+        colors[n] = 1;
+        colors[n+1] =  1-x;
+        colors[n+2] =  1-x;
+
+    }
+
+    this.geometry.attributes.color.needsUpdate = true;
 };
 
 //-----------------------
@@ -176,7 +256,7 @@ THREE.Avatar.prototype.morphology = function (){
 
             bone.scalling = null;
 
-            if(name==='LeftBreast' || name==='RightBreast') bone.scalling = new THREE.Vector3( 1.1,1,1 );
+            if(name==='LeftBreast' || name ==='RightBreast') bone.scalling = new THREE.Vector3( 1.1,1,1 );
             if(name === 'LeftCollar' || name === 'RightCollar') bone.scalling = new THREE.Vector3( 0.8, 1, 1 );
             if(name === 'LeftUpArm'  || name === 'RightUpArm' ) bone.scalling = new THREE.Vector3( 0.93, 1, 1 );
             if(name === 'LeftLowArm' || name === 'RightLowArm') bone.scalling = new THREE.Vector3( 0.93, 1, 1 );
@@ -346,6 +426,12 @@ THREE.Avatar.prototype.reset = function (){
 
     var i = this.skeleton.bones.length;
     while(i--) this.skeleton.bones[i].matrixAutoUpdate = true;
+
+    //var oly= this.position.y;
+
+    //this.pose();
+
+    //this.position.y = 80;
 
     
     this.play("base", 0);

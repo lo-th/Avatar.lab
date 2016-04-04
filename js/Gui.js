@@ -146,11 +146,15 @@ var Gui = ( function () {
 
     Gui.editMenu = function(){
 
-        avatar.reset();
+        
+
+        avatar.toEdit();
 
         ui.clear();
         ui.add('title', { name:'AVATAR LAB', prefix:version, h:30, r:10 } );
         ui.add('button', { name:'Man/Woman', p:4, h:30, r:10 } ).onChange( function(v){ switchGender(); } );
+        ui.add('list',   { name:'Bone',  list:avatar.bonesNames, height:30, value:'Hips'}).onChange( function(v){ avatar.showBones(v); } );
+
     }
 
     Gui.animationMenu = function(){
