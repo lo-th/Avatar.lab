@@ -25,6 +25,7 @@ canvas { position: absolute; top:0; left:0; pointer-events:auto; width:100%; hei
 <!-- Copyright Lo-Th -->
 <script src="js/extract.js"></script>
 <script src="js/three.min.js"></script>
+<script src="js/CCDIKSolver.js"></script>
 <script src="js/sea3d.min.js"></script>
 <script src="js/Stats.js"></script>
 <script src="js/uil.min.js"></script>
@@ -101,6 +102,8 @@ function init() {
     animate();
 
     Gui.init();
+
+
 
 }
 
@@ -369,6 +372,8 @@ function animate() {
     var delta = clock.getDelta();
 
     requestAnimationFrame( animate );
+
+    if( Gui ) Gui.update();
 
     if(bvhReader !== null) bvhReader.update();
 

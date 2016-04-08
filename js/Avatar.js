@@ -16,6 +16,7 @@ THREE.Avatar = function () {
 
     this.animationsNames = [];
 
+    //this.bones = {};
     this.bonesNames = [];
     this.boneSelect = null;
 
@@ -32,8 +33,33 @@ THREE.Avatar = function () {
     this.breath = 0;
     this.breathSide = -1;
 
+    // specifics bone
+    this.head = null;
     this.chest = null;
     this.abdomen = null;
+
+    this.poses = {
+
+        'l_fingers': 0,
+        'l_finger_0': 0,
+        'l_finger_1': 0,
+        'l_finger_2': 0,
+        'l_finger_3': 0,
+        'l_finger_4': 0,
+        
+        'r_fingers': 0,
+        'r_finger_0': 0,
+        'r_finger_1': 0,
+        'r_finger_2': 0,
+        'r_finger_3': 0,
+        'r_finger_4': 0,
+        
+    };
+
+    this.rot = {};
+    this.pos = {};
+
+
 
 };
 
@@ -43,7 +69,7 @@ THREE.Avatar.prototype.constructor = THREE.Avatar;
 
 THREE.Avatar.prototype.init = function ( Geos ){
 
-    var i, n;
+    var i, n, name, bone;
 
     this.geos = Geos;
 
@@ -92,11 +118,17 @@ THREE.Avatar.prototype.init = function ( Geos ){
 
     i = this.skeleton.bones.length;
     while(i--){ 
-        this.bonesNames[i] = this.skeleton.bones[i].name;
-        this.baseMatrix[i] = this.skeleton.bones[i].matrixWorld.clone();
+        bone = this.skeleton.bones[i];
+        name = bone.name;
+        //this.bones[ name ] = bone;
+        this.bonesNames[i] = name;
+        this.rot[ name ] = bone.rotation.clone();
+        this.pos[ name ] = bone.position.clone();
+        this.baseMatrix[ i ] = bone.matrixWorld.clone();
 
-        if(this.skeleton.bones[i].name === 'Chest') this.chest = this.skeleton.bones[i];
-        if(this.skeleton.bones[i].name === 'Spine1') this.abdomen = this.skeleton.bones[i];
+        if( name === 'Head' ) this.head = bone;
+        if( name === 'Chest' ) this.chest = bone;
+        if( name === 'Spine1' ) this.abdomen = bone;
     }
 
     //console.log(this.baseMatrix);
@@ -162,6 +194,23 @@ THREE.Avatar.prototype.findID = function ( name ){
 
 };
 
+THREE.Avatar.prototype.testIK = function (){
+
+    /*this.geometry.iks = [];
+
+    var ik = {
+      target: this.findID('LeftHand'),
+      effector: this.findID('LeftCollar'),
+      links: [ { index: this.findID('LeftLowArm'), limitation: new THREE.Vector3( 1, 0, 0 ) }, { index: this.findID('LeftUpArm'), limitation: new THREE.Vector3( 1, 0, 0 ) } ],
+      iteration: 10,
+      minAngle: 0.0,
+      maxAngle: 1.0,
+   }
+
+   this.geometry.iks.push(ik);*/
+
+
+}
 
 //-----------------------
 //  for SHOW BONE
@@ -177,6 +226,12 @@ THREE.Avatar.prototype.toEdit = function ( ){
 
     this.material.vertexColors = THREE.VertexColors;
     this.material.needsUpdate = true;
+
+    //this.testIK();
+
+
+    this.isAnimation = false;
+    this.isBvh = false;
 
 }
 
@@ -415,7 +470,7 @@ THREE.Avatar.prototype.initMorphology = function (){
  
 };
 
-THREE.Avatar.prototype.lerp = function (a, b, percent) { return a + (b - a) * percent; };
+
 
 THREE.Avatar.prototype.breathing = function (){
 
@@ -454,6 +509,75 @@ THREE.Avatar.prototype.morphology = function (){
 
 };
 
+THREE.Avatar.prototype.lerp = function (a, b, percent) { return a + (b - a) * percent; };
+
+THREE.Avatar.prototype.toRad = function( v ){ return v * 0.0174532925199432957; };
+
+THREE.Avatar.prototype.rotate = function ( v, name, x, y, z ) { 
+
+    var bone = this.skeleton.bones[ this.findID( name ) ];
+
+    var tx = this.rot[name].x;
+    var ty = this.rot[name].y;
+    var tz = this.rot[name].z;
+
+    if( x !== undefined ) bone.rotation.x = this.lerp( tx, tx + this.toRad(x), v );
+    if( y !== undefined ) bone.rotation.y = this.lerp( ty, ty + this.toRad(y), v );
+    if( z !== undefined ) bone.rotation.z = this.lerp( tz, tz + this.toRad(z), v );
+
+    bone.updateMatrix();
+
+};
+
+//-----------------------
+// BONES animator
+//-----------------------
+
+THREE.Avatar.prototype.setBoneAnimation = function ( name, v ) {
+
+    if(this.poses[name] === undefined ) return;
+
+    this.poses[name] = v;
+
+    var anims = name;
+    var side = name.substring(0, 1);
+    var end = name.substring(name.length -1);
+
+     
+    if(side === 'r' || side === 'l' ) anims = name.substring(2);
+    if( !isNaN(end) ) anims = anims.substring(0, anims.length -2);
+
+    if( this[anims] ) this[anims]( v, side, end );
+
+};
+
+//-----------------------
+//  HAND control
+//-----------------------
+
+THREE.Avatar.prototype.fingers = function (v, s){
+
+    var i = 5;
+    while(i--){ 
+        this.finger( v, s, i );
+        this.poses[s + '_finger_' + i] = v;
+    }
+
+};
+
+THREE.Avatar.prototype.finger = function (v, s, n){
+
+    if(n === 0 || n === '0' ){
+        this.rotate( v , s + 'f_'+n+'_0', s==='r' ? -10 : 10, -10 );
+        this.rotate( v , s + 'f_'+n+'_1', s==='r' ? -6 : 6, -20 );
+        this.rotate( v , s + 'f_'+n+'_2', null, -45 );
+
+    }else{
+        this.rotate( v , s + 'f_'+n+'_0', null, -75 );
+        this.rotate( v , s + 'f_'+n+'_1', null, -90 );
+        this.rotate( v , s + 'f_'+n+'_2', null, -75 );
+    }
+};
 
 //-----------------------
 //  EYE control
@@ -481,14 +605,16 @@ THREE.Avatar.prototype.addEyes = function (){
     eyeL.lookAt( this.target );
     eyeR.lookAt( this.target );
 
-    for(var i=0; i<this.skeleton.bones.length; i++){
+    this.head.add( this.eyeGroup )
+
+    /*for(var i=0; i<this.skeleton.bones.length; i++){
         if(this.skeleton.bones[i].name === "Head"){ 
             this.skeleton.bones[i].add( this.eyeGroup );
             
             //this.skeleton.bones[i].scale.y = 1.2;
             //console.log(this.skeleton.bones[i].scale)
         }
-    }
+    }*/
 
 };
 
@@ -539,6 +665,8 @@ THREE.Avatar.prototype.initAnimation = function (){
     //this.play("walk", 0);//( name, crossfade, offset )
     this.play( this.cAnimation, 0);
 
+    this.ikSolver = new THREE.CCDIKSolver( this );
+
 };
 
 THREE.Avatar.prototype.playAnimation = function ( name ){
@@ -574,8 +702,12 @@ THREE.Avatar.prototype.reset = function (){
     this.isAnimation = false;
     this.isBvh = false;
 
-    var i = this.skeleton.bones.length;
-    while(i--) this.skeleton.bones[i].matrixAutoUpdate = true;
+    var i = this.skeleton.bones.length, name;
+    while(i--){ 
+        name = this.skeleton.bones[i].name;
+        if(name.substring(0,2) === 'lf' || name.substring(0,2) === 'rf'){ this.skeleton.bones[i].matrixAutoUpdate = false; }
+        else this.skeleton.bones[i].matrixAutoUpdate = true;
+    }
 
     //var oly= this.position.y;
 
@@ -597,6 +729,8 @@ THREE.Avatar.prototype.reset = function (){
         this.skeleton.bones[i].matrixWorld.copy( this.baseMatrix[i] );
     }*/
 };
+
+
 
 
 THREE.Avatar.prototype.toBvh = function (){
@@ -649,6 +783,9 @@ THREE.Avatar.prototype.toAnimation = function (){
 
 THREE.Avatar.prototype.updateAnimation = function (delta){
 
+
+    if(this.ikSolver) this.ikSolver.update()
+
     if( !this.isAnimation ) return;
 
     // Update SEA3D Animations
@@ -661,6 +798,8 @@ THREE.Avatar.prototype.updateAnimation = function (delta){
 
 
     if(this.mode === 'play')this.updateKey();
+
+    ;
 
     this.breathing();
 

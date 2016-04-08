@@ -21,6 +21,10 @@ var Gui = ( function () {
         //this.init();
     };
 
+    Gui.update = function(){
+        UIL.update();
+    }
+
     Gui.init = function(){
         this.topMenu();
         //UIL.COLOR = 'no';
@@ -28,7 +32,6 @@ var Gui = ( function () {
         ui.callbackClose = Gui.draw;
         ui.setBG('rgba(80,80,80,0.8)');
 
-        
         this.basicMenu();
 
     };
@@ -146,9 +149,21 @@ var Gui = ( function () {
        // if (fill) { }        
     }
 
-    Gui.editMenu = function(){
+    Gui.handBlock = function(){
 
-        
+        var gr1 = ui.add('group', { name:'hand left' });
+        gr1.add( avatar.poses, 'l_fingers',  { min:0, max:1, step:0.01, precision:2, h:17, p:50, stype:1, bColor:'#AAA' }).onChange( function(v){ avatar.setBoneAnimation( this.txt, v ) } ).listen();
+        var gr2 = ui.add('group', { name:'hand right' });
+        gr2.add( avatar.poses, 'r_fingers',  { min:0, max:1, step:0.01, precision:2, h:17, p:50, stype:1, bColor:'#AAA' }).onChange( function(v){ avatar.setBoneAnimation( this.txt, v ) } ).listen();
+        var i = 5;
+        while(i--){
+            gr1.add( avatar.poses, 'l_finger_'+(4-i),  { min:0, max:1, step:0.01, precision:2, h:17, p:50, stype:1, bColor:'#AAA' }).onChange( function(v){ avatar.setBoneAnimation( this.txt, v ) } ).listen();
+            gr2.add( avatar.poses, 'r_finger_'+(4-i),  { min:0, max:1, step:0.01, precision:2, h:17, p:50, stype:1, bColor:'#AAA' }).onChange( function(v){ avatar.setBoneAnimation( this.txt, v ) } ).listen();
+        }
+
+    };
+
+    Gui.editMenu = function(){
 
         ui.clear();
         ui.add('title', { name:'AVATAR LAB', prefix:version, h:30, r:10 } );
@@ -158,6 +173,9 @@ var Gui = ( function () {
         sx = ui.add('slide',  { name:'scale X',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ avatar.setScalling('x', v); } );
         sy = ui.add('slide',  { name:'scale Y',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ avatar.setScalling('y', v); } );
         sz = ui.add('slide',  { name:'scale Z',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ avatar.setScalling('z', v); } );
+
+        this.handBlock();
+
 
         avatar.toEdit();
 
@@ -185,6 +203,9 @@ var Gui = ( function () {
 
         ui.add('list',   { name:'Animation',  list:avatar.animationsNames, p:40, height:30, value:avatar.cAnimation}).onChange( function(v){ avatar.playAnimation(v); } );
 
+        this.handBlock();
+
+
     };
 
     Gui.bvhMenu = function(){
@@ -205,6 +226,13 @@ var Gui = ( function () {
 
         ui.add('button', { name:'Action', p:4, h:30, r:10 } ).onChange(  function(){ bvhReader.load("bvh/action.z") }  );
         ui.add('button', { name:'Story', p:4, h:30, r:10 } ).onChange(  function(){ bvhReader.load("bvh/story.z") }  );
+
+        this.handBlock();
+
+        //var gr1 = ui.add('group', { name:'hand left' });
+
+        //gr1.add( avatar.poses, 'l_finger_0',  { min:0, max:1, step:0.01, precision:2, h:17, p:50, stype:1, bColor:'#AAA' }).onChange( function(v){ avatar.setBoneAnimation( this.txt, v ) } ).listen();
+
 
 
 
