@@ -163,8 +163,12 @@ function addSoftBody ( o ) {
 
     if(o.margin !== undefined ) Ammo.castObject( body, Ammo.btCollisionObject ).getCollisionShape().setMargin( o.margin );
 
+    console.log(body)
+
 
     // Soft-soft and soft-rigid collisions
+    body.setCollisionFlags(o.flag || 0);
+
     world.addSoftBody( body, o.group || 1, o.mask || -1 );
 
     if(o.name) byName[o.name] = body;

@@ -56,6 +56,7 @@ canvas { position: absolute; top:0; left:0; pointer-events:auto; width:100%; hei
 
 <!-- PHYSICS -->
 <script src="js/Ammo.manager.js"></script>
+<script src="js/ConvexGeometry.js"></script>
 <script src="js/View.js"></script>
 
 <canvas id="canvas"></canvas>
@@ -133,9 +134,28 @@ function physicsActive() {
 
     view.activeRay(rayMove);
 
-    view.add({type:'plane'}); // infinie plane
-    view.add({type:'box', size:[6], name:'bob', mass:10, flag:2, state:4 });
-    view.add({ type:'sphere', size:[6], pos:[0,100,0], mass:3 });
+    view.add({type:'plane', friction:0.5, restitution:0.9}); // infinie plane
+    //view.add({type:'box', size:[6], name:'bob', mass:10, flag:2, state:4 });
+    view.add({ type:'cylinder', size:[3, 12, 3], name:'bob', mass:10, flag:2, state:4, friction:0.5, restitution:0.5 });
+    view.add({ type:'sphere', size:[6], pos:[0,100,0], mass:3, state:4, friction:0.5, restitution:0.9 });
+
+    /*view.add({ 
+        type:'ellipsoid',
+        center:[-10, 20, 0],
+        radius:[6, 6, 6],
+        vertices:32,
+        mass:3, state:4,
+        viterations:10,
+        piterations:10,
+        citerations:4,
+        diterations:0,
+
+        kdf:1,
+        kdp:0.001,
+        kpr:2500,
+        
+        margin:0.1,
+    });*/
 
 }
 

@@ -74,7 +74,7 @@ var ammo = ( function () {
 
         }
 
-        //if(m === 'ellipsoid'){ view.ellipsoidMesh(e.data.o);  }
+        if(m === 'ellipsoid'){ view.ellipsoidMesh( e.data.o );  }
 
         if(m === 'step'){
 
