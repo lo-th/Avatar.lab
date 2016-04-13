@@ -251,6 +251,9 @@ var Gui = ( function () {
        // ui.add('bool', { name:'BVH Skeleton', p:70, h:20, value:false } ).onChange( function(v){ skeletonVisibility(); } );
         ui.add('bool', { name:'Helper', p:70, h:20, value:false } ).onChange( function(v){ helperVisibility(); } );
 
+
+        ui.add('bool', { name:'Physics', p:70, h:20, value:false } ).onChange( function(v){ initPhysics(); } );
+
     };
 
     Gui.renderMenu = function(){

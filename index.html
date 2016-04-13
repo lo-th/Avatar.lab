@@ -54,6 +54,10 @@ canvas { position: absolute; top:0; left:0; pointer-events:auto; width:100%; hei
 <script src="js/Avatar.js"></script>
 <script src="js/Gui.js"></script>
 
+<!-- PHYSICS -->
+<script src="js/Ammo.manager.js"></script>
+<script src="js/View.js"></script>
+
 <canvas id="canvas"></canvas>
 <div id="debug"></div>
 
@@ -118,6 +122,35 @@ function debugTell(s) {
     debug.innerHTML = s;
 }
 
+function initPhysics() {
+    ammo.init( physicsActive );
+    view.init();
+}
+
+function physicsActive() {
+
+    debugTell('Physics on road');
+
+    view.activeRay(rayMove);
+
+    view.add({type:'plane'}); // infinie plane
+    view.add({type:'box', size:[6], name:'bob', mass:10, flag:2, state:4 });
+    view.add({ type:'sphere', size:[6], pos:[0,100,0], mass:3 });
+
+}
+
+function rayMove ( m ) {
+
+    var o = {
+        name:'bob',
+        pos:[m.position.x*0.1, m.position.y*0.1, m.position.z*0.1],
+        quat: m.quaternion.toArray()
+    }
+
+    ammo.send( 'set', o );
+
+};
+
 function init3D() {
 
     clock = new THREE.Clock();
@@ -148,8 +181,7 @@ function init3D() {
     controls.enableKeys = false;
     controls.update();
 
-    
-    
+
     scene.add( new THREE.AmbientLight( 0x444444 ) );
     
     light = new THREE.SpotLight( 0xFFFFFF, 1.8, 0, Math.PI/2, 1 );
