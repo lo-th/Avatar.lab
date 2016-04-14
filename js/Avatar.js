@@ -738,7 +738,7 @@ THREE.Avatar.prototype.toAnimation = function (){
 THREE.Avatar.prototype.updateAnimation = function (delta){
 
 
-    if(this.ikSolver) this.ikSolver.update()
+    //if(this.ikSolver) this.ikSolver.update()
 
     if( !this.isAnimation ) return;
 
@@ -751,11 +751,9 @@ THREE.Avatar.prototype.updateAnimation = function (delta){
     if( this.helper ) this.helper.update();
 
 
-    if(this.mode === 'play')this.updateKey();
+    if(this.mode === 'play') this.updateKey();
 
-    ;
-
-    this.breathing();
+   // this.breathing();
 
 };
 

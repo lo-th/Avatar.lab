@@ -37,10 +37,13 @@ var view = ( function () {
         mouse = new THREE.Vector2();
 
         geo['box'] =  new THREE.BoxBufferGeometry(1,1,1);
-        geo['sphere'] = new THREE.SphereBufferGeometry( 1, 12, 10 );
+        geo['sphere'] = new THREE.SphereBufferGeometry( 1, 6, 6 );
         geo['cylinder'] =  new THREE.CylinderBufferGeometry(1,1,1,12,1 );
 
-        mat['basic'] = new THREE.MeshBasicMaterial({ color:0xffffff, name:'basic', wireframe:true });
+        mat['basic'] = new THREE.MeshBasicMaterial({ color:0xffffff, name:'basic', wireframe:true, depthTest:false, depthWrite:false });
+        mat['wall'] = new THREE.MeshBasicMaterial({ color:0x000000, name:'wall', wireframe:true, depthTest:false, depthWrite:false ,transparent:true, opacity:0.1 });
+        mat['kinect'] = new THREE.MeshBasicMaterial({ color:0x00FFFF, name:'kinect', wireframe:true, depthTest:false, depthWrite:false  });
+
 
     };
 
@@ -118,7 +121,11 @@ var view = ( function () {
 
         }
 
-        var material = mat.basic;
+        var material = mat.wall;
+
+        if( o.mass ) material = mat.basic;
+        if( o.flag === 2 ) material = mat.kinect;
+        //else statics.push( mesh );
         //if(o.material !== undefined) material = mat[o.material];
         //else material = o.mass ? mat.move : mat.statique;
         
@@ -203,7 +210,7 @@ var view = ( function () {
         canvas.addEventListener( 'mousemove', view.rayTest, false );
 
         rayCallBack = callback;
-        
+
     };
 
     view.rayTest = function ( e ) {

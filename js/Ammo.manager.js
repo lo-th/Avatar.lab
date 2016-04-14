@@ -38,7 +38,11 @@ var ammo = ( function () {
     var timer = 0;
     var needDelete = true;
 
+    var bonesRef = {};
+    var bonesAr = new Float32Array( 29*8 );
+
     var isInit = false;
+    var isRunning = false;
 
     ammo = function () {};
 
@@ -52,23 +56,6 @@ var ammo = ( function () {
 
         //this.startWorker( true );
 
-        /*worker = new Worker('js/Ammo.worker.js');
-
-        worker.onmessage = this.message;
-        worker.postMessage = worker.webkitPostMessage || worker.postMessage;
-
-        var blob;
-
-        //if(direct){
-            blob = document.location.href.replace(/\/[^/]*$/,"/") + "js/ammo/ammo.js";
-            needDelete = false;
-            //worker.postMessage( { m: 'init', blob:blob, isBuffer: isBuffer, timestep:timestep, substep:substep });
-        //}else{
-        //    blob = extract.get('ammo');
-        //}
-
-        //worker.postMessage( { m: 'init', blob:blob, isBuffer: isBuffer, timestep:timestep, substep:substep, Br:Br, Cr:Cr, Hr:Hr, Jr:Jr, Sr:Sr });
-        worker.postMessage( { m: 'init', blob:blob, isBuffer: isBuffer, timestep:timestep, substep:substep });*/
         
     };
 
@@ -81,7 +68,7 @@ var ammo = ( function () {
 
     ammo.startWorker = function( direct ){
 
-        console.log('start')
+        //console.log('start')
 
 
 
@@ -107,20 +94,103 @@ var ammo = ( function () {
 
     ammo.demo = function() {
 
-        view.activeRay( ammo.rayMove );
+        //view.activeRay( ammo.rayMove );
 
-        view.add({type:'plane', friction:0.5, restitution:0.9}); // infinie plane
+        //view.add({ type:'plane', friction:0.5, restitution:0.9 }); // infinie plane
+
+        var w = 140;
+        var p = 100;
+        var h = 160;
+        
+        var m = 10;
+        var mi = m * 0.5;
+        var y = -2;
+
+        view.add({ type:'box', size:[w+m, m, p+m], pos:[0,-(m*0.5) + y,0], friction:0.5, restitution:0.9 });
+        view.add({ type:'box', size:[w+m, m, p+m], pos:[0,h+(m*0.5) + y,0], friction:0.5, restitution:0.9 });
+
+        view.add({ type:'box', size:[m, h, p+m], pos:[-w*0.5,(h*0.5)+y,0], friction:0.5, restitution:0.9 });
+        view.add({ type:'box', size:[m, h, p+m], pos:[w*0.5,(h*0.5)+y,0], friction:0.5, restitution:0.9 });
+        view.add({ type:'box', size:[w-m, h, m], pos:[0,(h*0.5)+y,-p*0.5], friction:0.5, restitution:0.9 });
+        view.add({ type:'box', size:[w-m, h, m], pos:[0,(h*0.5)+y, p*0.5], friction:0.5, restitution:0.9 });
+
+
         //view.add({type:'box', size:[6], name:'bob', mass:10, flag:2, state:4 });
-        view.add({ type:'cylinder', size:[3, 12, 3], name:'bob', mass:10, flag:2, state:4, friction:0.5, restitution:0.5 });
-        view.add({ type:'sphere', size:[6], pos:[0,100,0], mass:3, state:4, friction:0.5, restitution:0.9 });
+        //view.add({ type:'cylinder', size:[3, 12, 3], name:'bob', mass:10, flag:2, state:4, friction:0.5, restitution:0.5 });
+        view.add({ type:'sphere', size:[6], pos:[0,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
+        view.add({ type:'sphere', size:[6], pos:[10,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
+        view.add({ type:'sphere', size:[6], pos:[-10,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
+        view.add({ type:'sphere', size:[6], pos:[-20,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
+        view.add({ type:'sphere', size:[6], pos:[20,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
+
+        ammo.initSkeleton();
 
     };
 
     ammo.initSkeleton = function(){
 
+    
+        var i = avatar.bones.length - 30 , bone, name;
+
+        while(i--){
+
+            bone = avatar.bones[i];
+            name = bone.name;
+
+            //if(name === 'Head') console.log( bone.rotation )//ammo.addPart(name, i); 
+
+            //console.log(name, i)
+
+            if(name !== 'Bone001' && name !== 'Hips' && name !== 'LeftBreast' && name !== 'RightBreast' && name !== 'LeftToe' && name !== 'RightToe' )
+                view.add({ type:'sphere', size:[2], pos:bone.getWorldPosition().toArray(), name:i, mass:3, flag:2, state:4, friction:0.5, restitution:0.9 });
+        
+
+        }
+
+        isRunning = true;
+
+    };
+
+    ammo.addPart = function( name, id ){
+
+        view.add({ type:'sphere', size:[6], pos:[0,100,0], name:id, mass:3, state:4, friction:0.5, restitution:0.9 })
+        //bonesRef[name] = 
+
     };
 
     ammo.updateSkeleton = function(){
+
+        if(!isRunning) return;
+
+        var i = avatar.bones.length  - 30 , bone;
+        var n;
+        var r = bonesAr;
+        var pos = new THREE.Vector3();
+        var quat = new THREE.Quaternion();
+
+        while(i--){
+
+            if(i !== 4 && i !== 0 && i !== 14 && i !== 16 && i !== 20 && i !== 17 ){
+            n = i * 8;
+
+            bone = avatar.bones[i];
+
+            pos = bone.getWorldPosition();
+
+            r[n] = pos.x * 0.1;
+            r[n+1] = pos.y * 0.1;
+            r[n+2] = pos.z * 0.1;
+
+            quat.setFromEuler( bone.rotation );
+
+            r[n+3] = quat.x;
+            r[n+4] = quat.y;
+            r[n+5] = quat.z;
+            r[n+6] = quat.w;
+        }
+            
+        }
+
 
     };
 
@@ -154,8 +224,10 @@ var ammo = ( function () {
 
         if(m === 'step'){
 
+            //ammo.updateSkeleton();
+
             time = performance.now();//now();
-            if ( (time - 1000) > temp ){ temp = time; fps = count; count = 0; }; count++;
+            //if ( (time - 1000) > temp ){ temp = time; fps = count; count = 0; }; count++;
             
             Br = e.data.Br;
             //Cr = e.data.Cr;
@@ -169,6 +241,8 @@ var ammo = ( function () {
 
             delay = ~~ ( timerate - ( time - sendTime ));
             delay = delay < 0 ? 0 : delay;
+
+
 
             
 
@@ -201,8 +275,8 @@ var ammo = ( function () {
         //user.update();
         var key = [];//user.getKey();
 
-        if( isBuffer ) worker.postMessage( { m:'step', key:key, Br:Br, Jr:Jr } , [ Br.buffer, Jr.buffer ] );
-        else worker.postMessage( { m:'step', key:key } );
+        if( isBuffer ) worker.postMessage( { m:'step', key:key, bonesAr:bonesAr, Br:Br, Jr:Jr } , [ Br.buffer, Jr.buffer ] );
+        else worker.postMessage( { m:'step', key:key, bonesAr:bonesAr } );
 
         //if( isBuffer ) worker.postMessage( { m:'step', key:key, Br:Br, Cr:Cr, Hr:Hr, Jr:Jr, Sr:Sr } , [ Br.buffer, Cr.buffer, Hr.buffer, Jr.buffer, Sr.buffer ] );
         //else worker.postMessage( { m:'step', key:key } );

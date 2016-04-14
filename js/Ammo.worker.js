@@ -39,6 +39,8 @@ var tmpset = null;
 
 var currentCar = 0;
 
+var boneAR;
+
 // main transphere array
 /*var Br, Cr, Jr, Hr, Sr;*/
 
@@ -224,6 +226,10 @@ self.onmessage = function ( e ) {
             
         }
 
+        //boneAR = e.data.boneAR;
+
+        updateSkeleton ( e.data.bonesAr );
+
         // ------- step
 
         world.stepSimulation( timestep, substep );
@@ -404,6 +410,31 @@ function wipe (obj) {
 //  RIGIDBODY
 //
 //--------------------------------------------------
+function updateSkeleton ( ar ) {
+    if(!ar) return;
+
+    var i = ar.length/8, b, n;
+
+    while(i--){
+
+        b = getByName( i );
+        if(b){
+            n = i*8;
+
+            tmpPos.fromArray( [ar[n], ar[n+1], ar[n+2]] );
+            tmpQuat.fromArray( [ ar[n+3], ar[n+4], ar[n+5], ar[n+6] ] );
+            tmpTrans.setIdentity();
+            tmpTrans.setOrigin( tmpPos );
+            tmpTrans.setRotation( tmpQuat );
+
+            b.getMotionState().setWorldTransform( tmpTrans );
+
+        }
+
+    }
+
+
+}
 
 function set ( ) {
 
