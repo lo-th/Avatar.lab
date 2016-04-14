@@ -149,6 +149,14 @@ var Gui = ( function () {
        // if (fill) { }        
     }
 
+    Gui.physicsBlock = function(){
+
+        var g = ui.add('group', { name:'Physics', bg:'rgba(120,80,80,0.8)' });
+
+        g.add('bool', { name:'active', p:70, h:20, inh:16, value:ammo.isInit } ).onChange( function(v){ if(v) ammo.init(); else ammo.reset(); } );
+
+    };
+
     Gui.handBlock = function(){
 
         var gr1 = ui.add('group', { name:'hand left' });
@@ -246,13 +254,13 @@ var Gui = ( function () {
         if(avatar)avatar.toPlayMode();
 
         ui.add('title', { name:'AVATAR LAB', prefix:version, h:30, r:10 } );//.onChange( function(v){ switchGender(); } );
-        ui.add('button', { name:'Man/Woman', p:4, h:30, r:10 } ).onChange( function(v){ switchGender(); } );
-        ui.add('bool', { name:'Visible', p:70, h:20, value:true } ).onChange( function(v){ heroVisibility(); } );
+        ui.add('button', { name:'Man/Woman', p:4, h:30, r:10, inh:16 } ).onChange( function(v){ switchGender(); } );
+        ui.add('bool', { name:'Visible', p:70, h:20, value:true, inh:16 } ).onChange( function(v){ heroVisibility(); } );
        // ui.add('bool', { name:'BVH Skeleton', p:70, h:20, value:false } ).onChange( function(v){ skeletonVisibility(); } );
-        ui.add('bool', { name:'Helper', p:70, h:20, value:false } ).onChange( function(v){ helperVisibility(); } );
+        ui.add('bool', { name:'Helper', p:70, h:20, value:false, inh:16 } ).onChange( function(v){ helperVisibility(); } );
 
 
-        ui.add('bool', { name:'Physics', p:70, h:20, value:false } ).onChange( function(v){ initPhysics(); } );
+        this.physicsBlock();
 
     };
 

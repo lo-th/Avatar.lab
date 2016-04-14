@@ -1,18 +1,8 @@
-/**   _   _____ _   _   
-*    | | |_   _| |_| |
-*    | |_ _| | |  _  |
-*    |___|_|_| |_| |_|
-*    @author lo.th / https://github.com/lo-th
-*    THREE and SEA3D avatar
-*/
-
 'use strict';
 
 THREE.Avatar = function () {
 
     this.gender = "woman";
-
-    this.bones = null;
 
     this.isAnimation = true;
     this.isBvh = false;
@@ -26,6 +16,7 @@ THREE.Avatar = function () {
 
     this.animationsNames = [];
 
+    //this.bones = {};
     this.bonesNames = [];
     this.boneSelect = null;
 
@@ -48,15 +39,31 @@ THREE.Avatar = function () {
     this.abdomen = null;
 
     this.poses = {
-        'l_fingers': 0, 'l_finger_0': 0, 'l_finger_1': 0, 'l_finger_2': 0, 'l_finger_3': 0, 'l_finger_4': 0,
-        'r_fingers': 0, 'r_finger_0': 0, 'r_finger_1': 0, 'r_finger_2': 0, 'r_finger_3': 0, 'r_finger_4': 0,
+
+        'l_fingers': 0,
+        'l_finger_0': 0,
+        'l_finger_1': 0,
+        'l_finger_2': 0,
+        'l_finger_3': 0,
+        'l_finger_4': 0,
+        
+        'r_fingers': 0,
+        'r_finger_0': 0,
+        'r_finger_1': 0,
+        'r_finger_2': 0,
+        'r_finger_3': 0,
+        'r_finger_4': 0,
+        
     };
 
     this.rot = {};
     this.pos = {};
 
+
+
 };
 
+//THREE.Avatar.prototype = Object.create( THREE.SkinnedMesh.prototype );
 THREE.Avatar.prototype = Object.create( THREE.SEA3D.SkinnedMesh.prototype );
 THREE.Avatar.prototype.constructor = THREE.Avatar;
 
@@ -106,13 +113,12 @@ THREE.Avatar.prototype.init = function ( Geos ){
     //THREE.SkinnedMesh.call( this, this.geos[this.gender], this.material, useVertexTexture );
     THREE.SEA3D.SkinnedMesh.call( this, this.geos[this.gender], this.material, useVertexTexture );
 
-    // referency bones
-    this.bones = this.skeleton.bones;
+    //this.skeletonCopy = this.skeleton.clone();
 
 
-    i = this.bones.length;
+    i = this.skeleton.bones.length;
     while(i--){ 
-        bone = this.bones[i];
+        bone = this.skeleton.bones[i];
         name = bone.name;
         //this.bones[ name ] = bone;
         this.bonesNames[i] = name;
@@ -240,14 +246,14 @@ THREE.Avatar.prototype.setScalling = function ( axe, v ){
         if(this.womanScalling[id] === null) this.womanScalling[id] = new THREE.Vector3(1,1,1);
 
         this.womanScalling[id][axe] = v;
-        this.bones[id].scalling = this.womanScalling[id].clone();
+        this.skeleton.bones[id].scalling = this.womanScalling[id].clone();
 
     }else{
 
         if(this.manScalling[id] === null) this.manScalling[id] = new THREE.Vector3(1,1,1);
 
         this.manScalling[id][axe] = v;
-        this.bones[id].scalling = this.manScalling[id].clone();
+        this.skeleton.bones[id].scalling = this.manScalling[id].clone();
 
     }
 
@@ -300,7 +306,36 @@ THREE.Avatar.prototype.showBones = function ( name ){
     this.geometry.attributes.color.needsUpdate = true;
 };
 
+//-----------------------
+//  for SSAO
+//-----------------------
 
+THREE.Avatar.prototype.initDepth = function (){
+
+    var depthShader = THREE.ShaderLib[ "depthRGBA" ];
+    var depthUniforms = THREE.UniformsUtils.clone( depthShader.uniforms );
+
+    this.depthMaterial = new THREE.ShaderMaterial( { 
+        fragmentShader: depthShader.fragmentShader, vertexShader:depthShader.vertexShader,
+        uniforms: depthUniforms, blending: THREE.NoBlending, 
+        skinning: true, morphTargets:false 
+    });
+
+};
+
+THREE.Avatar.prototype.depthPass = function (){
+
+    this.eyeGroup.visible = false;
+    this.material = this.depthMaterial;
+
+};
+
+THREE.Avatar.prototype.normalPass = function (){
+
+    this.eyeGroup.visible = true;
+    this.material = this.normalMaterial;
+
+};
 
 
 //-----------------------
@@ -318,8 +353,8 @@ THREE.Avatar.prototype.toPlayMode = function (){
     //console.log(this.animations)
     //this.isBvh = false;
 
-   // var i = this.bones.length;
-    //while(i--) this.bones[i].matrixAutoUpdate = this.isAnimation;
+   // var i = this.skeleton.bones.length;
+    //while(i--) this.skeleton.bones[i].matrixAutoUpdate = this.isAnimation;
 
     this.play("idle", 0);
 
@@ -376,11 +411,11 @@ THREE.Avatar.prototype.initMorphology = function (){
 
     // for woman
 
-    i = this.bones.length;
+    i = this.skeleton.bones.length;
 
     while(i--){
 
-        bone = this.bones[i];
+        bone = this.skeleton.bones[i];
         name = bone.name;
 
         v = null;
@@ -403,11 +438,11 @@ THREE.Avatar.prototype.initMorphology = function (){
 
     // for man
 
-    i = this.bones.length;
+    i = this.skeleton.bones.length;
 
     while(i--){
 
-        bone = this.bones[i];
+        bone = this.skeleton.bones[i];
         name = bone.name;
 
         v = null;
@@ -435,26 +470,14 @@ THREE.Avatar.prototype.initMorphology = function (){
  
 };
 
-THREE.Avatar.prototype.morphology = function (){
 
-    var i, bone, name;
-
-    i = this.bones.length;
-    while(i--){
-
-        if( this[this.gender + 'Scalling'][i] !== null ) this.bones[i].scalling = this[ this.gender + 'Scalling' ][i].clone();
-        else this.bones[i].scalling = null;
-    }
-
-};
-
-//-----------------------
-// Avatar Breathing 
-//-----------------------
 
 THREE.Avatar.prototype.breathing = function (){
 
     if(this.chest && this.abdomen){
+
+
+        
 
         if(this.breathSide > 0){
             //console.log( this.breath )
@@ -473,7 +496,18 @@ THREE.Avatar.prototype.breathing = function (){
 
 };
 
+THREE.Avatar.prototype.morphology = function (){
 
+    var i, bone, name;
+
+    i = this.skeleton.bones.length;
+    while(i--){
+
+        if( this[this.gender + 'Scalling'][i] !== null ) this.skeleton.bones[i].scalling = this[ this.gender + 'Scalling' ][i].clone();
+        else this.skeleton.bones[i].scalling = null;
+    }
+
+};
 
 THREE.Avatar.prototype.lerp = function (a, b, percent) { return a + (b - a) * percent; };
 
@@ -481,7 +515,7 @@ THREE.Avatar.prototype.toRad = function( v ){ return v * 0.0174532925199432957; 
 
 THREE.Avatar.prototype.rotate = function ( v, name, x, y, z ) { 
 
-    var bone = this.bones[ this.findID( name ) ];
+    var bone = this.skeleton.bones[ this.findID( name ) ];
 
     var tx = this.rot[name].x;
     var ty = this.rot[name].y;
@@ -573,12 +607,12 @@ THREE.Avatar.prototype.addEyes = function (){
 
     this.head.add( this.eyeGroup )
 
-    /*for(var i=0; i<this.bones.length; i++){
-        if(this.bones[i].name === "Head"){ 
-            this.bones[i].add( this.eyeGroup );
+    /*for(var i=0; i<this.skeleton.bones.length; i++){
+        if(this.skeleton.bones[i].name === "Head"){ 
+            this.skeleton.bones[i].add( this.eyeGroup );
             
-            //this.bones[i].scale.y = 1.2;
-            //console.log(this.bones[i].scale)
+            //this.skeleton.bones[i].scale.y = 1.2;
+            //console.log(this.skeleton.bones[i].scale)
         }
     }*/
 
@@ -642,7 +676,19 @@ THREE.Avatar.prototype.playAnimation = function ( name ){
 
 };
 
+THREE.Avatar.prototype.addHelper = function (){
 
+    this.helper = new THREE.SkeletonHelper(this);
+    scene.add(this.helper);
+
+};
+
+THREE.Avatar.prototype.removeHelper = function (){
+
+    scene.remove(this.helper);
+    this.helper = null;
+
+};
 
 THREE.Avatar.prototype.reset = function (){
 
@@ -656,11 +702,11 @@ THREE.Avatar.prototype.reset = function (){
     this.isAnimation = false;
     this.isBvh = false;
 
-    var i = this.bones.length, name;
+    var i = this.skeleton.bones.length, name;
     while(i--){ 
-        name = this.bones[i].name;
-        if(name.substring(0,2) === 'lf' || name.substring(0,2) === 'rf'){ this.bones[i].matrixAutoUpdate = false; }
-        else this.bones[i].matrixAutoUpdate = true;
+        name = this.skeleton.bones[i].name;
+        if(name.substring(0,2) === 'lf' || name.substring(0,2) === 'rf'){ this.skeleton.bones[i].matrixAutoUpdate = false; }
+        else this.skeleton.bones[i].matrixAutoUpdate = true;
     }
 
     //var oly= this.position.y;
@@ -676,11 +722,11 @@ THREE.Avatar.prototype.reset = function (){
 
     this.stop();
 
-   /* var i = this.bones.length;
+   /* var i = this.skeleton.bones.length;
     while(i--){ 
-        this.bones[i].matrixAutoUpdate = this.isAnimation;
-        //this.bones[i].matrixWorld = this.baseMatrix[i].clone();
-        this.bones[i].matrixWorld.copy( this.baseMatrix[i] );
+        this.skeleton.bones[i].matrixAutoUpdate = this.isAnimation;
+        //this.skeleton.bones[i].matrixWorld = this.baseMatrix[i].clone();
+        this.skeleton.bones[i].matrixWorld.copy( this.baseMatrix[i] );
     }*/
 };
 
@@ -700,12 +746,12 @@ THREE.Avatar.prototype.toBvh = function (){
     //this.isAnimation = false;
     this.isBvh = true;
 
-    //console.log(this.bones[0].scalling)
+    //console.log(this.skeleton.bones[0].scalling)
 
     
 
-    //var i = this.bones.length;
-    //while(i--) this.bones[i].matrixAutoUpdate = false;//this.isAnimation;
+    //var i = this.skeleton.bones.length;
+    //while(i--) this.skeleton.bones[i].matrixAutoUpdate = false;//this.isAnimation;
 
 };
 
@@ -718,8 +764,8 @@ THREE.Avatar.prototype.toAnimation = function (){
     this.isAnimation = true;
     //this.isBvh = false;
 
-   // var i = this.bones.length;
-    //while(i--) this.bones[i].matrixAutoUpdate = this.isAnimation;
+   // var i = this.skeleton.bones.length;
+    //while(i--) this.skeleton.bones[i].matrixAutoUpdate = this.isAnimation;
 
     //this.play("idle", 0);
     this.play( this.cAnimation, 0);
@@ -730,8 +776,8 @@ THREE.Avatar.prototype.toAnimation = function (){
 
     this.isAnimation = b === undefined ? false : b;
 
-    var i = this.bones.length;
-    while(i--) this.bones[i].matrixAutoUpdate = this.isAnimation;
+    var i = this.skeleton.bones.length;
+    while(i--) this.skeleton.bones[i].matrixAutoUpdate = this.isAnimation;
 
 };*/
 
@@ -768,7 +814,7 @@ THREE.Avatar.prototype.updateBones = function (){
 
     var matrixWorldInv = new THREE.Matrix4().getInverse( this.matrixWorld );
     var bone, node, name, parentName, parentId;
-    var bones = this.bones;
+    var bones = this.skeleton.bones;
     var nodes = this.bvh.Nodes;
     var len = bones.length;
     var parentMtx, tmpMtx; //, worldMtx;
@@ -866,61 +912,9 @@ THREE.Avatar.prototype.updateBones = function (){
 
     this.breathing();
 
-  //  console.log(this.bones[ 0 ].scalling)
+  //  console.log(this.skeleton.bones[ 0 ].scalling)
        
 };
-
-
-//-----------------------
-// skeleton Helper
-//-----------------------
-
-THREE.Avatar.prototype.addHelper = function (){
-
-    this.helper = new THREE.SkeletonHelper(this);
-    scene.add(this.helper);
-
-};
-
-THREE.Avatar.prototype.removeHelper = function (){
-
-    scene.remove(this.helper);
-    this.helper = null;
-
-};
-
-
-//-----------------------
-//  for SSAO
-//-----------------------
-
-THREE.Avatar.prototype.initDepth = function (){
-
-    var depthShader = THREE.ShaderLib[ "depthRGBA" ];
-    var depthUniforms = THREE.UniformsUtils.clone( depthShader.uniforms );
-
-    this.depthMaterial = new THREE.ShaderMaterial( { 
-        fragmentShader: depthShader.fragmentShader, vertexShader:depthShader.vertexShader,
-        uniforms: depthUniforms, blending: THREE.NoBlending, 
-        skinning: true, morphTargets:false 
-    });
-
-};
-
-THREE.Avatar.prototype.depthPass = function (){
-
-    this.eyeGroup.visible = false;
-    this.material = this.depthMaterial;
-
-};
-
-THREE.Avatar.prototype.normalPass = function (){
-
-    this.eyeGroup.visible = true;
-    this.material = this.normalMaterial;
-
-};
-
 
 //-----------------------
 // force local scalling
@@ -963,9 +957,7 @@ THREE.Skeleton.prototype.update = ( function () {
             }
             
             offsetMatrix.multiplyMatrices( matrix, this.boneInverses[ b ] );
-            //offsetMatrix.flattenToArrayOffset( this.boneMatrices, b * 16 );
-            // only for three dev
-            offsetMatrix.toArray( this.boneMatrices, b * 16 );
+            offsetMatrix.flattenToArrayOffset( this.boneMatrices, b * 16 );
 
         }
 

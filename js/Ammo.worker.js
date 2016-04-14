@@ -43,10 +43,10 @@ var currentCar = 0;
 /*var Br, Cr, Jr, Hr, Sr;*/
 
 var Br = new Float32Array( 1000*8 ); // rigid buffer max 1000
-var Cr = new Float32Array( 14*56 ); // car buffer max 14 / 6 wheels
+//var Cr = new Float32Array( 14*56 ); // car buffer max 14 / 6 wheels
 var Jr = new Float32Array( 100*4 ); // joint buffer max 100
-var Hr = new Float32Array( 10*8 ); // hero buffer max 10
-var Sr = new Float32Array( 8192*3 ); // soft buffer nVertices x,y,z
+//var Hr = new Float32Array( 10*8 ); // hero buffer max 10
+//var Sr = new Float32Array( 8192*3 ); // soft buffer nVertices x,y,z
 
 // for terrain
 //var hdata = null;
@@ -146,12 +146,12 @@ self.onmessage = function ( e ) {
         //importScripts( 'ammo/ammo.js' );
         importScripts( 'ammo/math.js' );
         importScripts( 'ammo/world.js' );
-        importScripts( 'ammo/character.js' );
+        //importScripts( 'ammo/character.js' );
         importScripts( 'ammo/constraint.js' );
         importScripts( 'ammo/rigidBody.js' );
-        importScripts( 'ammo/softBody.js' );
-        importScripts( 'ammo/terrain.js' );
-        importScripts( 'ammo/vehicle.js' );
+        //importScripts( 'ammo/softBody.js' );
+        //importScripts( 'ammo/terrain.js' );
+        //importScripts( 'ammo/vehicle.js' );
         
         self.postMessage({ m:'init' });
         init();
@@ -160,9 +160,9 @@ self.onmessage = function ( e ) {
 
     if(m === 'reset') reset( e.data.full );
 
-    if(m === 'key') key = e.data.o;
+    //if(m === 'key') key = e.data.o;
 
-    if(m === 'setDriveCar') currentCar = e.data.o.n;
+    //if(m === 'setDriveCar') currentCar = e.data.o.n;
 
     if(m === 'substep') substep = e.data.o.substep;
 
@@ -170,9 +170,9 @@ self.onmessage = function ( e ) {
 
     if(m === 'set') tmpset = e.data.o;
 
-    if(m === 'vehicle') addVehicle( e.data.o );
+    //if(m === 'vehicle') addVehicle( e.data.o );
 
-    if(m === 'character') addCharacter( e.data.o );
+    //if(m === 'character') addCharacter( e.data.o );
 
     if(m === 'gravity') gravity( e.data.o );
 
@@ -180,7 +180,7 @@ self.onmessage = function ( e ) {
 
     if(m === 'apply') apply( e.data.o );
 
-    if(m === 'terrain'){
+    /*if(m === 'terrain'){
 
         var name = e.data.name;
         terrainList.push(name);
@@ -189,38 +189,38 @@ self.onmessage = function ( e ) {
         //hdata = e.data.hdata;
         terrainNeedUpdate = true;
         
-    }
+    }*/
 
     if(m === 'step'){
 
-        if(pause) return;
+        if( pause ) return;
 
         // ------- pre step
 
-        key = e.data.key;
+        //key = e.data.key;
 
         //drive( currentCar );
-        move( 0 );
+        //move( 0 );
 
-        if(tmpset!==null) set();
+        if( tmpset !== null ) set();
 
-        if( terrainNeedUpdate ){
+        /*if( terrainNeedUpdate ){
             while(terrainList.length){
                 terrain_data(terrainList.pop());
             }
 
             terrainNeedUpdate = false;
-        }
+        }*/
 
         // ------- buffer data
 
         if( isBuffer ){
 
             Br = e.data.Br;
-            Cr = e.data.Cr;
-            Hr = e.data.Hr;
+            //Cr = e.data.Cr;
+            //Hr = e.data.Hr;
             Jr = e.data.Jr;
-            Sr = e.data.Sr;
+            //Sr = e.data.Sr;
             
         }
 
@@ -229,12 +229,12 @@ self.onmessage = function ( e ) {
         world.stepSimulation( timestep, substep );
         //world.stepSimulation( dt, it, dt );
 
-        drive( currentCar );
+        //drive( currentCar );
 
         stepRigidBody();
-        stepCharacter();
-        stepVehicle();
-        stepSoftBody();
+        //stepCharacter();
+        //stepVehicle();
+        //stepSoftBody();
 
         //softPoints = 0;
         //softs.forEach( softUp )
@@ -255,8 +255,11 @@ function preStep(){
 
 function postStep(){
 
-    if( isBuffer ) self.postMessage({ m:'step', Br:Br, Cr:Cr, Hr:Hr, Jr:Jr, Sr:Sr },[ Br.buffer, Cr.buffer, Hr.buffer, Jr.buffer, Sr.buffer ]);
-    else self.postMessage( { m:'step', Br:Br, Cr:Cr, Hr:Hr, Jr:Jr, Sr:Sr } );
+    if( isBuffer ) self.postMessage({ m:'step', Br:Br, Jr:Jr },[ Br.buffer, Jr.buffer ]);
+    else self.postMessage( { m:'step', Br:Br, Jr:Jr } );
+
+    //if( isBuffer ) self.postMessage({ m:'step', Br:Br, Cr:Cr, Hr:Hr, Jr:Jr, Sr:Sr },[ Br.buffer, Cr.buffer, Hr.buffer, Jr.buffer, Sr.buffer ]);
+    //else self.postMessage( { m:'step', Br:Br, Cr:Cr, Hr:Hr, Jr:Jr, Sr:Sr } );
 
 };
 
@@ -268,13 +271,13 @@ function postStep(){
 //--------------------------------------------------
 
 
-function control( o ){
+/*function control( o ){
 
     key = o;
     drive( 0 );
     move( 0 );
 
-};
+};*/
 
 
 
@@ -324,11 +327,11 @@ function init () {
     addWorld();
 
     bodys = [];
-    softs = [];
+    //softs = [];
     joints = [];
-    cars = [];
-    carsInfo = [];
-    heros = [];
+    //cars = [];
+    //carsInfo = [];
+    //heros = [];
     solids = [];
 
     // use for get object by name
@@ -349,14 +352,14 @@ function resetARRAY(){
 
     var i = Br.length;
     while(i--) Br[i] = 0;
-    i = Cr.length;
-    while(i--) Cr[i] = 0;
+    //i = Cr.length;
+   // while(i--) Cr[i] = 0;
     i = Jr.length;
     while(i--) Jr[i] = 0;
-    i = Hr.length;
-    while(i--) Hr[i] = 0;
-    i = Sr.length;
-    while(i--) Sr[i] = 0;
+   // i = Hr.length;
+   //while(i--) Hr[i] = 0;
+   // i = Sr.length;
+   // while(i--) Sr[i] = 0;
 
 };
 
@@ -368,9 +371,9 @@ function reset ( fullReset ) {
 
     clearJoint();
     clearRigidBody();
-    clearVehicle();
-    clearCharacter();
-    clearSoftBody();
+    //clearVehicle();
+    //clearCharacter();
+    //clearSoftBody();
 
     // clear body name object
     byName = {};
@@ -446,7 +449,7 @@ function add ( o, extra ) {
     }
 
     // SOFTBODY
-    if(o.type.substring(0,4) == 'soft' || o.type == 'ellipsoid'  || o.type == 'rope'  || o.type == 'cloth' ) {
+    /*if(o.type.substring(0,4) == 'soft' || o.type == 'ellipsoid'  || o.type == 'rope'  || o.type == 'cloth' ) {
 
         addSoftBody( o );
         return;
@@ -459,7 +462,7 @@ function add ( o, extra ) {
         addTerrain( o );
         return;
 
-    }
+    }*/
 
     // RIGIDBODY
     addRigidBody( o, extra );

@@ -54,9 +54,8 @@ canvas { position: absolute; top:0; left:0; pointer-events:auto; width:100%; hei
 <script src="js/Avatar.js"></script>
 <script src="js/Gui.js"></script>
 
-<!-- PHYSICS -->
+<!-- AMMO PHYSICS -->
 <script src="js/Ammo.manager.js"></script>
-<script src="js/ConvexGeometry.js"></script>
 <script src="js/View.js"></script>
 
 <canvas id="canvas"></canvas>
@@ -72,7 +71,7 @@ var env = 'yellow';
 var avatar;
 var version = 'v 0.2';
 
-var key = [0,0,0,0,0,0,0,0];
+var key = [ 0,0,0,0,0,0,0,0 ];
 
 
 var isTJS = false;
@@ -123,9 +122,9 @@ function debugTell(s) {
     debug.innerHTML = s;
 }
 
-function initPhysics() {
+/*function initPhysics() {
     ammo.init( physicsActive );
-    view.init();
+    //view.init();
 }
 
 function physicsActive() {
@@ -139,24 +138,6 @@ function physicsActive() {
     view.add({ type:'cylinder', size:[3, 12, 3], name:'bob', mass:10, flag:2, state:4, friction:0.5, restitution:0.5 });
     view.add({ type:'sphere', size:[6], pos:[0,100,0], mass:3, state:4, friction:0.5, restitution:0.9 });
 
-    /*view.add({ 
-        type:'ellipsoid',
-        center:[-10, 20, 0],
-        radius:[6, 6, 6],
-        vertices:32,
-        mass:3, state:4,
-        viterations:10,
-        piterations:10,
-        citerations:4,
-        diterations:0,
-
-        kdf:1,
-        kdp:0.001,
-        kpr:2500,
-        
-        margin:0.1,
-    });*/
-
 }
 
 function rayMove ( m ) {
@@ -169,7 +150,7 @@ function rayMove ( m ) {
 
     ammo.send( 'set', o );
 
-};
+};*/
 
 function init3D() {
 

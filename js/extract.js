@@ -72,6 +72,7 @@ EXTRACT.Pool = function(urls, callback, type){
     this.callback = callback || new function(){};
 
     this.results = {};
+    this.blobs = {};
     
 
     
@@ -94,8 +95,8 @@ EXTRACT.Pool.prototype = {
         var _this = this;
         var name = fname.substring(fname.lastIndexOf('/')+1, fname.indexOf('.'));
         var ar = new Uint8Array(r.length); 
-        for (var i = 0, len = r.length; i < len; ++i){ ar[i] = r.charCodeAt(i) & 0xff; };
-        EXTRACT.decompress( ar, function on_complete(result) { _this.add(result, name, type); }); 
+        for (var i = 0, len = r.length; i < len; ++i){ ar[i] = r.charCodeAt(i) & 255; };
+        EXTRACT.decompress( ar, function on_complete(result) { _this.add( result, name, type ); }); 
     },
     load:function(url, type, callback){
         if(callback) this.callback = callback;
@@ -106,7 +107,7 @@ EXTRACT.Pool.prototype = {
         x.overrideMimeType('text/plain; charset=x-user-defined'); 
         x.open('GET', url, true);
         x.onload = function(){ 
-            _this.read(x.responseText, url, type, callback);
+            _this.read( x.responseText, url, type, callback );
             //var s = x.responseText; 
             //var ar = new Uint8Array(s.length); 
             //for (var i = 0, len = s.length; i < len; ++i) { ar[i] = s.charCodeAt(i) & 0xff; }; 
@@ -124,26 +125,30 @@ EXTRACT.Pool.prototype = {
                 document.getElementsByTagName('head')[0].appendChild(n);
             break;
             case 1:// for worker injection
-                var URL = window.URL || window.webkitURL;
-                this.results[name] = URL.createObjectURL( new Blob([ result ], { type: 'application/javascript' }) );
+                //console.log(result)
+                this.results[name] = (window.URL || window.webkitURL).createObjectURL( new Blob([ result ], { type: 'application/javascript' }) );
             break;
             case 2:// only text 
                 this.results[name] = result;
             break;
         }
 
-        
-
-        
         if(this.urls.length > 1){
             this.urls.shift();
             this.type.shift();
             this.load(this.urls[0], this.type[0]);
         } else { 
-            //console.log('end')
             this.callback();
         }
     },
+    clearBlob:function( name ){
+        (window.URL || window.webkitURL).revokeObjectURL( this.results[name] );
+        this.results[name] = null;
+
+    },
+    get:function( name ){
+        return this.results[name];
+    }
     /*apply:function(name){
         var n = document.createElement("script");
         n.type = "text/javascript";
