@@ -408,11 +408,15 @@ function animate() {
 
     if( Gui ) Gui.update();
 
+    
+
     if(bvhReader !== null) bvhReader.update();
 
     if(avatar) avatar.updateAnimation(delta);
 
     if(ammo) ammo.updateSkeleton();
+
+    //if(ammo) ammo.updateSkeleton();
 
     
 

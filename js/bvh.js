@@ -414,7 +414,8 @@ BVH.Reader.prototype = {
         scene.remove( this.skeleton );
         this.skeleton = null;
     },
-    updateSkeleton:function (  ) {
+    updateSkeleton:function () {
+        if(!avatar.isBvh) return;
         var mtx, node, bone, name;
         var n = this.nodes.length;
         var target;

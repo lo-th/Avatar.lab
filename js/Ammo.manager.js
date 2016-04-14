@@ -137,7 +137,7 @@ var ammo = ( function () {
     ammo.initSkeleton = function(){
 
     
-        var i = avatar.bones.length - 30 , bone, name, ln, lz;
+        var i = avatar.bones.length - 30 , bone, name, ln, lz, ls;
 
         while(i--){
 
@@ -146,45 +146,67 @@ var ammo = ( function () {
 
             //if(name === 'Head') console.log( bone.rotation )//ammo.addPart(name, i); 
 
-            //console.log(name, i)
+            console.log(name, i);
 
-            if(name !== 'Bone001' && name !== 'Hips' && name !== 'LeftBreast' && name !== 'RightBreast' && name !== 'LeftToeEnd' && name !== 'RightToeEnd'  && name !== 'LeftKnee' && name !== 'RightKnee' && name !== 'Top'){
+            if(name !== 'Hips'  &&name !== 'Bone001'  && name !== 'LeftBreast' && name !== 'RightBreast' && name !== 'LeftToeEnd' && name !== 'RightToeEnd'  && name !== 'LeftKnee' && name !== 'RightKnee' && name !== 'Top'){
 
                 ln = 5;
+                ls = 5;
                 lz = 2;
 
                 if(name === 'LeftUpLeg' || name === 'RightUpLeg'){
                   lz = 3;
-                  if( bone.children[0]  ) ln = ammo.distance(bone.position, bone.children[0].position );
-                } else if(name === 'Chest'){
+                  if( bone.children[0]  ) ln = ammo.distance(bone.position, bone.children[0].position )+2;
+                  ls = ln;
+                }else if(name === 'LeftLowLeg' || name === 'RightLowLeg'){
+                  lz = 2.3;
+                  ln = ammo.distance( bone.parent.position, bone.position )+2;
+                  ls = ln;
+                }else if(name === 'Chest'){
                   lz = 5;
-                  ln = 12
+                  ln = 14;
+                  ls = 8;
+                 // if( bone.children[2]  ) ln = ammo.distance(bone.position, bone.children[2].position );
+                }else if(name === 'Spine1'){
+                  ls = -4;
                  // if( bone.children[2]  ) ln = ammo.distance(bone.position, bone.children[2].position );
                 }else if(name === 'LeftUpArm' || name === 'RightUpArm'){
-                  lz = 2.5;
-                 // ln = 6
-                  if( bone.children[0]  ) ln = ammo.distance(bone.position, bone.children[0].position )+2;
-
+                  lz = 2.3;
+                  if( bone.children[0]  ) ln = ammo.distance(bone.position, bone.children[0].position )+4;
+                  ls = ln;
+                }else if(name === 'LeftLowArm' || name === 'RightLowArm'){
+                    lz = 2;
+                    ln = ammo.distance( bone.parent.position, bone.position )+3;
+                    ls = ln;
                 }else if(name === 'LeftToe' || name === 'RightToe'){
                   //lz = 3;
                  // ln = 6
                   if( bone.children[0]  ) ln = ammo.distance(bone.position, bone.children[0].position );
+                  ls = 0;
                 }else if(name === 'LeftHand' || name === 'RightHand'){
                   //lz = 3;
                  // ln = 6
                   if( bone.children[0]  ) ln = ammo.distance(bone.position, bone.children[0].position );
+                  ls = ln;
                 }else if(name === 'LeftFoot' || name === 'RightFoot'){
-                  //lz = 3;
-                  ln = 6
+                  lz = 1.6;
+                  ln = 6;
+                  ls = 3;
                   //if( bone.children[0]  ) ln = ammo.distance(bone.position, bone.children[0].position );
                 } else {
                    if( bone.parent  ) ln = ammo.distance( bone.parent.position, bone.position );
+                   ls = ln;
                 }
                 // 
 
-                boneDecal[i] = [ln*0.5];
+                boneDecal[i] = [ls*0.5];
+
+
                
                 if( name === 'Head' )view.add({ type:'sphere', size:[3.8], pos:bone.getWorldPosition().toArray(), name:i, mass:3, flag:2, state:4, friction:0.5, restitution:0.9 });
+                else if(name === 'LeftToe' || name === 'RightToe' || name === 'LeftFoot' || name === 'RightFoot') view.add({ type:'box', size:[lz*2, ln, lz], pos:bone.getWorldPosition().toArray(), name:i, mass:3, flag:2, state:4, friction:0.5, restitution:0.9 });
+                else if(name === 'LeftCollar' || name === 'RightCollar') view.add({ type:'sphere', size:[3], pos:bone.getWorldPosition().toArray(), name:i, mass:3, flag:2, state:4, friction:0.5, restitution:0.9 });
+                else if(name === 'Spine1') view.add({ type:'sphere', size:[6.4], pos:bone.getWorldPosition().toArray(), name:i, mass:3, flag:2, state:4, friction:0.5, restitution:0.9 });
                 else view.add({ type:'cylinder', size:[lz, ln, lz], pos:bone.getWorldPosition().toArray(), name:i, mass:3, flag:2, state:4, friction:0.5, restitution:0.9 });
             }
         
@@ -222,19 +244,21 @@ var ammo = ( function () {
 
         while(i--){
 
-            if(i !== 4 && i !== 0 && i !== 14 && i !== 16 && i !== 22 && i !== 24 && i !== 8 && i !== 5 && i !== 25  ){
+            if(i !== 0 && i !== 4 && i !== 14 && i !== 16 && i !== 22 && i !== 24 && i !== 8 && i !== 5 && i !== 25  ){
                 n = i * 8;
 
                 bone = avatar.bones[i];
                 mtxBone = bone.matrixWorld.clone();
 
-                mtx.identity() ;//= new THREE.Matrix4();
+                mtx.identity();//= new THREE.Matrix4();
                 //mtx.makeTranslation(boneDecal[i][1], 0, 0);
                 mtx.makeRotationZ( Math.PI*0.5 );
                 mtxBone.multiply( mtx );
 
                 mtx.identity() ;//= new THREE.Matrix4();
-                mtx.makeTranslation(0, boneDecal[i][0], 0);
+                if(i===2) mtx.makeTranslation(0, boneDecal[i][0], -1);
+                if( i===20 || i===17 ) mtx.makeTranslation(0, boneDecal[i][0], -1);
+                else  mtx.makeTranslation(0, boneDecal[i][0], 0);
                 //mtx.makeRotationZ( Math.PI*0.5 );
                 mtxBone.multiply( mtx );
 

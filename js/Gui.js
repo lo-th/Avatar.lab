@@ -214,6 +214,8 @@ var Gui = ( function () {
 
         this.handBlock();
 
+        this.physicsBlock();
+
 
     };
 
@@ -237,6 +239,8 @@ var Gui = ( function () {
         ui.add('button', { name:'Story', p:4, h:30, r:10 } ).onChange(  function(){ bvhReader.load("bvh/story.z") }  );
 
         this.handBlock();
+
+        this.physicsBlock();
 
         //var gr1 = ui.add('group', { name:'hand left' });
 
