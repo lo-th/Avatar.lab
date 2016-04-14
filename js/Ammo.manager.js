@@ -137,7 +137,7 @@ var ammo = ( function () {
     ammo.initSkeleton = function(){
 
     
-        var i = avatar.bones.length - 30 , bone, name, ln;
+        var i = avatar.bones.length - 30 , bone, name, ln, lz;
 
         while(i--){
 
@@ -146,18 +146,46 @@ var ammo = ( function () {
 
             //if(name === 'Head') console.log( bone.rotation )//ammo.addPart(name, i); 
 
-            console.log(name, i)
+            //console.log(name, i)
 
-            if(name !== 'Bone001' && name !== 'Hips' && name !== 'LeftBreast' && name !== 'RightBreast' && name !== 'LeftToe' && name !== 'RightToe'  && name !== 'LeftKnee' && name !== 'RightKnee'){
+            if(name !== 'Bone001' && name !== 'Hips' && name !== 'LeftBreast' && name !== 'RightBreast' && name !== 'LeftToeEnd' && name !== 'RightToeEnd'  && name !== 'LeftKnee' && name !== 'RightKnee' && name !== 'Top'){
 
                 ln = 5;
-                //if( bone.children[0]  ) ln = ammo.distance(bone.position, bone.children[0].position );
-                 if( bone.parent  ) ln = ammo.distance( bone.parent.position, bone.position );
+                lz = 2;
+
+                if(name === 'LeftUpLeg' || name === 'RightUpLeg'){
+                  lz = 3;
+                  if( bone.children[0]  ) ln = ammo.distance(bone.position, bone.children[0].position );
+                } else if(name === 'Chest'){
+                  lz = 5;
+                  ln = 12
+                 // if( bone.children[2]  ) ln = ammo.distance(bone.position, bone.children[2].position );
+                }else if(name === 'LeftUpArm' || name === 'RightUpArm'){
+                  lz = 2.5;
+                 // ln = 6
+                  if( bone.children[0]  ) ln = ammo.distance(bone.position, bone.children[0].position )+2;
+
+                }else if(name === 'LeftToe' || name === 'RightToe'){
+                  //lz = 3;
+                 // ln = 6
+                  if( bone.children[0]  ) ln = ammo.distance(bone.position, bone.children[0].position );
+                }else if(name === 'LeftHand' || name === 'RightHand'){
+                  //lz = 3;
+                 // ln = 6
+                  if( bone.children[0]  ) ln = ammo.distance(bone.position, bone.children[0].position );
+                }else if(name === 'LeftFoot' || name === 'RightFoot'){
+                  //lz = 3;
+                  ln = 6
+                  //if( bone.children[0]  ) ln = ammo.distance(bone.position, bone.children[0].position );
+                } else {
+                   if( bone.parent  ) ln = ammo.distance( bone.parent.position, bone.position );
+                }
+                // 
 
                 boneDecal[i] = [ln*0.5];
                
-                if( name === 'Head' )view.add({ type:'sphere', size:[2], pos:bone.getWorldPosition().toArray(), name:i, mass:3, flag:2, state:4, friction:0.5, restitution:0.9 });
-                else view.add({ type:'cylinder', size:[2, ln, 2], pos:bone.getWorldPosition().toArray(), name:i, mass:3, flag:2, state:4, friction:0.5, restitution:0.9 });
+                if( name === 'Head' )view.add({ type:'sphere', size:[3.8], pos:bone.getWorldPosition().toArray(), name:i, mass:3, flag:2, state:4, friction:0.5, restitution:0.9 });
+                else view.add({ type:'cylinder', size:[lz, ln, lz], pos:bone.getWorldPosition().toArray(), name:i, mass:3, flag:2, state:4, friction:0.5, restitution:0.9 });
             }
         
 
@@ -194,7 +222,7 @@ var ammo = ( function () {
 
         while(i--){
 
-            if(i !== 4 && i !== 0 && i !== 14 && i !== 16 && i !== 20 && i !== 17 && i !== 8 && i !== 5   ){
+            if(i !== 4 && i !== 0 && i !== 14 && i !== 16 && i !== 22 && i !== 24 && i !== 8 && i !== 5 && i !== 25  ){
                 n = i * 8;
 
                 bone = avatar.bones[i];

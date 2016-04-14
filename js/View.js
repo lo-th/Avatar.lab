@@ -38,7 +38,7 @@ var view = ( function () {
 
         geo['box'] =  new THREE.BoxBufferGeometry(1,1,1);
         geo['sphere'] = new THREE.SphereBufferGeometry( 1, 6, 6 );
-        geo['cylinder'] =  new THREE.CylinderBufferGeometry(1,1,1,12,1 );
+        geo['cylinder'] =  new THREE.CylinderBufferGeometry(1,1,1, 6, 1 );
 
         mat['basic'] = new THREE.MeshBasicMaterial({ color:0xffffff, name:'basic', wireframe:true, depthTest:false, depthWrite:false });
         mat['wall'] = new THREE.MeshBasicMaterial({ color:0x000000, name:'wall', wireframe:true, depthTest:false, depthWrite:false ,transparent:true, opacity:0.1 });
