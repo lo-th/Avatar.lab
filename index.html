@@ -410,7 +410,7 @@ function animate() {
 
     
 
-    if(bvhReader !== null) bvhReader.update();
+    if(bvhReader) bvhReader.update();
 
     if(avatar) avatar.updateAnimation(delta);
 
@@ -438,6 +438,7 @@ function animate() {
         // Render renderPass and SSAO shaderPass
         //scene.overrideMaterial = null;
         composer.render();
+        
     } else {
 
         renderer.render( scene, camera );
