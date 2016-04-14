@@ -25,6 +25,8 @@ var ammo = ( function () {
     //var ar, dr, hr, jr, sr;
 
     var timerate = timestep * 1000;
+
+    var boneDecal = [];
     
     
     var sendTime = 0;
@@ -135,7 +137,7 @@ var ammo = ( function () {
     ammo.initSkeleton = function(){
 
     
-        var i = avatar.bones.length - 30 , bone, name;
+        var i = avatar.bones.length - 30 , bone, name, ln;
 
         while(i--){
 
@@ -144,15 +146,30 @@ var ammo = ( function () {
 
             //if(name === 'Head') console.log( bone.rotation )//ammo.addPart(name, i); 
 
-            //console.log(name, i)
+            console.log(name, i)
 
-            if(name !== 'Bone001' && name !== 'Hips' && name !== 'LeftBreast' && name !== 'RightBreast' && name !== 'LeftToe' && name !== 'RightToe' )
-                view.add({ type:'sphere', size:[2], pos:bone.getWorldPosition().toArray(), name:i, mass:3, flag:2, state:4, friction:0.5, restitution:0.9 });
+            if(name !== 'Bone001' && name !== 'Hips' && name !== 'LeftBreast' && name !== 'RightBreast' && name !== 'LeftToe' && name !== 'RightToe'  && name !== 'LeftKnee' && name !== 'RightKnee'){
+
+                ln = 5;
+                //if( bone.children[0]  ) ln = ammo.distance(bone.position, bone.children[0].position );
+                 if( bone.parent  ) ln = ammo.distance( bone.parent.position, bone.position );
+
+                boneDecal[i] = [ln*0.5];
+               
+                if( name === 'Head' )view.add({ type:'sphere', size:[2], pos:bone.getWorldPosition().toArray(), name:i, mass:3, flag:2, state:4, friction:0.5, restitution:0.9 });
+                else view.add({ type:'cylinder', size:[2, ln, 2], pos:bone.getWorldPosition().toArray(), name:i, mass:3, flag:2, state:4, friction:0.5, restitution:0.9 });
+            }
         
 
         }
 
         isRunning = true;
+
+    };
+
+    ammo.distance = function( v1, v2 ){
+        var d = v2.clone().sub(v1);
+        return Math.sqrt( d.x * d.x + d.y * d.y + d.z * d.z );
 
     };
 
@@ -172,28 +189,43 @@ var ammo = ( function () {
         var r = bonesAr;
         var pos = new THREE.Vector3();
         var quat = new THREE.Quaternion();
+        var mtx = new THREE.Matrix4();
+        var mtxBone = new THREE.Matrix4();
 
         while(i--){
 
-            if(i !== 4 && i !== 0 && i !== 14 && i !== 16 && i !== 20 && i !== 17 ){
-            n = i * 8;
+            if(i !== 4 && i !== 0 && i !== 14 && i !== 16 && i !== 20 && i !== 17 && i !== 8 && i !== 5   ){
+                n = i * 8;
 
-            bone = avatar.bones[i];
+                bone = avatar.bones[i];
+                mtxBone = bone.matrixWorld.clone();
 
-            pos = bone.getWorldPosition();
+                mtx.identity() ;//= new THREE.Matrix4();
+                //mtx.makeTranslation(boneDecal[i][1], 0, 0);
+                mtx.makeRotationZ( Math.PI*0.5 );
+                mtxBone.multiply( mtx );
 
-            r[n] = pos.x * 0.1;
-            r[n+1] = pos.y * 0.1;
-            r[n+2] = pos.z * 0.1;
+                mtx.identity() ;//= new THREE.Matrix4();
+                mtx.makeTranslation(0, boneDecal[i][0], 0);
+                //mtx.makeRotationZ( Math.PI*0.5 );
+                mtxBone.multiply( mtx );
 
-            quat.setFromEuler( bone.rotation );
+                //
 
-            r[n+3] = quat.x;
-            r[n+4] = quat.y;
-            r[n+5] = quat.z;
-            r[n+6] = quat.w;
-        }
-            
+                pos.setFromMatrixPosition( mtxBone );// = bone.getWorldPosition();
+
+                r[n] = pos.x * 0.1;
+                r[n+1] = pos.y * 0.1;
+                r[n+2] = pos.z * 0.1;
+
+                quat.setFromRotationMatrix( mtxBone );//setFromEuler( bone.rotation );
+
+                r[n+3] = quat.x;
+                r[n+4] = quat.y;
+                r[n+5] = quat.z;
+                r[n+6] = quat.w;
+            }
+                
         }
 
 
