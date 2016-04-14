@@ -117,11 +117,11 @@ var ammo = ( function () {
 
         //view.add({type:'box', size:[6], name:'bob', mass:10, flag:2, state:4 });
         //view.add({ type:'cylinder', size:[3, 12, 3], name:'bob', mass:10, flag:2, state:4, friction:0.5, restitution:0.5 });
-        view.add({ type:'sphere', size:[6], pos:[0,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
-        view.add({ type:'sphere', size:[6], pos:[10,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
-        view.add({ type:'sphere', size:[6], pos:[-10,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
-        view.add({ type:'sphere', size:[6], pos:[-20,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
-        view.add({ type:'sphere', size:[6], pos:[20,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
+        view.add({ type:'sphere', size:[6], name:'ball', pos:[0,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
+        //view.add({ type:'sphere', size:[6], pos:[10,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
+        //view.add({ type:'sphere', size:[6], pos:[-10,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
+        //view.add({ type:'sphere', size:[6], pos:[-20,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
+        //view.add({ type:'sphere', size:[6], pos:[20,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
 
         ammo.initSkeleton();
 
@@ -129,7 +129,7 @@ var ammo = ( function () {
 
     ammo.addBall = function(){
         if(!isRunning) return;
-        view.add({ type:'sphere', size:[6], pos:[0,30,20], mass:3, state:4, friction:0.5, restitution:0.9 });
+        view.add({ type:'sphere', size:[6], name:'ball',  pos:[0,30,20], mass:3, state:4, friction:0.5, restitution:0.9 });
     };
 
     ammo.initSkeleton = function(){

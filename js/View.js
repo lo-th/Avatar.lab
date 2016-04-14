@@ -43,6 +43,7 @@ var view = ( function () {
         mat['basic'] = new THREE.MeshBasicMaterial({ color:0xffffff, name:'basic', wireframe:true, depthTest:false, depthWrite:false });
         mat['wall'] = new THREE.MeshBasicMaterial({ color:0x000000, name:'wall', wireframe:true, depthTest:false, depthWrite:false ,transparent:true, opacity:0.1 });
         mat['kinect'] = new THREE.MeshBasicMaterial({ color:0x00FFFF, name:'kinect', wireframe:true, depthTest:false, depthWrite:false  });
+        mat['kinecton'] = new THREE.MeshBasicMaterial({ color:0xFF9900, name:'kinecton', wireframe:true, depthTest:false, depthWrite:false  });
 
 
     };
@@ -265,6 +266,11 @@ var view = ( function () {
         meshs.forEach( function( b, id ) {
             var n = id * 8;
             var s = Br[n];
+
+             if ( b.material.name == 'kinect' || b.material.name == 'kinecton' ){
+
+                 b.material = s > 0 ? mat.kinecton : mat.kinect
+             }
             //if ( s > 0 ) {
 
                 //if ( b.material.name == 'sleep' ) b.material = mat.move;

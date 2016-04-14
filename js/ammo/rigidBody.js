@@ -11,10 +11,25 @@ function stepRigidBody() {
 
     bodys.forEach( function ( b, id ) {
 
-        var n = id * 8;
-        Br[n] = b.getLinearVelocity().length() * 9.8;//b.isActive() ? 1 : 0;
 
-        if ( Br[n] > 0 ) {
+
+        var n = id * 8;
+
+        Br[n] = 0;//b.getLinearVelocity().length() * 9.8;//b.isActive() ? 1 : 0;
+
+        if(!isNaN(b.name)){
+            if( collisionPtr.indexOf(b.ptr) !== -1 ){ Br[n] = 1; console.log('touch', b.name ); }
+            else Br[n] = 0;
+        }
+        //Br[n] = b.cc || 0;//b.getContact();
+       //  Br[n] = testContact(b,'ball')
+         //if(b.getCollisionFlags() === 2 )testContact(b,'ball');//Br[n] = 1;
+           // var b = testContact(b, 'ball');
+           // if(b) Br[n] = 1; else Br[n] = 0;
+        //    if(body.getCollisionFlags)
+     //   }
+
+        //if ( Br[n] > 0 ) {
 
             b.getMotionState().getWorldTransform( trans );
             pos = trans.getOrigin();
@@ -29,7 +44,7 @@ function stepRigidBody() {
             Br[n+6] = quat.z();
             Br[n+7] = quat.w();
 
-        }
+        //}
 
     });
 
@@ -180,18 +195,48 @@ function addRigidBody ( o, extra ) {
         body.setActivationState( o.state || 1 );
     } else {
         body.setCollisionFlags(o.flag || 1); 
-        world.addCollisionObject( body, o.group || 1, o.mask || -1 );
+        var c = world.addCollisionObject( body, o.group || 1, o.mask || -1 );
+
+       // console.log(body.getCollisionShape())
+
+
     }
     
-    if(o.name) byName[o.name] = body;
+    if(o.name){ 
+        byName[o.name] = body;
+
+       // body.setName(o.name);
+
+       body.getCollisionShape().name = o.name;
+
+
+
+        //if(name = 'ball')
+        body.name = o.name;
+        body.cc = 0;
+    } else {
+        body.name = ''
+    }
 
 
     if ( o.mass !== 0 ) bodys.push( body ); 
     else solids.push( body );
 
+    if( o.name === 'ball' ){ 
+        //console.log(body)
+        ballptr.push(body.ptr);
+    }
+
+
+    //if(o.flag)
+
+      //  console.log( body, !isNaN(body.name) )
+
     //Ammo.destroy( startTransform );
     //Ammo.destroy( localInertia );
     Ammo.destroy( rbInfo );
+
+
 
     o = null;
 

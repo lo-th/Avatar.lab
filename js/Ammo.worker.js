@@ -16,6 +16,10 @@
 
 var Module = { TOTAL_MEMORY: 256*1024*1024 };
 
+
+var ball;
+var parts = [];
+
 var trans, pos, quat, posW, quatW, transW, gravity;
 var tmpTrans, tmpPos, tmpQuat;
 var tmpPos1, tmpPos2, tmpPos3, tmpPos4;
@@ -41,6 +45,9 @@ var currentCar = 0;
 
 var boneAR;
 
+
+var ballptr = [];
+var collisionPtr = [];
 // main transphere array
 /*var Br, Cr, Jr, Hr, Sr;*/
 
@@ -233,6 +240,10 @@ self.onmessage = function ( e ) {
         // ------- step
 
         world.stepSimulation( timestep, substep );
+
+
+        collisionPtr = [];
+        contact();
         //world.stepSimulation( dt, it, dt );
 
         //drive( currentCar );
@@ -563,3 +574,5 @@ function apply ( o ) {
     }
 
 };
+
+
