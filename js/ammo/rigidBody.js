@@ -17,7 +17,7 @@ function stepRigidBody() {
 
         Br[n] = 0;//b.getLinearVelocity().length() * 9.8;//b.isActive() ? 1 : 0;
 
-        if(!isNaN(b.name)){
+        if(b.getCollisionFlags() === 2){//!isNaN(b.name)){
             if( collisionPtr.indexOf(b.ptr) !== -1 ){ Br[n] = 1; console.log('touch', b.name ); }
             else Br[n] = 0;
         }
@@ -224,7 +224,7 @@ function addRigidBody ( o, extra ) {
 
     if( o.name === 'ball' ){ 
         //console.log(body)
-        ballptr.push(body.ptr);
+        ballptr.push( body.ptr );
     }
 
 

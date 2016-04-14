@@ -96,17 +96,15 @@ function contact(){
     //console.log(i)
     while(i--){
         c = dispatch.getManifoldByIndexInternal(i);
-        a = c.getBody0();
-        b = c.getBody1();
-
-        //console.log(a, b)
+        a = c.getBody0().ptr;
+        b = c.getBody1().ptr;
         n = c.getNumContacts();
 
         //if( a.ptr === ballptr && n>0 ) collisionPtr.push(b.ptr);//console.log(a, b);
         //if( b.ptr === ballptr && n>0 ) collisionPtr.push(a.ptr);//console.log(a, b)
 
-        if( ballptr.indexOf(a.ptr) !== -1 && n>0 ) collisionPtr.push( b.ptr );//console.log(a, b);
-        if( ballptr.indexOf(b.ptr) !== -1 && n>0 ) collisionPtr.push( a.ptr );//console.log(a, b)
+        if( ballptr.indexOf(a) !== -1 && n>0 && collisionPtr.indexOf(b) === -1 ) collisionPtr.push( b );
+        if( ballptr.indexOf(b) !== -1 && n>0 && collisionPtr.indexOf(a) === -1 ) collisionPtr.push( a );
 
         //if(a.name == 'ball' && !isNaN(b.name)){
         //    b.cc = 1;//c.getNumContacts();

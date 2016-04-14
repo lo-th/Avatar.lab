@@ -384,6 +384,8 @@ function reset ( fullReset ) {
 
     pause = true;
 
+    ballptr = [];
+
     resetARRAY();
 
     clearJoint();
