@@ -127,6 +127,11 @@ var ammo = ( function () {
 
     };
 
+    ammo.addBall = function(){
+        if(!isRunning) return;
+        view.add({ type:'sphere', size:[6], pos:[0,30,20], mass:3, state:4, friction:0.5, restitution:0.9 });
+    };
+
     ammo.initSkeleton = function(){
 
     
@@ -297,6 +302,8 @@ var ammo = ( function () {
     }
 
     ammo.reset = function( full ) {
+
+        isRunning = false;
 
         worker.postMessage( { m:'reset', full:full });
         view.reset();

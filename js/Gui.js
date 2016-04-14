@@ -154,6 +154,7 @@ var Gui = ( function () {
         var g = ui.add('group', { name:'Physics', bg:'rgba(120,80,80,0.8)' });
 
         g.add('bool', { name:'active', p:70, h:20, inh:16, value:ammo.isInit } ).onChange( function(v){ if(v) ammo.init(); else ammo.reset(); } );
+        g.add('button', { name:'add ball', p:4, h:30, r:10 } ).onChange( function(v){ ammo.addBall(); } );
 
     };
 
