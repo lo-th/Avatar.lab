@@ -875,14 +875,14 @@ THREE.Avatar.prototype.updateBones = function (){
 
 THREE.Avatar.prototype.addHelper = function (){
 
-    this.helper = new THREE.SkeletonHelper(this);
-    scene.add(this.helper);
+    this.helper = new THREE.SkeletonHelper( this );
+    scene.add( this.helper );
 
 };
 
 THREE.Avatar.prototype.removeHelper = function (){
 
-    scene.remove(this.helper);
+    scene.remove( this.helper );
     this.helper = null;
 
 };

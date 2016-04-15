@@ -18,6 +18,7 @@ var view = ( function () {
     var wsi = 1/ws;
 
     var content;
+    var contentMesh;
     var targetMouse;
     var raycaster; 
     var mouse;
@@ -30,14 +31,18 @@ var view = ( function () {
 
     view.init = function ( callback ) {
 
-        content = new THREE.Object3D();
+        content = new THREE.Group();
         scene.add( content );
+
+        contentMesh = new THREE.Group();
+        scene.add( contentMesh );
 
         raycaster = new THREE.Raycaster();
         mouse = new THREE.Vector2();
 
         geo['box'] =  new THREE.BoxBufferGeometry(1,1,1);
-        geo['sphere'] = new THREE.SphereBufferGeometry( 1, 6, 6 );
+        geo['sphere'] = new THREE.SphereBufferGeometry( 1, 6, 5 );
+        geo['ball'] = new THREE.SphereBufferGeometry( 1, 12, 10 );
         geo['cylinder'] =  new THREE.CylinderBufferGeometry(1,1,1, 6, 1 );
 
         mat['basic'] = new THREE.MeshBasicMaterial({ color:0xffffff, name:'basic', wireframe:true, depthTest:false, depthWrite:false });
@@ -56,6 +61,15 @@ var view = ( function () {
         while( statics.length > 0 ) scene.remove( statics.pop() );
         
         byName = {};
+
+    };
+
+    view.showSkeleton = function( b ){
+
+        var i = meshs.length;
+        while(i--){
+            if( !isNaN(meshs[i].name) ) meshs[i].visible = b;
+        }
 
     };
 

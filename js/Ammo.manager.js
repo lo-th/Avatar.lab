@@ -42,9 +42,12 @@ var ammo = ( function () {
 
     var bonesRef = {};
     var bonesAr = new Float32Array( 29*8 );
+    //var bonesAr = new Float32Array( 80*8 )
 
     var isInit = false;
     var isRunning = false;
+
+    var skeleton;
 
     ammo = function () {};
 
@@ -116,25 +119,36 @@ var ammo = ( function () {
         view.add({ type:'box', size:[w-m, h, m], pos:[0,(h*0.5)+y,-p*0.5], friction:0.5, restitution:0.9 });
         view.add({ type:'box', size:[w-m, h, m], pos:[0,(h*0.5)+y, p*0.5], friction:0.5, restitution:0.9 });
 
+        
+
 
         //view.add({type:'box', size:[6], name:'bob', mass:10, flag:2, state:4 });
         //view.add({ type:'cylinder', size:[3, 12, 3], name:'bob', mass:10, flag:2, state:4, friction:0.5, restitution:0.5 });
-        view.add({ type:'sphere', size:[6], name:'ball', pos:[0,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
+       // view.add({ type:'sphere', size:[6], name:'ball', pos:[0,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
         //view.add({ type:'sphere', size:[6], pos:[10,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
         //view.add({ type:'sphere', size:[6], pos:[-10,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
         //view.add({ type:'sphere', size:[6], pos:[-20,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
         //view.add({ type:'sphere', size:[6], pos:[20,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
 
-        ammo.initSkeleton();
+       // ammo.initSkeleton();
+
+
+        skeleton = new ammo.skeleton( avatar );
+        skeleton.init();
+
+        isRunning = true;
+
+
+        ammo.addBall();
 
     };
 
     ammo.addBall = function(){
         if(!isRunning) return;
-        view.add({ type:'sphere', size:[6], name:'ball',  pos:[0,30,20], mass:3, state:4, friction:0.5, restitution:0.9 });
+        view.add({ type:'ball', size:[6], name:'ball',  pos:[0,30,20], mass:3, state:4, friction:0.5, restitution:0.9 });
     };
 
-    ammo.initSkeleton = function(){
+    /*ammo.initSkeleton = function(){
 
     
         var i = avatar.bones.length - 30 , bone, name, ln, lz, ls;
@@ -146,7 +160,7 @@ var ammo = ( function () {
 
             //if(name === 'Head') console.log( bone.rotation )//ammo.addPart(name, i); 
 
-            console.log(name, i);
+            //console.log(name, i);
 
             if(name !== 'Hips'  &&name !== 'Bone001'  && name !== 'LeftBreast' && name !== 'RightBreast' && name !== 'LeftToeEnd' && name !== 'RightToeEnd'  && name !== 'LeftKnee' && name !== 'RightKnee' && name !== 'Top'){
 
@@ -194,7 +208,7 @@ var ammo = ( function () {
                   ls = 3;
                   //if( bone.children[0]  ) ln = ammo.distance(bone.position, bone.children[0].position );
                 } else {
-                   if( bone.parent  ) ln = ammo.distance( bone.parent.position, bone.position );
+                   if( bone.parent ) ln = ammo.distance( bone.parent.position, bone.position );
                    ls = ln;
                 }
                 // 
@@ -216,25 +230,33 @@ var ammo = ( function () {
         isRunning = true;
 
     };
-
     ammo.distance = function( v1, v2 ){
         var d = v2.clone().sub(v1);
         return Math.sqrt( d.x * d.x + d.y * d.y + d.z * d.z );
 
-    };
+    };*/
+
 
     ammo.addPart = function( name, id ){
 
-        view.add({ type:'sphere', size:[6], pos:[0,100,0], name:id, mass:3, state:4, friction:0.5, restitution:0.9 })
+        var x = -0.5 + Math.random();
+        var z = -0.5 + Math.random();
+        view.add({ type:'sphere', size:[6], pos:[x,100,z], name:id, mass:1, state:4, friction:0.5, restitution:0.9 })
         //bonesRef[name] = 
 
     };
 
     ammo.updateSkeleton = function(){
 
-        if(!isRunning) return;
+        if(skeleton){ 
+            skeleton.update();
+        }
 
-        var i = avatar.bones.length  - 30 , bone;
+        /*if(!isRunning) return;
+
+        //skeleton.update();
+
+        var lng = avatar.bones.length  - 30 , bone;
         var n;
         var r = bonesAr;
         var pos = new THREE.Vector3();
@@ -242,7 +264,9 @@ var ammo = ( function () {
         var mtx = new THREE.Matrix4();
         var mtxBone = new THREE.Matrix4();
 
-        while(i--){
+        //while(i--){
+
+        for ( var i = 0; i < lng; i ++ ) {
 
             if(i !== 0 && i !== 4 && i !== 14 && i !== 16 && i !== 22 && i !== 24 && i !== 8 && i !== 5 && i !== 25  ){
                 n = i * 8;
@@ -278,7 +302,7 @@ var ammo = ( function () {
                 r[n+6] = quat.w;
             }
                 
-        }
+        }*/
 
 
     };
@@ -364,8 +388,15 @@ var ammo = ( function () {
         //user.update();
         var key = [];//user.getKey();
 
-        if( isBuffer ) worker.postMessage( { m:'step', key:key, bonesAr:bonesAr, Br:Br, Jr:Jr } , [ Br.buffer, Jr.buffer ] );
-        else worker.postMessage( { m:'step', key:key, bonesAr:bonesAr } );
+        if(skeleton){
+            if( isBuffer ) worker.postMessage( { m:'step', key:key, bonesAr:skeleton.data, Br:Br, Jr:Jr } , [ Br.buffer, Jr.buffer ] );
+            else worker.postMessage( { m:'step', key:key, bonesAr:skeleton.data } );
+        } else {
+            if( isBuffer ) worker.postMessage( { m:'step', key:key, bonesAr:[], Br:Br, Jr:Jr } , [ Br.buffer, Jr.buffer ] );
+            else worker.postMessage( { m:'step', key:key, bonesAr:[] } );
+        }
+
+        
 
         //if( isBuffer ) worker.postMessage( { m:'step', key:key, Br:Br, Cr:Cr, Hr:Hr, Jr:Jr, Sr:Sr } , [ Br.buffer, Cr.buffer, Hr.buffer, Jr.buffer, Sr.buffer ] );
         //else worker.postMessage( { m:'step', key:key } );

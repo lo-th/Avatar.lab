@@ -15,11 +15,15 @@ function stepRigidBody() {
 
         var n = id * 8;
 
-        Br[n] = 0;//b.getLinearVelocity().length() * 9.8;//b.isActive() ? 1 : 0;
+        //b.getLinearVelocity().length() * 9.8;//b.isActive() ? 1 : 0;
 
-        if(b.getCollisionFlags() === 2){//!isNaN(b.name)){
-            if( collisionPtr.indexOf(b.ptr) !== -1 ){ Br[n] = 1; console.log('touch', b.name ); }
-            else Br[n] = 0;
+        if( b.getCollisionFlags() === 2 ){//!isNaN(b.name)){
+
+             Br[n] = collisionPtr.indexOf(b.ptr) === -1 ? 0 : 1;
+           // if( collisionPtr.indexOf(b.ptr) !== -1 ){ Br[n] = 1; console.log('touch', b.name ); }
+           // else Br[n] = 0;
+        } else {
+            Br[n] = 0;
         }
         //Br[n] = b.cc || 0;//b.getContact();
        //  Br[n] = testContact(b,'ball')
@@ -96,7 +100,7 @@ function addRigidBody ( o, extra ) {
             shape = new Ammo.btBoxShape( tmpPos4 );
         break;
 
-        case 'sphere': 
+        case 'sphere': case 'ball': 
             shape = new Ammo.btSphereShape( o.size[0] ); 
         break;  
 
