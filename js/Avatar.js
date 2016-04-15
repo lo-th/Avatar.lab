@@ -741,12 +741,17 @@ THREE.Avatar.prototype.updateAnimation = function (delta){
     //if(this.ikSolver) this.ikSolver.update()
 
     if( !this.isAnimation ) return;
+    if( !this.animations ) return;
+
+    var t = delta * this.speed;
 
     // Update SEA3D Animations
-    THREE.SEA3D.AnimationHandler.update( delta * this.speed );
+    THREE.SEA3D.AnimationHandler.update( t );
 
     // Update Three.JS Animations
-    THREE.AnimationHandler.update( delta * this.speed );
+    THREE.AnimationHandler.update( t );
+
+   
 
     if( this.helper ) this.helper.update();
 
