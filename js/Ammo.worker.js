@@ -242,13 +242,14 @@ self.onmessage = function ( e ) {
         world.stepSimulation( timestep, substep );
 
 
-        collisionPtr = [];
-        contact();
+        stepRigidBody();
+        
+        stepContact();
         //world.stepSimulation( dt, it, dt );
 
         //drive( currentCar );
 
-        stepRigidBody();
+        
         //stepCharacter();
         //stepVehicle();
         //stepSoftBody();

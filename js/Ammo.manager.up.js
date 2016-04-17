@@ -15,9 +15,9 @@ var ammo = ( function () {
 
     var worker, callback;
 
-    var isBuffer = true;
-    var timestep = 1/60;//1/30;//0.017;//1/60;
-    var substep = 3;//6;//7;
+    var isBuffer = false;
+    var timestep = 0.017;//1/60;
+    var substep = 6;//7;
 
     var extractor;// = new EXTRACT.Pool();
 
@@ -119,6 +119,20 @@ var ammo = ( function () {
         view.add({ type:'box', size:[w-m, h, m], pos:[0,(h*0.5)+y,-p*0.5], friction:0.5, restitution:0.9 });
         view.add({ type:'box', size:[w-m, h, m], pos:[0,(h*0.5)+y, p*0.5], friction:0.5, restitution:0.9 });
 
+        
+
+
+        //view.add({type:'box', size:[6], name:'bob', mass:10, flag:2, state:4 });
+        //view.add({ type:'cylinder', size:[3, 12, 3], name:'bob', mass:10, flag:2, state:4, friction:0.5, restitution:0.5 });
+       // view.add({ type:'sphere', size:[6], name:'ball', pos:[0,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
+        //view.add({ type:'sphere', size:[6], pos:[10,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
+        //view.add({ type:'sphere', size:[6], pos:[-10,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
+        //view.add({ type:'sphere', size:[6], pos:[-20,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
+        //view.add({ type:'sphere', size:[6], pos:[20,6,20], mass:3, state:4, friction:0.5, restitution:0.9 });
+
+       // ammo.initSkeleton();
+
+
         skeleton = new ammo.skeleton( avatar );
         skeleton.init();
 
@@ -126,6 +140,8 @@ var ammo = ( function () {
 
 
         ammo.addBall();
+
+        sendData();
 
     };
 
@@ -196,12 +212,28 @@ var ammo = ( function () {
             //delay = ( timerate - ( time - sendTime ) ).toFixed(2);
             //if(delay < 0) delay = 0;
 
-            delay = ~~ ( timerate - ( time - sendTime ));
-            delay = delay < 0 ? 0 : delay;
+            //delay = ~~ ( timerate - ( time - sendTime ));
+            //delay = delay < 0 ? 0 : delay;
 
-            timer = setInterval( sendData, delay );
 
-            view.update();
+
+            
+
+            
+
+            
+
+            //view.update( ar, dr, hr, jr, sr );
+            //timer = setInterval( sendData, delay );
+
+            if( view ) view.update();
+
+            //view.bodyStep();
+            //view.heroStep();
+            //view.carsStep();
+            //view.softStep();
+
+            //timer = setTimeout( sendData , delay );
 
         }
 
@@ -209,9 +241,11 @@ var ammo = ( function () {
 
     function sendData(){
 
-        clearTimeout(timer);
+        requestAnimationFrame( sendData );
+
+        //clearTimeout(timer);
         //clearInterval( timer );
-        sendTime = performance.now();//now();
+        //sendTime = performance.now();//now();
 
         //user.update();
         var key = [];//user.getKey();
@@ -223,6 +257,18 @@ var ammo = ( function () {
             if( isBuffer ) worker.postMessage( { m:'step', key:key, bonesAr:[], Br:Br, Jr:Jr } , [ Br.buffer, Jr.buffer ] );
             else worker.postMessage( { m:'step', key:key, bonesAr:[] } );
         }
+
+        
+
+        //if( isBuffer ) worker.postMessage( { m:'step', key:key, Br:Br, Cr:Cr, Hr:Hr, Jr:Jr, Sr:Sr } , [ Br.buffer, Cr.buffer, Hr.buffer, Jr.buffer, Sr.buffer ] );
+        //else worker.postMessage( { m:'step', key:key } );
+
+        //var f = view.getFps();
+        //tell( 'THREE '+ f + ' | AMMO ' + fps +' | '+ delay +'ms' );
+
+        //debugTell( )
+
+        //tell( key );
         
     };
 

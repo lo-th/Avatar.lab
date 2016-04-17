@@ -60,17 +60,17 @@ function addWorld () {
         
     }
 
-    //world = new Ammo.btDiscreteDynamicsWorld( dispatcher, broadphase, solver, collision );
-    world = new Ammo.btSoftRigidDynamicsWorld( dispatcher, broadphase, solver, collision, solverSoft );
+    world = new Ammo.btDiscreteDynamicsWorld( dispatcher, broadphase, solver, collision );
+    //world = new Ammo.btSoftRigidDynamicsWorld( dispatcher, broadphase, solver, collision, solverSoft );
 
     gravity.setValue( 0, -9.8, 0 );
     world.setGravity( gravity );
 
     
 
-    worldInfo = world.getWorldInfo();
+    //worldInfo = world.getWorldInfo();
 
-    worldInfo.set_m_gravity( gravity );
+    //worldInfo.set_m_gravity( gravity );
     //worldInfo.set_air_density( 1.2 );
     //worldInfo.set_water_density( 0 );
     //worldInfo.set_water_offset( 0 );
@@ -87,15 +87,20 @@ function gravity ( o ) {
 
 };
 
-function contact(){
+function stepContact(){
 
-    var dispatch = world.getDispatcher(), c, a, b, n, pt, pa, pb;
+    //var dispatch = world.getDispatcher()
 
-    var i = dispatch.getNumManifolds();
+    var i, c, a, b, n;
 
-    //console.log(i)
+    collisionPtr = [];
+
+    i = dispatcher.getNumManifolds();
     while(i--){
-        c = dispatch.getManifoldByIndexInternal(i);
+    //var lng = dispatcher.getNumManifolds();
+    //for(i = 0; i < lng; i++){
+
+        c = dispatcher.getManifoldByIndexInternal(i);
         a = c.getBody0().ptr;
         b = c.getBody1().ptr;
         n = c.getNumContacts();
@@ -103,41 +108,16 @@ function contact(){
         //if( a.ptr === ballptr && n>0 ) collisionPtr.push(b.ptr);//console.log(a, b);
         //if( b.ptr === ballptr && n>0 ) collisionPtr.push(a.ptr);//console.log(a, b)
 
-        if( ballptr.indexOf(a) !== -1 && n>0 && collisionPtr.indexOf(b) === -1 ) collisionPtr.push( b );
-        if( ballptr.indexOf(b) !== -1 && n>0 && collisionPtr.indexOf(a) === -1 ) collisionPtr.push( a );
-
-        //if(a.name == 'ball' && !isNaN(b.name)){
-        //    b.cc = 1;//c.getNumContacts();
-            //if ( c.getNumContacts() !== 0 ) b.cc = 1;
-
-
-        //}
-
-        //else if(b.name == 'ball' && !isNaN(a.name)){
-         //   a.cc = 1;//c.getNumContacts();
-            //if ( c.getNumContacts()  ) a.cc = 1;
-        //} /*else {
-
-        //}*/
-
-
-
-        /*n = c.getNumContacts();
-        while(n--){
-            pt = c.getContactPoint(n);
-            if ( pt.getDistance()<0 ){
-                //pa = pt.getPositionWorldOnA();
-                //pb = pt.getPositionWorldOnB();
-                //normal = pt.m_normalWorldOnB();
-            }
-        }*/
-
-
-
+        if( n > 0 ){
+            if( ballptr.indexOf(a) !== -1 && collisionPtr.indexOf(b) === -1 ) collisionPtr.push( b );
+            if( ballptr.indexOf(b) !== -1 && collisionPtr.indexOf(a) === -1 ) collisionPtr.push( a );
+        }
 
     }
 
 }
+
+
 function testContactPair( b, name, callback ){
 
     if(world.contactPairTest( b, getByName(name))) return 1;//, function(){return 1;} );

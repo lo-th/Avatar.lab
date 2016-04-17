@@ -239,6 +239,7 @@ var Gui = ( function () {
 
         ui.add('button', { name:'Action', p:4, h:30, r:10 } ).onChange(  function(){ bvhReader.load("bvh/action.z") }  );
         ui.add('button', { name:'Story', p:4, h:30, r:10 } ).onChange(  function(){ bvhReader.load("bvh/story.z") }  );
+        ui.add('button', { name:'Soccer', p:4, h:30, r:10 } ).onChange(  function(){ bvhReader.load("bvh/soccer.z") }  );
 
         this.handBlock();
 

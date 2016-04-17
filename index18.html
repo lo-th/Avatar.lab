@@ -25,7 +25,7 @@ canvas { position: absolute; top:0; left:0; pointer-events:auto; width:100%; hei
 <!-- Copyright Lo-Th -->
 <script src="js/extract.js"></script>
 <script src="js/three.min.dev.js"></script>
-<script src="js/sea3d.min.js"></script>
+<script src="js/sea3d.18.min.js"></script>
 <script src="js/Stats.js"></script>
 <script src="js/uil.min.js"></script>
 
@@ -50,7 +50,7 @@ canvas { position: absolute; top:0; left:0; pointer-events:auto; width:100%; hei
 
 <script src="js/bvh.js"></script>
 <script src="js/loadordrag.js"></script>
-<script src="js/Avatar.js"></script>
+<script src="js/Avatar18.js"></script>
 <script src="js/Gui.js"></script>
 
 <!-- AMMO PHYSICS -->
@@ -402,36 +402,41 @@ function initPostEffect(){
 
 function animate() {
 
-    requestAnimationFrame( animate );
-
     var delta = clock.getDelta();
+
+    requestAnimationFrame( animate );
 
     if( Gui ) Gui.update();
 
-    if( bvhReader ) bvhReader.update();
+    
 
-    if( avatar ) avatar.updateAnimation( delta );
+    if(bvhReader) bvhReader.update();
 
-    if( ammo ) ammo.updateSkeleton();
+    if(avatar) avatar.updateAnimation(delta);
+
+    if(ammo) ammo.updateSkeleton();
 
     //if(ammo) ammo.updateSkeleton();
 
     
 
     if(isWithPosEffect){
+        if(avatar) avatar.depthPass();
 
-        if( avatar ) avatar.depthPass();
-        if( back ) back.visible = false; 
-        if( ground ) ground.visible = false;
+        //scene.overrideMaterial = depthMaterial;
+        if(back) back.visible = false; 
+        if(ground) ground.visible = false;
         //if(avatar.eyeGroup) avatar.eyeGroup.visible = false;
 
         renderer.render( scene, camera, depthRenderTarget, true );
-        if( back ) back.visible = true; 
-        if( ground ) ground.visible = true;
+        if(back) back.visible = true; 
+        if(ground) ground.visible = true;
         //if(avatar.eyeGroup) avatar.eyeGroup.visible = true;
 
-        if( avatar ) avatar.normalPass();
+        if(avatar) avatar.normalPass();
 
+        // Render renderPass and SSAO shaderPass
+        //scene.overrideMaterial = null;
         composer.render();
         
     } else {
@@ -441,7 +446,6 @@ function animate() {
     }
     
     stats.update();
-
 };
 
 function resize( event ) {
@@ -555,6 +559,14 @@ function initBVH() {
 
 }
 
+/*function loadBVH(file) {
+
+    bvhReader.boneSize = BVHanimConfig.boneSize;
+    //bvhReader.speed = BVHanimConfig.speed;
+    bvhReader.load(file);
+
+}*/
+
 function updateBVH() {
 
     if(avatar) avatar.updateBones();
@@ -562,8 +574,8 @@ function updateBVH() {
 }
 
 function skeletonVisibility() {
-    if( bvhReader.skeleton.visible){ bvhReader.skeleton.visible = false;}
-    else{ bvhReader.skeleton.visible = true;}
+    if( bvhReader.skeleton.visible){ bvhReader.skeleton.visible=false; document.getElementById("b4").value = "show skeleton"}
+    else{ bvhReader.skeleton.visible = true; document.getElementById("b4").value = "hide skeleton";}
 }
 
 //===============================================
@@ -601,6 +613,8 @@ function loadSea3dBody(){
 
         avatar.init( geos );
         scene.add( avatar );
+
+        
 
         if(isWithBVH) initBVH();
 

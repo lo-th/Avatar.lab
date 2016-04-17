@@ -101,7 +101,7 @@ THREE.Avatar.prototype.init = function ( Geos ){
 
     this.decal = new THREE.Vector3(0,-11.5,0);
 
-    var useVertexTexture = false;
+    var useVertexTexture = true;
 
     //THREE.SkinnedMesh.call( this, this.geos[this.gender], this.material, useVertexTexture );
     THREE.SEA3D.SkinnedMesh.call( this, this.geos[this.gender], this.material, useVertexTexture );
@@ -321,7 +321,7 @@ THREE.Avatar.prototype.toPlayMode = function (){
    // var i = this.bones.length;
     //while(i--) this.bones[i].matrixAutoUpdate = this.isAnimation;
 
-    this.play("idle", 0);
+    this.play("idle", 0.5);
 
     debugTell('use keyboard to control character')
     //this.play( this.cAnimation, 0);
@@ -336,20 +336,21 @@ THREE.Avatar.prototype.switchCrouch = function (){
 }
 
 THREE.Avatar.prototype.updateKey = function (){
+
     if(this.mode !== 'play') return;
 
     //if(key[4]) this.isCrouch = true;
     //else this.isCrouch = false;
 
 
-    if(!key[0] || !key[1] || !key[2] || !key[3] ){ if(this.isCrouch){ this.play("idle_crouch", 0.5); } else { this.play("idle", 0.5); } }
+    //if(!key[0] || !key[1] || !key[2] || !key[3] ){ if( this.isCrouch ){ this.play("idle_crouch", 0.5); } else { this.play("idle", 0.5); } }
 
     if(this.isCrouch){
-        if(key[0]) { this.animations.walk_crouch.timeScale = this.speed;  this.play("walk_crouch", 0.5); }
-        if(key[1]) { this.animations.walk_crouch.timeScale = -this.speed; this.play("walk_crouch", 0.5); }
+        if(key[0]) { this.setTimeScale ( 1 );  this.play("walk_crouch", 0.5); }
+        if(key[1]) { this.setTimeScale ( -1 ); this.play("walk_crouch", 0.5); }
     }else{
-        if(key[0]) { this.animations.walk.timeScale = this.speed; if(key[7]) this.play("run", 0.5); else this.play("walk", 0.5); }
-        if(key[1]) { this.animations.walk.timeScale = -this.speed; this.play("walk", 0.5); }
+        if(key[0]) { this.setTimeScale ( 1 ); if(key[7]) this.play("run", 0.5); else this.play("walk", 0.5); }
+        if(key[1]) { this.setTimeScale ( -1 ); this.play("walk", 0.5); }
     }
 
     
@@ -611,34 +612,29 @@ THREE.Avatar.prototype.initAnimation = function (){
 
     if ( this.geometry.animations ) {
 
-        this.setAnimations( this.geometry.animations );
+       // this.setAnimations( this.geometry.animations );
 
     }
+
+    this.updateAnimations();
 
     this.animationsNames = [];
 
     var i, lng = this.animations.length, name;
     for( i = 0; i<lng ; i++ ){
-
         name = this.geometry.animations[i].name;
-        name = name.substring( name.lastIndexOf('/')+1 );
+        //name = name.substring( name.lastIndexOf('/')+1 );
         this.animationsNames.push(name);
-
-        this.animations[i].timeScale = this.speed;
-
-
     }
 
-    //console.log(this.animations,this.animationsNames )
+    //console.log(this.animationsNames)
 
     //this.animations.idle_crouch.timeScale = 2;
-   // this.animations.idle.timeScale = 0.6;
-
-    
+    //this.animations.idle.timeScale = 0.6;
 
 
     //this.play("walk", 0);//( name, crossfade, offset )
-    this.play( this.cAnimation, 0 );
+    //this.play( this.cAnimation, 0);
 
     //this.ikSolver = new THREE.CCDIKSolver( this );
 
@@ -647,7 +643,7 @@ THREE.Avatar.prototype.initAnimation = function (){
 THREE.Avatar.prototype.playAnimation = function ( name ){
 
     this.cAnimation = name;
-    this.play( this.cAnimation, 0);
+    this.play( this.cAnimation, 0.5);
 
 };
 
@@ -679,11 +675,11 @@ THREE.Avatar.prototype.reset = function (){
     //this.position.y = 80;
 
     
-    this.play("base", 0);
-    THREE.SEA3D.AnimationHandler.update( 0 );
-    THREE.AnimationHandler.update( 0 );
+    this.play( "base", 0.1 );
+    THREE.SEA3D.AnimationHandler.update( 0.1 );
+    //THREE.AnimationHandler.update( 0 );
 
-    this.stop();
+    //this.pause();
 
    /* var i = this.bones.length;
     while(i--){ 
@@ -731,7 +727,7 @@ THREE.Avatar.prototype.toAnimation = function (){
     //while(i--) this.bones[i].matrixAutoUpdate = this.isAnimation;
 
     //this.play("idle", 0);
-    this.play( this.cAnimation, 0);
+    this.play( this.cAnimation, 0.5);
 
 };
 
@@ -744,21 +740,21 @@ THREE.Avatar.prototype.toAnimation = function (){
 
 };*/
 
-THREE.Avatar.prototype.updateAnimation = function (delta){
+THREE.Avatar.prototype.updateAnimation = function ( delta ){
 
 
     //if(this.ikSolver) this.ikSolver.update()
 
     if( !this.isAnimation ) return;
-    if( !this.animations ) return;
+    if( ! this.animations ) return;
 
-    var t = delta;// * this.speed;
+    var t = delta * this.speed;
 
     // Update SEA3D Animations
     THREE.SEA3D.AnimationHandler.update( t );
 
     // Update Three.JS Animations
-    THREE.AnimationHandler.update( t );
+    //THREE.AnimationHandler.update( t );
 
    
 
