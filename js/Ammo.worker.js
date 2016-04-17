@@ -29,8 +29,8 @@ var bodys, softs, joints, cars, solids, heros, carsInfo;
 // object
 var byName;
 
-var timestep = 0.017;//6;//7;
-var substep = 10;//4//3;// default is 1. 2 or more make simulation more accurate.
+var timestep = 1/60;//0.017;//6;//7;
+var substep = 6;//10;//4//3;// default is 1. 2 or more make simulation more accurate.
 var ddt = 1;
 var key = [ 0,0,0,0,0,0,0,0 ];
 
@@ -243,7 +243,7 @@ self.onmessage = function ( e ) {
 
 
         stepRigidBody();
-        
+
         stepContact();
         //world.stepSimulation( dt, it, dt );
 

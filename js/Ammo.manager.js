@@ -16,8 +16,8 @@ var ammo = ( function () {
     var worker, callback;
 
     var isBuffer = true;
-    var timestep = 1/60;//1/30;//0.017;//1/60;
-    var substep = 3;//6;//7;
+    var timestep = 0.01667;//1/30;//0.017;//1/60;
+    var substep = 6;//6;//7;
 
     var extractor;// = new EXTRACT.Pool();
 
@@ -131,17 +131,19 @@ var ammo = ( function () {
 
     ammo.addBall = function(){
         if(!isRunning) return;
-        view.add({ type:'ball', size:[5.6], name:'ball',  pos:[0,30,20], mass:1, state:4, friction:0.2, restitution:0.9 });
+        var r = Math.random();
+        if(r>0.5) view.add({ type:'ball', size:[5.6], name:'ball',  pos:[0,110,0], mass:1, state:4, friction:0.4, restitution:0.9 });
+        else view.add({ type:'ball', size:[5.6], name:'ball',  pos:[0,30,20], mass:1, state:4, friction:0.4, restitution:0.9 });
     };
 
-    ammo.addPart = function( name, id ){
+    /*ammo.addPart = function( name, id ){
 
         var x = -0.5 + Math.random();
         var z = -0.5 + Math.random();
         view.add({ type:'sphere', size:[6], pos:[x,100,z], name:id, mass:1, state:4, friction:0.5, restitution:0.9 })
         //bonesRef[name] = 
 
-    };
+    };*/
 
     ammo.updateSkeleton = function(){
 
