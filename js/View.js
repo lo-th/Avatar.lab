@@ -42,13 +42,18 @@ var view = ( function () {
 
         geo['box'] =  new THREE.BoxBufferGeometry(1,1,1);
         geo['sphere'] = new THREE.SphereBufferGeometry( 1, 6, 5 );
-        geo['ball'] = new THREE.SphereBufferGeometry( 1, 12, 10 );
+        geo['ball'] = new THREE.SphereBufferGeometry( 1, 24, 20 );
         geo['cylinder'] =  new THREE.CylinderBufferGeometry(1,1,1, 6, 1 );
 
         mat['basic'] = new THREE.MeshBasicMaterial({ color:0xffffff, name:'basic', wireframe:true });
         mat['wall'] = new THREE.MeshBasicMaterial({ color:0x000000, name:'wall', wireframe:true, depthTest:false, depthWrite:false ,transparent:true, opacity:0.1 });
         mat['kinect'] = new THREE.MeshBasicMaterial({ color:0x00FFFF, name:'kinect', wireframe:true, depthTest:false, depthWrite:false  });
         mat['kinecton'] = new THREE.MeshBasicMaterial({ color:0xFF9900, name:'kinecton', wireframe:true, depthTest:false, depthWrite:false  });
+
+
+        mat['ball'] = new THREE.MeshStandardMaterial({ map:textures[7], normalMap:textures[8], name:'ball', metalness:0.4, roughness:0.5, envMap:textures[0], normalScale:new THREE.Vector2( -1, -1 )  });
+
+        
 
 
     };
@@ -140,6 +145,7 @@ var view = ( function () {
 
         if( o.mass ) material = mat.basic;
         if( o.flag === 2 ) material = mat.kinect;
+        if( o.name === 'ball' ) material = mat.ball;
         //else statics.push( mesh );
         //if(o.material !== undefined) material = mat[o.material];
         //else material = o.mass ? mat.move : mat.statique;

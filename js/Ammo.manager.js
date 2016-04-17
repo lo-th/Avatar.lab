@@ -131,7 +131,7 @@ var ammo = ( function () {
 
     ammo.addBall = function(){
         if(!isRunning) return;
-        view.add({ type:'ball', size:[6], name:'ball',  pos:[0,30,20], mass:3, state:4, friction:0.5, restitution:0.9 });
+        view.add({ type:'ball', size:[5.6], name:'ball',  pos:[0,30,20], mass:1, state:4, friction:0.2, restitution:0.9 });
     };
 
     ammo.addPart = function( name, id ){
