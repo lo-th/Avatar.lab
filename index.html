@@ -24,7 +24,7 @@ canvas { position: absolute; top:0; left:0; pointer-events:auto; width:100%; hei
 <body>
 <!-- Copyright Lo-Th -->
 <script src="js/extract.js"></script>
-<script src="js/three.min.dev.js"></script>
+<script src="js/three.min.js"></script>
 <script src="js/sea3d.min.js"></script>
 <script src="js/Stats.js"></script>
 <script src="js/uil.min.js"></script>
@@ -406,13 +406,15 @@ function animate() {
 
     var delta = clock.getDelta();
 
-    if( Gui ) Gui.update();
+    
 
-    if( bvhReader ) bvhReader.update();
+    
 
     if( avatar ) avatar.updateAnimation( delta );
 
     if( ammo ) ammo.updateSkeleton();
+
+    if( bvhReader ) bvhReader.update();
 
     //if(ammo) ammo.updateSkeleton();
 
@@ -442,6 +444,8 @@ function animate() {
     
     stats.update();
 
+    if( Gui ) Gui.update();
+
 };
 
 function resize( event ) {
@@ -466,7 +470,7 @@ function resize( event ) {
 //  LOAD MAP
 //===============================================
 
-var mapLists = ['spherical/'+env+'.jpg', 'bg.png', 'avatar/avatar.jpg', 'avatar/avatar_n.jpg', 'avatar/eye.png', 'avatar/eye_n.png', 'avatar/avatar_gi.jpg', 'ball.jpg', 'ball_n.jpg'];
+var mapLists = ['spherical/'+env+'.jpg', 'bg.png', 'avatar/avatar.jpg', 'avatar/avatar_n.jpg', 'avatar/eye.png', 'avatar/eye_n.png', 'avatar/avatar_gi.jpg', 'ball.jpg', 'ball_n.jpg', 'avatar/white.jpg'];
 var textures;
 
 function loadTextures( callback ){
@@ -600,7 +604,10 @@ function loadSea3dBody(){
         debugTell( '3D model loaded in ' + loader.file.timer.elapsedTime + "ms" );
 
         avatar.init( geos );
+
         scene.add( avatar );
+
+        //avatar.addOutline();
 
         if(isWithBVH) initBVH();
 

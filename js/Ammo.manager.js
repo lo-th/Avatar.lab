@@ -41,7 +41,7 @@ var ammo = ( function () {
     var needDelete = true;
 
     var bonesRef = {};
-    var bonesAr = new Float32Array( 29*8 );
+    //var bonesAr = new Float32Array( 29*8 );
     //var bonesAr = new Float32Array( 80*8 )
 
     var isInit = false;
@@ -126,6 +126,8 @@ var ammo = ( function () {
 
 
         ammo.addBall();
+
+        
 
     };
 
@@ -218,13 +220,16 @@ var ammo = ( function () {
         //user.update();
         var key = [];//user.getKey();
 
-        if(skeleton){
+        if( isBuffer ) worker.postMessage( { m:'step', key:key, Br:Br, Jr:Jr } , [ Br.buffer, Jr.buffer ] );
+        else worker.postMessage( { m:'step', key:key } );
+
+        /*if(skeleton){
             if( isBuffer ) worker.postMessage( { m:'step', key:key, bonesAr:skeleton.data, Br:Br, Jr:Jr } , [ Br.buffer, Jr.buffer ] );
             else worker.postMessage( { m:'step', key:key, bonesAr:skeleton.data } );
         } else {
             if( isBuffer ) worker.postMessage( { m:'step', key:key, bonesAr:[], Br:Br, Jr:Jr } , [ Br.buffer, Jr.buffer ] );
             else worker.postMessage( { m:'step', key:key, bonesAr:[] } );
-        }
+        }*/
         
     };
 

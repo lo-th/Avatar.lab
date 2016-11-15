@@ -9,6 +9,7 @@ ammo.skeleton = function( object ){
     //console.log( this.bones );
     this.isRunning = false;
     this.boneDecal = [];
+    this.hideList = [];
 
     this.root = object;
 
@@ -63,7 +64,7 @@ ammo.skeleton.prototype = {
 
             //console.log(name, i);
 
-            if(name !== 'Hips'  &&name !== 'Bone001'  && name !== 'LeftBreast' && name !== 'RightBreast' && name !== 'LeftToeEnd' && name !== 'RightToeEnd'  && name !== 'LeftKnee' && name !== 'RightKnee' && name !== 'Top'){
+            if( name !== 'Hips'  && name !== 'Bone001'  && name !== 'LeftBreast' && name !== 'RightBreast' && name !== 'LeftToeEnd' && name !== 'RightToeEnd'  && name !== 'LeftKnee' && name !== 'RightKnee' && name !== 'Top' ){
 
                 ln = 5;
                 ls = 5;
@@ -123,6 +124,10 @@ ammo.skeleton.prototype = {
                 else if(name === 'LeftCollar' || name === 'RightCollar') view.add({ type:'sphere', size:[3], pos:bone.getWorldPosition().toArray(), name:i, mass:3, flag:2, state:4, friction:0.5, restitution:0.9 });
                 else if(name === 'Spine1') view.add({ type:'sphere', size:[6.4], pos:bone.getWorldPosition().toArray(), name:i, mass:3, flag:2, state:4, friction:0.5, restitution:0.9 });
                 else view.add({ type:'cylinder', size:[lz, ln, lz], pos:bone.getWorldPosition().toArray(), name:i, mass:3, flag:2, state:4, friction:0.5, restitution:0.9 });
+            } else {
+
+                this.hideList.push(i);
+
             }
         
 
@@ -140,6 +145,7 @@ ammo.skeleton.prototype = {
         //var matrixWorldInv = new THREE.Matrix4();//.getInverse( this.root.matrixWorld );
 
         var boneMatrix = new THREE.Matrix4();
+        var baseMatrix = new THREE.Matrix4().makeRotationZ( Math.PI*0.5 );
 
         var lng = this.bones.length , bone;
         var n;
@@ -155,16 +161,18 @@ ammo.skeleton.prototype = {
 
         for ( var i = 0; i < lng; i ++ ) {
 
-            if(i !== 0 && i !== 4 && i !== 14 && i !== 16 && i !== 22 && i !== 24 && i !== 8 && i !== 5 && i !== 25  ){
+            if( this.hideList.indexOf(i) === -1 ){
+
+            //if(i !== 0 && i !== 4 && i !== 14 && i !== 16 && i !== 22 && i !== 24 && i !== 8 && i !== 5 && i !== 25  ){
                 n = i * 8;
 
                 bone = this.bones[i];
 
-                mtx.makeRotationZ( Math.PI*0.5 );
+                mtx = baseMatrix.clone();//.makeRotationZ( Math.PI*0.5 );
 
 
-                if( i===2 || i===20 || i===17 ) mtx2.makeTranslation(0, this.boneDecal[i], -1);
-                else  mtx2.makeTranslation(0, this.boneDecal[i], 0);
+                if( i===2 || i===20 || i===17 ) mtx2.makeTranslation( 0, this.boneDecal[i], -1 );
+                else  mtx2.makeTranslation( 0, this.boneDecal[i], 0 );
 
                 mtx.multiply( mtx2 );
 
@@ -173,12 +181,11 @@ ammo.skeleton.prototype = {
                 //
 
                 pos.setFromMatrixPosition( boneMatrix );
+                quat.setFromRotationMatrix( boneMatrix );
 
                 r[n] = pos.x * 0.1;
                 r[n+1] = pos.y * 0.1;
                 r[n+2] = pos.z * 0.1;
-
-                quat.setFromRotationMatrix( boneMatrix );
 
                 r[n+3] = quat.x;
                 r[n+4] = quat.y;
@@ -187,6 +194,8 @@ ammo.skeleton.prototype = {
             }
                 
         }
+
+        ammo.send('skeleton', this.data );
 
     },
 

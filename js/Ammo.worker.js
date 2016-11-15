@@ -189,6 +189,11 @@ self.onmessage = function ( e ) {
 
     if(m === 'apply') apply( e.data.o );
 
+    if(m === 'skeleton'){ 
+        updateSkeleton ( e.data.o );
+        return;
+    }
+
     /*if(m === 'terrain'){
 
         var name = e.data.name;
@@ -235,7 +240,7 @@ self.onmessage = function ( e ) {
 
         //boneAR = e.data.boneAR;
 
-        updateSkeleton ( e.data.bonesAr );
+        //updateSkeleton ( e.data.bonesAr );
 
         // ------- step
 
@@ -425,7 +430,7 @@ function wipe (obj) {
 //
 //--------------------------------------------------
 function updateSkeleton ( ar ) {
-    if(!ar) return;
+    //if(!ar) return;
 
     var i = ar.length/8, b, n;
 
@@ -433,6 +438,7 @@ function updateSkeleton ( ar ) {
 
         b = getByName( i );
         if(b){
+
             n = i*8;
 
             tmpPos.fromArray( [ar[n], ar[n+1], ar[n+2]] );
@@ -446,7 +452,6 @@ function updateSkeleton ( ar ) {
         }
 
     }
-
 
 }
 

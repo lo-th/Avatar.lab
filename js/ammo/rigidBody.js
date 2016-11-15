@@ -211,7 +211,7 @@ function addRigidBody ( o, extra ) {
 
        // body.setName(o.name);
 
-       body.getCollisionShape().name = o.name;
+       //body.getCollisionShape().name = o.name;
 
 
 
@@ -230,6 +230,10 @@ function addRigidBody ( o, extra ) {
         //console.log(body)
         ballptr.push( body.ptr );
     }
+
+    // Enable CCD Continuous Collision Detection
+    //body.setCcdMotionThreshold(1e-7);
+    //body.setCcdSweptSphereRadius(0.50);
 
 
     //if(o.flag)

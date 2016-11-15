@@ -47,6 +47,9 @@ THREE.Avatar = function () {
     this.chest = null;
     this.abdomen = null;
 
+    this.outline = null;
+    this.isWithOutline = false;
+
     this.poses = {
         'l_fingers': 0, 'l_finger_0': 0, 'l_finger_1': 0, 'l_finger_2': 0, 'l_finger_3': 0, 'l_finger_4': 0,
         'r_fingers': 0, 'r_finger_0': 0, 'r_finger_1': 0, 'r_finger_2': 0, 'r_finger_3': 0, 'r_finger_4': 0,
@@ -146,6 +149,8 @@ THREE.Avatar.prototype.init = function ( Geos ){
 
     this.toPlayMode();
 
+    //this.addOutline()
+
     //this.switchToAnimation();
 
 };
@@ -155,17 +160,17 @@ THREE.Avatar.prototype.setBVH = function ( BVH ){
 };
 
 THREE.Avatar.prototype.materialUpdate = function (){
-     this.normalMaterial.needsUpdate = true;
-     this.eyeMaterial.needsUpdate = true;
-     if(this.depthMaterial)this.depthMaterial.needsUpdate = true;
+    this.normalMaterial.needsUpdate = true;
+    this.eyeMaterial.needsUpdate = true;
+    if(this.depthMaterial)this.depthMaterial.needsUpdate = true;
 };
 
 THREE.Avatar.prototype.setEnvMap = function ( tx ){
     this.normalMaterial.envMap = tx;
-     this.eyeMaterial.envMap = tx;
+    this.eyeMaterial.envMap = tx;
 
-     this.normalMaterial.needsUpdate = true;
-     this.eyeMaterial.needsUpdate = true;
+    this.normalMaterial.needsUpdate = true;
+    this.eyeMaterial.needsUpdate = true;
 };
 
 THREE.Avatar.prototype.setMetalness = function ( v ){
@@ -448,6 +453,17 @@ THREE.Avatar.prototype.morphology = function (){
 
 };
 
+THREE.Avatar.prototype.clearMorphology= function (){
+
+    var i, bone;
+
+    i = this.bones.length;
+    while(i--){
+        this.bones[i].scalling = null;
+    }
+
+};
+
 //-----------------------
 // Avatar Breathing 
 //-----------------------
@@ -598,6 +614,8 @@ THREE.Avatar.prototype.switchGender = function (){
     this.initAnimation();
 
     this.updateBones();
+
+    if( this.isWithOutline ) this.addOutline();
 
     if(this.mode === 'edit') this.showBones( this.boneSelect );
 
@@ -763,6 +781,8 @@ THREE.Avatar.prototype.updateAnimation = function (delta){
    
 
     if( this.helper ) this.helper.update();
+    this.updateOutline();
+
 
 
     if(this.mode === 'play') this.updateKey();
@@ -783,8 +803,9 @@ THREE.Avatar.prototype.updateBones = function (){
     var bones = this.bones;
     var nodes = this.bvh.Nodes;
     var len = bones.length;
-    var parentMtx, tmpMtx; //, worldMtx;
+    var parentMtx, tmpMtx, worldMtx;
     var globalMtx = new THREE.Matrix4();
+    var globalMtx2 = new THREE.Matrix4();
     var localMtx = new THREE.Matrix4();
     var globalQuat = new THREE.Quaternion();
     var globalPos = new THREE.Vector3();
@@ -829,11 +850,20 @@ THREE.Avatar.prototype.updateBones = function (){
             globalMtx.multiply( bone.rootMatrix );
             globalMtx.setPosition( globalPos );
 
+            //globalMtx = node.matrixWorld.clone();
+
+           // globalMtx2.identity();
+           //globalMtx.multiply( bone.rootMatrix );
+            //globalMtx2.setPosition( globalPos );
+
+            //globalMtx.multiply( globalMtx2 );
+
+
             //if( bone.scalling ) globalMtx.scale( bone.scalling );
             
             // GLOBAL TO LOCAL
             //tmpMtx.identity().getInverse( worldMtx );
-            //localMtx.multiplyMatrices( tmpMtx, globalMtx );
+           //localMtx.multiplyMatrices( tmpMtx, globalMtx );
             //globalMtx.multiplyMatrices( worldMtx, localMtx );
 
             // PRESERVES BONE SIZE
@@ -875,6 +905,7 @@ THREE.Avatar.prototype.updateBones = function (){
     }
 
     if( this.helper ) this.helper.update();
+    this.updateOutline();
 
     this.breathing();
 
@@ -882,6 +913,83 @@ THREE.Avatar.prototype.updateBones = function (){
        
 };
 
+//-----------------------
+// Outline Clone
+//-----------------------
+
+THREE.Avatar.prototype.initOutline = function (){
+    
+    this.isWithOutline = true;
+    this.addOutline();
+
+};
+
+THREE.Avatar.prototype.deleteOutline = function (){
+    
+    this.isWithOutline = false;
+    this.removeOutline();
+
+};
+
+THREE.Avatar.prototype.updateOutline = function (){
+    if( this.outline === null ) return;
+
+    //this.outline.skeleton = this.skeleton.clone();
+
+   /* var i = this.outline.skeleton.bones.length;
+
+    while(i--){
+        this.outline.skeleton.bones[i] = this.bones[i].clone();
+    }*/
+}
+
+THREE.Avatar.prototype.addOutline = function (){
+
+    if( this.outline !== null ) this.removeOutline();
+
+    var material = new THREE.MeshPhongMaterial( { color: 0x000000, specular:0x000000, shininess:0, skinning:true, side:THREE.BackSide, displacementMap:textures[9] , displacementScale:0.3, displacementBias:0 } );
+    this.outline = new THREE.SEA3D.SkinnedMesh( this.geometry, material, false );
+
+    scene.add( this.outline );
+
+    this.outline.scale.multiplyScalar(1.5);
+
+    //this.clearMorphology();
+
+    
+
+    this.outline.skeleton = this.skeleton.clone();
+    this.outline.skeleton.isClone = true;
+
+    //this.morphology();
+
+    /*var i = this.outline.skeleton.bones.length;
+    while(i--){
+
+        //this.outline.skeleton.bones[i] = this.bones[i].clone();
+        this.outline.skeleton.bones[i].scalling = null;//this.bones[i].scalling;
+    }
+
+    /*var i = this.outline.skeleton.bones.length;
+
+    while(i--){
+
+        this.outline.skeleton.bones[i] = this.bones[i].clone();
+        //this.outline.skeleton.bones[i].scalling = this.bones[i].scalling;
+    }*/
+
+};
+
+THREE.Avatar.prototype.removeOutline = function (){
+
+    if( this.outline === null ) return;
+
+    this.outline.skeleton = null;
+    scene.remove( this.outline );
+
+    this.outline = null;
+
+};
 
 //-----------------------
 // skeleton Helper
@@ -908,14 +1016,10 @@ THREE.Avatar.prototype.removeHelper = function (){
 
 THREE.Avatar.prototype.initDepth = function (){
 
-    var depthShader = THREE.ShaderLib[ "depthRGBA" ];
-    var depthUniforms = THREE.UniformsUtils.clone( depthShader.uniforms );
-
-    this.depthMaterial = new THREE.ShaderMaterial( { 
-        fragmentShader: depthShader.fragmentShader, vertexShader:depthShader.vertexShader,
-        uniforms: depthUniforms, blending: THREE.NoBlending, 
-        skinning: true, morphTargets:false 
-    });
+    this.depthMaterial = new THREE.MeshDepthMaterial();
+    this.depthMaterial.depthPacking = THREE.RGBADepthPacking;
+    this.depthMaterial.blending = THREE.NoBlending;
+    this.depthMaterial.skinning = true;
 
 };
 
@@ -954,7 +1058,7 @@ THREE.Skeleton.prototype.update = ( function () {
 
             var matrix = this.bones[ b ] ? this.bones[ b ].matrixWorld: this.identityMatrix;
 
-            if( this.bones[ b ].scalling ){ 
+            if( this.bones[ b ].scalling && !this.isClone ){ 
 
                 matrix.scale( this.bones[ b ].scalling );
 

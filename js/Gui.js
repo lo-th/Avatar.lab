@@ -266,6 +266,7 @@ var Gui = ( function () {
         ui.add('bool', { name:'Visible', p:70, h:20, value:true, inh:16 } ).onChange( function(v){ heroVisibility(); } );
        // ui.add('bool', { name:'BVH Skeleton', p:70, h:20, value:false } ).onChange( function(v){ skeletonVisibility(); } );
         ui.add('bool', { name:'Helper', p:70, h:20, value:false, inh:16 } ).onChange( function(v){ helperVisibility(); } );
+        ui.add('bool', { name:'outline', p:70, h:20, value:false, inh:16 } ).onChange( function(v){ if(v) avatar.initOutline(); else avatar.deleteOutline(); } );
 
 
         this.physicsBlock();
