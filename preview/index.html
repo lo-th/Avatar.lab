@@ -27,7 +27,7 @@
 	<body>
 		<div id="container"></div>
 		<div id="info">
-			<a href="http://threejs.org" target="_blank">three.js</a> - <a href="https://github.com/sunag/sea3d" target="_blank">sea3d</a><br>Skeletal Animation BVH to Mixer.
+			<a href="http://threejs.org" target="_blank">three.js</a> - <a href="https://github.com/sunag/sea3d" target="_blank">sea3d</a><br>Avatar 2.0
 		</div>
 
 		<script src="js/three.min.js"></script>
@@ -185,7 +185,7 @@
 				var aspect = window.innerWidth / window.innerHeight;
 				var radius = 40;
 
-				camera = new THREE.PerspectiveCamera( 50, aspect, 1, 10000 );
+				camera = new THREE.PerspectiveCamera( 60, aspect, 1, 10000 );
 				camera.position.set( 0.0, radius, radius * 3.5 );
 
 				controls = new THREE.OrbitControls( camera, renderer.domElement );
@@ -299,8 +299,8 @@
 
                     for( var i = 0; i < bones.length; i++ ){
 
-                       if(bones[ i ].name === 'rCollar') bones[ i ].scalling = new THREE.Vector3().set( 0.9, 0.9, 0.9 );
-                       if(bones[ i ].name === 'lCollar') bones[ i ].scalling = new THREE.Vector3().set( 0.9, 0.9, 0.9 );
+                       //if(bones[ i ].name === 'rCollar') bones[ i ].scalling = new THREE.Vector3().set( 0.9, 0.9, 0.9 );
+                       //if(bones[ i ].name === 'lCollar') bones[ i ].scalling = new THREE.Vector3().set( 0.9, 0.9, 0.9 );
 
                     }
 
