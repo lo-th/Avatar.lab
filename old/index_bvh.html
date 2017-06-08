@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>animation BVH 3</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				color: #fff;
+				font-family:Monospace;
+				font-size:11px;
+
+				background-color: #171717;
+				margin: 0px;
+				overflow: hidden;
+			}
+
+			#info {
+				position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+			}
+			a { color: hotpink; }
+		</style>
+	</head>
+	<body>
+		<div id="container"></div>
+		<div id="info">
+			<a href="http://threejs.org" target="_blank">three.js</a> - <a href="https://github.com/sunag/sea3d" target="_blank">sea3d</a><br>Skeletal Animation BVH to Mixer.
+		</div>
+
+		<script src="js/three.js"></script>
+		<script src="../sea_18016/build/sea.js"></script>
+		<script src="js/uil.min.js"></script>
+		<script src="js/OrbitControls.js"></script>
+		<script src="js/ShaderShadow.js"></script>
+        <script src="js/ShaderAvatar.js"></script>
+        <script src="js/BVHLoader.js"></script>
+        <script src="js/Gradient.js"></script>
+
+		<script>
+
+        var container = document.getElementById( 'container' );
+
+        //var bvhFile = 'bvh/story.z';
+        //var bvhFile = 'bvh/action.z';
+        var bvhFile = 'bvh/base.z';
+        //var path = 'textures/';
+        var path = '../3dsmax/textures/';
+
+	    var animation = [];
+
+        var tPoseMatrix = [];
+
+        var isBVHLoaded = false, bvhClip;
+
+        var normMan, normWom;
+
+		var anims = ['idle', 'walk', 'run'];
+
+		var settings = {
+
+            "Bvh_Skelet": false,
+
+			"Skeleton": false,
+			'Woman': false,
+
+			"timeScale": 0.3,
+			"stepSize": 0.03,
+			"crossfade": 3.5,
+
+			"idle": 0.33,
+			"walk": 0.33,
+			"run": 0.33,
+
+			'from':'base',
+			'to':'base',
+
+			muscles: 1,
+			metalness: 0.75,
+			roughness: 0.6,
+
+            skinAlpha:0.9,
+            oamap: 0.1,
+
+		};
+
+		var woman, man, e_l, e_r, eyes, head_bone;
+
+        var avatarMaterial;
+
+        var normalSkinMan, normalSkinWom;
+
+		var blendMesh, helper, camera, scene, renderer, controls;
+
+		var clock = new THREE.Clock();
+		var gui = null;
+
+		var isFrameStepping = false;
+		var timeToStep = 0;
+
+		var fromList, toList;
+
+        var bones, bones_bvh, nodes;
+
+        var mixer, skeletonHelper;
+
+        var bvhLoader;
+
+        var torad = 0.0174532925199432957;
+
+		init();
+		animate();
+
+        function debug( t ){
+            document.getElementById( 'info' ).innerHTML = t;
+        }
+
+            // -----------------------------
+    //  SHADER HACK
+    // -----------------------------
+
+    function uniformPush( type, name, value ){
+
+        type = type || 'physical';
+        THREE.ShaderLib[type].uniforms[name] = value;
+
+    };
+
+    function shaderRemplace( type, shad, word, re ){
+
+        type = type || 'physical';
+        shad = shad || 'fragment';
+
+        THREE.ShaderLib[type][shad+'Shader'] = THREE.ShaderLib[type][shad+'Shader'].replace(word, re);
+
+    };
+
+    function shaderPush( type, shad, add ){
+
+        type = type || 'physical';
+        shad = shad || 'fragment';
+
+        add.push(" ");
+        THREE.ShaderLib[type][shad+'Shader'] = add.join("\n") + THREE.ShaderLib[type][shad+'Shader'];
+
+    };
+
+    function shaderMain( type, shad, add ){
+
+        type = type || 'physical';
+        shad = shad || 'fragment';
+
+        add.push("} ");
+
+        THREE.ShaderLib[type][shad+'Shader'] = THREE.ShaderLib[type][shad+'Shader'].substring( 0, THREE.ShaderLib[type][shad+'Shader'].length-2 );
+        THREE.ShaderLib[type][shad+'Shader'] += add.join("\n");
+
+    };
+
+			function init() {
+
+				
+
+				scene = new THREE.Scene();
+                scene.background = backImage();
+
+				renderer = new THREE.WebGLRenderer( { antialias: true, alpha: false } );
+                //renderer = new THREE.WebGL2Renderer( { antialias: true, alpha: true } );
+				renderer.setClearColor( 0x171717, 1 );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				//renderer.autoClear = true;
+
+				renderer.gammaInput = true;
+				renderer.gammaOutput = true;
+
+				renderer.toneMapping = THREE.Uncharted2ToneMapping;
+                renderer.toneMappingExposure = 3.0;
+                renderer.toneMappingWhitePoint = 5.0;
+
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.soft = true;
+			    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+			    renderer.shadowMap.renderReverseSided = false
+
+				container.appendChild( renderer.domElement );
+
+				var aspect = window.innerWidth / window.innerHeight;
+				var radius = 40;
+
+				camera = new THREE.PerspectiveCamera( 60, aspect, 1, 10000 );
+				camera.position.set( 0.0, radius, radius * 3.5 );
+
+				controls = new THREE.OrbitControls( camera, renderer.domElement );
+				controls.target.set( 0, radius, 0 );
+				controls.update();
+
+				//var ambient = new THREE.AmbientLight( 0x282824 );
+
+	            var light = new THREE.DirectionalLight( 0xffffff, 1 );
+	            light.position.set(10,100,60);
+	            light.lookAt(new THREE.Vector3(0,radius,0));
+
+	            var d = 100;
+
+				light.shadow.camera.left = -d;
+				light.shadow.camera.right = d;
+				light.shadow.camera.top = d * 1.5;
+				light.shadow.camera.bottom = -d;
+
+	            light.castShadow = true;
+				light.shadow.camera.far = 200;
+				light.shadow.mapSize.width = 1024;
+				light.shadow.mapSize.height = 1024;
+				light.shadow.bias =  -0.005;
+
+                //var point = new THREE.PointLight( 0x00FF00, 0.6, 200);
+                //point.position.set( 0,-100,0 );
+
+	            var point = new THREE.SpotLight( 0x111150, 1.6);
+	            point.position.set( -40,-4,-40 );
+                point.lookAt( new THREE.Vector3(0,radius,0));
+
+	            var point2 = new THREE.SpotLight( 0xFF8833, 2);
+	            point2.position.set( 70,radius,-60 );
+                point2.lookAt( new THREE.Vector3(0,radius,0));
+
+                //var hemiLight = new THREE.HemisphereLight( 0x5ebfd4, 0xe76813, 0.6 );
+                var hemiLight = new THREE.HemisphereLight( 0xddeeff, 0x0f0e0d, 2.2 );
+                //hemiLight.color.setHSL( 0.6, 0.75, 1 );
+                //hemiLight.groundColor.setHSL( 0.095, 0.5, 1 );
+                hemiLight.position.set( 0, radius, 0 );
+
+	            //scene.add( ambient );
+	            scene.add( light );
+	            scene.add( point );
+	            scene.add( point2 );
+                scene.add( hemiLight );
+
+				//
+
+				//var shader = THREE.ShaderShadow;
+				var planemat = new THREE.ShaderMaterial( THREE.ShaderShadow );
+
+				//var planemat = new THREE.MeshStandardMaterial({ color:0x131313, metalness:0, roughness:1 });
+	            var plane = new THREE.Mesh( new THREE.PlaneBufferGeometry( 200, 200, 1, 1 ), planemat );
+			    plane.geometry.applyMatrix(new THREE.Matrix4().makeRotationX(-Math.PI*0.5));
+
+			    //plane.position.y = -0.1;
+			    
+			    scene.add( plane );
+			    plane.castShadow = false;
+				plane.receiveShadow = true;
+
+
+				//
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+				initGUI();
+
+
+				loader = new THREE.SEA3D({ autoPlay : false  });
+
+				loader.onComplete = function( e ) {
+
+					var i = loader.meshes.length, name, mesh;
+					while(i--){
+
+						mesh = loader.meshes[i];
+						name = mesh.name;
+						if(name==='woman') woman = mesh;
+						if(name==='man') man = mesh;
+						if(name==='eye_left') e_l = mesh;
+						if(name==='eye_right') e_r = mesh;
+						//if(name==='eyes') eyes = mesh;
+
+					}
+
+
+                    // man and woman have same skeleton
+
+                    var bones = man.skeleton.bones;
+
+                    for( var i = 0; i < bones.length; i++ ){
+
+                        //if(bones[ i ].name === 'rCollar') bones[ i ].scalling = new THREE.Vector3().set( 1.1, 1.1, 1.1 );
+                        //if(bones[ i ].name === 'lCollar') bones[ i ].scalling = new THREE.Vector3().set( 1.1, 1.1, 1.1 );
+
+                        //if(bones[ i ].name === 'rShldr') bones[ i ].scale.set(1, 1.3, 1.3);
+                        //if(bones[ i ].name === 'lShldr') bones[ i ].scale.set(1, 1.3, 1.3);
+
+
+                        //if(bones[ i ].name === 'rShldr') bones[ i ].scalling = new THREE.Vector3().set(1, 1.3, 1.3);
+                        //if(bones[ i ].name === 'lShldr') bones[ i ].scalling = new THREE.Vector3().set(1, 1.3, 1.3);
+
+                        tPoseMatrix[i] = bones[ i ].matrixWorld.clone();
+
+                    }
+
+                    var bones = woman.skeleton.bones;
+
+                    for( var i = 0; i < bones.length; i++ ){
+
+                       //if(bones[ i ].name === 'rCollar') bones[ i ].scalling = new THREE.Vector3().set( 0.9, 0.9, 0.9 );
+                       //if(bones[ i ].name === 'lCollar') bones[ i ].scalling = new THREE.Vector3().set( 0.9, 0.9, 0.9 );
+
+                    }
+
+                    // for symetrique mapping
+
+					reversUV( woman.geometry );
+					reversUV( man.geometry );
+
+                    // textures
+
+					var envMap = new THREE.TextureLoader().load( path + 'spherical/sky.jpg' );
+                    envMap.mapping = THREE.SphericalReflectionMapping;
+
+                    /*var type = 'jpg'
+                    var envMap = new THREE.CubeTextureLoader()
+                    .setPath( path + 'cube/skybox/' )
+                    .load( [ 'px.' + type, 'nx.' + type, 'py.' + type, 'ny.' + type, 'pz.' + type, 'nz.' + type ] );
+                    */
+
+					var txt =  new THREE.TextureLoader().load( path + 'muscular.png' );
+					txt.wrapS = THREE.MirroredRepeatWrapping;
+					txt.flipY = false;
+
+                    var txt2 = new THREE.TextureLoader().load( path + 'avatar_final.png' );
+                    txt2.wrapS = THREE.MirroredRepeatWrapping;
+                    txt2.flipY = false;
+
+                    var txt_occ =  new THREE.TextureLoader().load( path + 'avatar_occ.png' );
+                    txt_occ.wrapS = THREE.MirroredRepeatWrapping;
+                    txt_occ.flipY = false;
+
+                    normalSkinMan =  new THREE.TextureLoader().load( path + 'avatar_skin_n_m.png' );
+                    normalSkinMan.wrapS = THREE.RepeatWrapping;
+                    normalSkinMan.flipY = false;
+
+                    normalSkinWom =  new THREE.TextureLoader().load( path + 'avatar_skin_n_w.png' );
+                    normalSkinWom.wrapS = THREE.RepeatWrapping;
+                    normalSkinWom.flipY = false;
+
+
+
+                    normMan =  new THREE.TextureLoader().load( path + 'avatar_n_m.png' );
+                    normMan.wrapS = THREE.RepeatWrapping;
+                    normMan.flipY = false;
+
+                    normWom =  new THREE.TextureLoader().load( path + 'avatar_n_w.png' );
+                    normWom.wrapS = THREE.RepeatWrapping;
+                    normWom.flipY = false;
+
+                    avatarMaterial = new THREE.AvatarMaterial( {
+
+                        
+                        map:txt,
+                        skin:txt2,
+                        skinAlpha:settings.skinAlpha,
+                        color:new THREE.Color(0xffFFFF),
+                        //color:new THREE.Color(0xffefe0),
+                        //color:new THREE.Color(0xc19c87),
+                        //color:new THREE.Color(0x49251c),
+                        skinning:true,
+                        morphTargets:false, 
+                        envMap:envMap,
+                        metalness:settings.metalness,
+                        roughness:settings.roughness, 
+                        normalScale:new THREE.Vector2( settings.muscles, settings.muscles ),
+
+                        aoMap: txt_occ,
+                        aoMapIntensity: settings.oamap,
+
+                        wireframe: false
+
+                        //displacementMap: td, displacementScale: 0.3, displacementBias: - 0.428408,
+
+                    } );
+
+                 
+					var txt_e =  new THREE.TextureLoader().load( path + 'eye.png' );
+					//txt.wrapS = THREE.MirroredRepeatWrapping;
+					txt.flipY = false;
+
+					var tn_e =  new THREE.TextureLoader().load( path + 'eye_n.png' );
+					//tn.wrapS = THREE.MirroredRepeatWrapping;
+					
+
+					var mat_e = new THREE.MeshStandardMaterial({ 
+                        color:0xFFFFFF, 
+                        map: txt_e, 
+                        envMap: envMap, 
+                        metalness: 0.9, 
+                        roughness: 0.3, 
+                        normalMap: tn_e, 
+                        normalScale: new THREE.Vector2( 1, 1 )})
+
+					e_l.material = mat_e;
+					e_r.material = mat_e;
+
+                    eyes = new THREE.Group();
+                    eyes.add(e_l);
+                    eyes.add(e_r);
+
+					man.material = avatarMaterial;
+					woman.material = avatarMaterial;
+
+					onGender();
+
+                    testAnimationLoad();
+
+				}
+
+                loader.load( 'models/avatar2.sea' );
+
+			}
+
+            function backImage(){
+
+                var c = document.createElement( 'canvas' );
+                var res = 0.5;
+
+                c.width = 512*res;
+                c.height = 512*res;
+
+                var ctx = c.getContext( '2d' );
+                var dgrad = new Grad.Radial( 256*res, 1024*res, 512*res, 256*res, 1024*res, 1024*res );     
+                dgrad.addColorStop(0.1,45,45,45);
+               // dgrad.addColorStop(0.6,228,228,228);
+                dgrad.addColorStop(1,20,20,20);
+                dgrad.fillRect( ctx, 0, 0, 512*res, 512*res );
+
+                var tx = new THREE.Texture( c );
+                tx.anisotropy = 16;
+                tx.format = THREE.RGBFormat;
+                tx.needsUpdate = true;
+
+                return tx;
+            };
+
+            function testAnimationLoad(){
+
+                bvhLoader = new THREE.BVHLoader();
+
+                var xml = new XMLHttpRequest();
+                xml.responseType = 'arraybuffer';
+
+                xml.onload = function (  ) {
+
+                    //var buffer = new TextDecoder("utf-8").decode( SEA3D.File.LZMAUncompress( xml.response ) );
+
+                    parseBvhAnimation( bvhLoader.parse( SEA3D.File.LZMAUncompress( xml.response ) ) );
+
+                }
+
+                xml.open( 'GET', bvhFile, true );
+                xml.send( null );
+
+                //bvhLoader = new THREE.BVHLoader();
+                //bvhLoader.load( "bvh/try_Take_001.bvh", parseBvhAnimation );
+
+            }
+
+            function parseBvhAnimation( result ){
+
+                result.clip.name = 'story';
+
+                skeletonHelper = new THREE.SkeletonHelper( result.skeleton.bones[ 0 ] );
+                skeletonHelper.skeleton = result.skeleton; // allow animation mixer to bind to SkeletonHelper directly
+
+                skeletonHelper.changeColor( 0xFF0000, 0xFFFF00 );
+
+                skeletonHelper.visible = settings.Bvh_Skelet;
+
+                var boneContainer = new THREE.Group();
+                boneContainer.add( result.skeleton.bones[ 0 ] );
+
+                scene.add( skeletonHelper );
+                scene.add( boneContainer );
+
+
+                bones_bvh = skeletonHelper.skeleton.bones;
+
+                var name;
+                nodes = {};
+
+                for( var i = 0; i < bones_bvh.length; i++ ){
+
+                    name = bones_bvh[i].name;
+                    nodes[name] = bones_bvh[i];
+
+                }
+
+                // play animation
+                mixer = new THREE.AnimationMixer( skeletonHelper );
+                mixer.clipAction( result.clip ).setEffectiveWeight( 1.0 ).play();
+
+                isBVHLoaded = true;
+
+                bvhClip = result.clip;
+
+                console.log(result.clip.frames, result.clip.frameTime, (result.clip.frames-1)*result.clip.frameTime)
+
+                var seq = [
+
+                    ['idle', 5, 25],
+
+                    ['walk', 325, 355],
+                    ['walk_side_r', 360, 390],
+                    ['walk_diag_r', 395, 425],
+                    ['walk_side_l', 430, 460],
+                    ['walk_diag_l', 465, 495],
+
+                    ['run', 500, 530 ],
+                    ['run_side_r', 535, 565 ],
+                    ['run_diag_r', 570, 600 ],
+                    ['run_side_l', 605, 635 ],
+                    ['run_diag_l', 640, 670 ],
+
+                    ['crouch', 675, 705],
+                    ['crouch_side_r', 710, 740 ],
+                    ['crouch_diag_r', 745, 775 ],
+                    ['crouch_side_l', 780, 810 ],
+                    ['crouch_diag_l', 815, 845 ],
+
+                ]
+
+
+                bvhLoader.applyToModel( man, bvhClip, seq, tPoseMatrix );
+                bvhLoader.applyToModel( woman, bvhClip, seq, tPoseMatrix );
+
+                //bvhLoader.applyToModel( man, bvhClip );
+                //bvhLoader.applyToModel( woman, bvhClip )
+
+
+
+
+                //blendMesh.mixer.clipAction( result.clip ).setEffectiveWeight( 1.0 ).play();
+            }
+
+			function initGUI(){
+
+				gui = new UIL.Gui( { width:280, bg:'rgba(44,44,38,0.1)' } );
+
+				gui.add( 'fps', { res:70 } );
+
+                gui.add(settings, 'Bvh_Skelet', { type:'Bool' } ).onChange( onShowBVHSkeleton );
+				gui.add(settings, 'Skeleton', { type:'Bool' } ).onChange( onShowSkeleton );
+				gui.add(settings, 'Woman', { type:'Bool' } ).onChange( onGender );
+
+
+				
+
+				
+
+				var g_01 = gui.add('group', { name:'TIME' });
+				//var g_02 = gui.add('group', { name:'ANIMATIONS' });
+				//var g_03 = gui.add('group', { name:'BLEND' });
+				var g_04 = gui.add('group', { name:'MATERIAL' });
+
+				g_01.add( 'button', { name:'play' }).onChange( onStartAnimation );
+				g_01.add( 'button', { name:'pause' }).onChange( onPauseAnimation );
+				g_01.add( 'button', { name:'step' }).onChange( onStepAnimation );
+
+				g_01.add(settings, 'timeScale', { min:-2, max:2 } );
+				g_01.add(settings, 'stepSize', { min:0.01, max:0.1 } );
+				//g_01.add(settings, 'crossfade', { min:0.1, max:6 } );
+
+				//g_01.add( settings, 'idle', { min:0, max:1, fontColor:'#33AAFF' } ).onChange( onWeightAnimation ).listen();
+				//g_01.add( settings, 'walk', { min:0, max:1, fontColor:'#33AAFF' } ).onChange( onWeightAnimation ).listen();
+				//g_01.add( settings, 'run' , { min:0, max:1, fontColor:'#33AAFF' } ).onChange( onWeightAnimation ).listen();
+
+				//
+
+				/*fromList = g_02.add( 'list', { name:'from', list:animation }).onChange( function(v){ settings.from = v; } );
+				toList   = g_02.add( 'list', { name:'to',   list:animation }).onChange( function(v){ settings.to = v; } );
+
+				g_02.add('button', { name:'Crossfade' }).onChange( function(){ onCrossfade( settings.from, settings.to ); } );
+				g_02.add('button', { name:'Warp' }).onChange( function(){ onWarp( settings.from, settings.to ); } );
+                */
+
+				//
+
+				g_04.add(settings, 'muscles', { min:0, max:2, fontColor:'#D4B87B' } ).onChange( function(){ blendMesh.material.normalScale = new THREE.Vector2( settings.muscles, settings.muscles ) } );
+                g_04.add(settings, 'oamap', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( function(){ blendMesh.material.aoMapIntensity = settings.oamap; });
+				g_04.add(settings, 'metalness', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( function(){ blendMesh.material.metalness = settings.metalness; });
+				g_04.add(settings, 'roughness', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( function(){ blendMesh.material.roughness = settings.roughness; });
+
+                g_04.add(settings, 'skinAlpha', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( function(){ blendMesh.material.uniforms.skinAlpha.value = settings.skinAlpha; });
+                
+
+
+				g_01.open();
+				//g_01.open();
+				g_04.open();
+
+			};
+
+			function onGender () {
+
+				if( blendMesh ){
+					scene.remove( eyes );
+					scene.remove( blendMesh );
+				}
+
+				//if( settings.Woman ) blendMesh = woman;
+				//else blendMesh = man;
+
+                blendMesh = settings.Woman ? woman : man;
+                //avatarMaterial.normalMap = settings.Woman ? normWom : normMan;
+
+                avatarMaterial.normalMap = settings.Woman ? normalSkinWom : normalSkinMan;
+
+                blendMesh.material.uniforms.normalMap2.value = settings.Woman ? normWom : normMan;;
+
+				blendMesh.castShadow = true;
+				blendMesh.receiveShadow = true;
+
+                
+
+				scene.add( blendMesh );
+
+				var i = blendMesh.skeleton.bones.length, name;
+				while(i--){
+					name = blendMesh.skeleton.bones[i].name;
+					if(name === 'head') head_bone = blendMesh.skeleton.bones[i];
+				}
+
+				eyes.matrix = head_bone.matrixWorld;
+				eyes.matrixAutoUpdate = false;
+				scene.add( eyes );
+
+				
+
+
+				//var list = [], name;
+				//bones = blendMesh.skeleton.bones;
+
+
+				/*for( var i = 0; i < bones.length; i++ ){
+
+                    name = bones[i].name;
+                    if( name.substring(1, 7) !== 'finger' ) list.push( i + '__' + name );
+
+				}*/
+
+				//console.log( list );
+
+               // animation = [];
+
+                // Create the debug visualization
+                if( helper ) scene.remove( helper );
+                helper = new THREE.SkeletonHelper( blendMesh );
+                helper.visible = settings.Skeleton;
+                scene.add( helper );
+
+                
+
+                /*for(var a in blendMesh.animations ){
+                    animation.push( a );
+                }
+
+
+    
+                if( animation.length < 1 ) return;
+
+				//console.log( animation );
+
+				fromList.setList( animation, 8 );
+				toList.setList( animation, 13 );
+
+				settings.from = animation[8];
+				settings.to = animation[13];
+				
+				start();*/
+
+
+
+
+			};
+
+			// special mid revers for symetrics character
+			// correct inversion of normal map
+			function reversUV( geometry ){
+
+			    var uv = geometry.attributes.uv.array;
+			    var i = uv.length * 0.25;
+			    while( i-- ) uv[ i * 2 ] *= -1;
+			    geometry.attributes.uv.needsUpdate = true;
+
+                geometry.addAttribute( 'uv2', geometry.attributes.uv );
+
+			};
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			function onStartAnimation() {
+
+				blendMesh.stopAll();
+				blendMesh.unPauseAll();
+
+                blendMesh.playw( 'story', 1 );
+
+				// the blend mesh will combine 1 or more animations
+				/*for ( var i = 0; i < anims.length; ++i ) {
+
+					blendMesh.playw( anims[ i ], settings[ anims[ i ] ] );
+
+				}*/
+
+				isFrameStepping = false;
+
+			}
+
+			function onStopAnimation() {
+
+				blendMesh.stopAll();
+				isFrameStepping = false;
+
+			}
+
+			function onPauseAnimation() {
+
+				( isFrameStepping ) ? blendMesh.unPauseAll(): blendMesh.pauseAll();
+				isFrameStepping = false;
+
+			}
+
+			function onStepAnimation() {
+
+				blendMesh.unPauseAll();
+				isFrameStepping = true;
+				timeToStep = settings.stepSize;
+			}
+
+			/*function onWeightAnimation() {
+
+				var sum = settings.idle + settings.walk + settings.run;
+
+				settings.idle /= sum;
+				settings.walk /= sum;
+				settings.run /= sum;
+
+				for ( var i = 0; i < anims.length; ++i ) {
+
+					blendMesh.setWeight( anims[ i ], settings[ anims[ i ] ] );
+
+				}
+
+			}
+
+			function onCrossfade( a, b ) {
+
+				blendMesh.stopAll();
+				blendMesh.crossfade( a, b, settings.crossfade );
+
+				isFrameStepping = false;
+
+			}
+
+			function onWarp( a, b ) {
+
+				blendMesh.stopAll();
+				blendMesh.warp( a, b, settings.crossfade );
+
+				isFrameStepping = false;
+
+			}*/
+
+            function onShowBVHSkeleton( b ) {
+
+                skeletonHelper.visible = b;
+
+            }
+
+			function onShowSkeleton( b ) {
+
+				helper.visible = b;
+
+			}
+
+			function start() {
+
+				// Set default weights
+				//blendMesh.setWeight( 'idle', settings.idle );
+				//blendMesh.setWeight( 'walk', settings.walk );
+				//blendMesh.setWeight( 'run', settings.run );
+
+			}
+
+			function animate() {
+
+				requestAnimationFrame( animate, renderer.domElement );
+
+
+
+
+
+				// step forward in time based on whether we're stepping and scale
+
+				var scale = settings.timeScale;
+				var delta = clock.getDelta();
+				var stepSize = (!isFrameStepping) ? delta * scale: timeToStep;
+
+                THREE.SEA3D.AnimationHandler.update( stepSize );
+
+                if( helper && helper.visible ) helper.update();
+
+
+
+                if ( mixer ) mixer.update( delta );
+                if ( skeletonHelper && skeletonHelper.visible ) skeletonHelper.update();
+
+
+
+				renderer.render( scene, camera );
+	
+
+				// if we are stepping, consume time
+				// ( will equal step size next time a single step is desired )
+
+				timeToStep = 0;
+
+			}
+
+
+            // ADDON BVHLoader
+
+            THREE.BVHLoader.prototype.findTime = function( times, value ){
+
+                var lng = times.length, t, n = 0;
+
+                //var v = Math.floor(value*1000);
+
+                for(var i=0; i<lng; i++){
+
+                    //t = Math.floor(times[i]*1000);
+
+                    t = times[i];
+
+                    //if(v===t){ n = i; break;}
+                    
+                    if(t>value) break;
+                    n = i;
+
+                }
+
+                return n;
+
+            };
+
+
+
+            THREE.BVHLoader.prototype.applyToModel = function ( model, clip, seq, tPose ) {
+
+                var lng, lngB, lngS, n, i, j, k, bone, name, tmptime, tracks;
+
+                var modelName = model.name;
+
+                var utils = THREE.AnimationUtils;
+
+                var bones = model.skeleton.bones;
+                var baseTracks = clip.tracks;
+                var nodeTracks = []; // 0:position, 1:quaternion
+
+                var times, positions, resultPositions, rotations, resultRotations, pos, rot;
+
+                var matrixWorldInv = new THREE.Matrix4().getInverse( model.matrixWorld );
+                var globalQuat = new THREE.Quaternion();
+                var globalPos = new THREE.Vector3();
+                var globalMtx = new THREE.Matrix4();
+                var localMtx = new THREE.Matrix4();
+                var parentMtx;
+                
+                var resultQuat = new THREE.Quaternion();
+                var resultPos = new THREE.Vector3();
+                var resultScale = new THREE.Vector3();
+
+                // 1° get bones worldMatxix in Tpose
+
+                if( tPose === undefined ){
+
+                    tPose = [];
+                    lngB = bones.length;
+
+                    for( i = 0; i < lngB; i++ ){ 
+
+                        tPose[i] = bones[ i ].matrixWorld.clone();
+
+                    }
+
+                }
+
+                // 2° find same name bones track 
+
+                lngB = bones.length
+
+                for ( i = 0; i < lngB; ++ i ) {
+
+                    bone = bones[ i ];
+                    name = bone.name;
+                    nodeTracks[ i ] = this.findBoneTrack( name, baseTracks );
+
+                }
+
+                // 3° divide track in sequency
+
+                var clipName = clip.name;
+                var clipStart = 0;
+                var clipEnd = 0;
+                var timeStart = 0;
+                var timeEnd = 0;
+                var startId = 0;
+                var endId = 0;
+
+                var sequences = seq || [ clip.name, 0, clip.frames ];
+
+                lngS = seq.length;
+
+                for( k = 0; k < lngS; k++ ){
+
+                    clipName = sequences[k][0];
+                    clipStart = sequences[k][1];
+                    clipEnd = sequences[k][2];//+1;
+
+                    timeStart = clipStart * clip.frameTime;
+                    timeEnd = clipEnd * clip.frameTime;
+
+                    tracks = [];
+
+                    // 4° copy track to track with correct matrix
+
+                    lngB = bones.length;
+
+                    for ( i = 0; i < lngB; ++ i ) {
+
+                        bone = bones[ i ];
+                        name = bone.name;
+                        
+
+                        if( nodeTracks[i].length === 2 ){
+
+                            parentMtx = bone.parent ? bone.parent.matrixWorld : matrixWorldInv;
+
+                            // position
+
+                            if( name === 'hip' ) {
+
+                                pos = nodeTracks[i][0];
+                                
+
+                                startId = this.findTime( baseTracks[pos].times, timeStart );
+                                endId = this.findTime( baseTracks[pos].times, timeEnd ) + 1;
+
+                                tmptime = utils.arraySlice( baseTracks[pos].times, startId, endId );
+                                positions = utils.arraySlice( baseTracks[pos].values, startId * 3, endId * 3 );
+
+                                //tmptime =  baseTracks[pos].times.slice( startId, endId );
+                                //positions = baseTracks[pos].values.slice( startId*3, endId*3 );
+
+                                times = [];
+                                resultPositions = [];
+
+                                lng = tmptime.length;
+
+                                for( j = 0; j < lng; j++ ){
+
+                                    times[j] = tmptime[j] - timeStart;
+
+                                    n = j*3;
+
+                                    globalPos.set( positions[n], positions[n+1], positions[n+2] );
+
+                                    globalMtx.identity();
+                                    //globalMtx.multiply( tPose[i] );
+                                    globalMtx.setPosition( globalPos );
+                                   ///globalMtx.multiply( tPose[i] );
+
+                                    localMtx.identity().getInverse( parentMtx );
+                                    localMtx.multiply( globalMtx );
+                                    localMtx.decompose( resultPos, resultQuat, resultScale );
+
+                                    resultPositions[n] = resultPos.x ;
+                                    resultPositions[n+1] = resultPos.y;
+                                    resultPositions[n+2] = resultPos.z;
+
+                                }
+
+                                if(times.length>0)tracks.push( new THREE.VectorKeyframeTrack( ".bones[" + name + "].position", times, resultPositions ) );
+
+                            }
+
+                            // rotation
+
+                            rot = nodeTracks[i][1];
+
+                            startId = this.findTime( baseTracks[rot].times, timeStart );
+                            endId = this.findTime( baseTracks[rot].times, timeEnd ) + 1;
+
+                            tmptime = utils.arraySlice( baseTracks[rot].times, startId, endId );
+                            rotations = utils.arraySlice( baseTracks[rot].values, startId * 4, endId * 4 );
+
+                            //tmptime = baseTracks[rot].times.slice( startId, endId );
+                            //rotations = baseTracks[rot].values.slice( startId*4, endId*4 );
+
+                            resultRotations = [];
+                            times = [];
+
+
+                            lng  = tmptime.length;
+
+                            for( j = 0; j < lng; j++ ){
+
+                                times[j] = tmptime[j] - timeStart;
+
+                                n = j*4;
+
+                                globalQuat.set( rotations[n], rotations[n+1], rotations[n+2], rotations[n+3] );
+
+                                globalMtx.identity().makeRotationFromQuaternion( globalQuat );
+                                globalMtx.multiply( tPose[i] );
+
+                                localMtx.identity().getInverse( parentMtx );
+                                localMtx.multiply( globalMtx );
+                                localMtx.decompose( resultPos, resultQuat, resultScale );
+
+                                resultQuat.normalize();
+
+                                if(modelName === 'woman'){
+
+                                    if(clipName === 'walk'){
+                                        if(name === 'rShldr') resultQuat.multiply(new THREE.Quaternion(0, 0, 6 * torad, 1).normalize());
+                                        if(name === 'lShldr') resultQuat.multiply(new THREE.Quaternion(0, 0, -6 * torad, 1).normalize());
+                                    }
+                                    if(clipName !== 'idle'){
+                                        if(name === 'rThigh') resultQuat.multiply(new THREE.Quaternion(0, 0, -2 * torad, 1).normalize());
+                                        if(name === 'lThigh') resultQuat.multiply(new THREE.Quaternion(0, 0, 2 * torad, 1).normalize());
+                                    }else{
+                                        if(name === 'rThigh') resultQuat.multiply(new THREE.Quaternion(0, 0, -0.7 * torad, 1).normalize());
+                                        if(name === 'lThigh') resultQuat.multiply(new THREE.Quaternion(0, 0, 0.7 * torad, 1).normalize());
+                                    }
+
+
+                                }
+
+                                resultQuat.normalize();
+
+                                resultRotations[n] = resultQuat.x;
+                                resultRotations[n+1] = resultQuat.y;
+                                resultRotations[n+2] = resultQuat.z;
+                                resultRotations[n+3] = resultQuat.w;
+
+                            }
+
+                            if( times.length > 0 ) tracks.push( new THREE.QuaternionKeyframeTrack( ".bones[" + name + "].quaternion", times, resultRotations ) );
+
+                        }
+                    }
+
+                    // 5° apply new clip to model
+
+                    //var newClip = new THREE.AnimationClip( clipName, timeEnd-timeStart, tracks );
+                    var newClip = new THREE.AnimationClip( clipName, -1, tracks );
+                    newClip.loop = true;
+                    newClip.timeScale = 1;
+
+                    model.addAnimation( newClip );
+
+                    if( clipName === 'run'){ model.playw( clipName, 1 ); console.log(newClip)}
+
+                }
+               // model.playw( clip.name, 1 );
+
+                //model.mixer.clipAction( newClip ).setEffectiveWeight( 1.0 ).play();
+
+            };
+
+            THREE.BVHLoader.prototype.findBoneTrack = function( name, tracks ){
+
+                var n, nodeName, type, result = [];
+                for ( var i = 0; i < tracks.length; ++ i ) {
+
+                    n = tracks[i].name;
+                    nodeName = n.substring( n.indexOf('[')+1, n.indexOf(']') );
+                    type = n.substring( n.lastIndexOf('.')+1 );
+
+                    if( name === nodeName ){
+                        if(type === 'position') result[0] = i;
+                        else result[1] = i;
+                    } 
+
+                }
+
+                return result;
+
+            };
+
+
+            // ADDON SkeletonHelper
+
+            THREE.SkeletonHelper.prototype.changeColor = function ( a, b ) {
+
+                var geometry = this.geometry;
+
+                for( var i = 0; i < geometry.colors.length; i++ ){
+
+                    c = geometry.colors[i];
+                    if( c.b === 1 ) geometry.colors[i] = new THREE.Color( b );
+                    else geometry.colors[i] = new THREE.Color( a );
+
+                }
+
+            }
+
+            //-----------------------
+            // force local scalling
+            //-----------------------
+
+            THREE.Skeleton.prototype.update = ( function () {
+
+                var offsetMatrix = new THREE.Matrix4();
+                var scaleMatrix = new THREE.Matrix4();
+                var pos = new THREE.Vector3();
+
+                return function update() {
+
+                    // flatten bone matrices to array
+
+                    for ( var b = 0, bl = this.bones.length; b < bl; b ++ ) {
+
+                        // compute the offset between the current and the original transform
+
+                        var matrix = this.bones[ b ] ? this.bones[ b ].matrixWorld: this.identityMatrix;
+
+                        if( this.bones[ b ].scalling && !this.isClone ){ 
+
+                            matrix.scale( this.bones[ b ].scalling );
+
+                            // update position of children
+
+                            for ( var i = 0, l = this.bones[ b ].children.length; i < l; i ++ ) {
+
+                                scaleMatrix = matrix.clone();
+                                scaleMatrix.multiply(this.bones[ b ].children[ i ].matrix.clone() )
+                                pos.setFromMatrixPosition( scaleMatrix );
+                                this.bones[ b ].children[ i ].matrixWorld.setPosition(pos);
+
+                            }
+
+                        }
+                        
+                        offsetMatrix.multiplyMatrices( matrix, this.boneInverses[ b ] );
+                        //offsetMatrix.flattenToArrayOffset( this.boneMatrices, b * 16 );
+                        // only for three dev
+                        offsetMatrix.toArray( this.boneMatrices, b * 16 );
+
+                    }
+
+                    if ( this.useVertexTexture ) {
+
+                        this.boneTexture.needsUpdate = true;
+
+                    }
+
+                    //this.pose(); 
+
+                };
+
+            } )();
+
+		</script>
+
+	</body>
+</html>
