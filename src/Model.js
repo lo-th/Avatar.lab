@@ -244,7 +244,7 @@ V.Model.prototype = {
         if( m.lightMap !== undefined ) m.lightMap = this.type === 'man' ? this.txt.avatar_l_m : this.txt.avatar_l_w;
         if( m.aoMap !== undefined ) m.aoMap = this.txt.avatar_ao;
         if( m.bumpMap !== undefined ) m.bumpMap = this.txt.muscular;
-        if( m.emissiveMap !== undefined ) m.emissiveMap = this.txt.transition;;
+        //if( m.emissiveMap !== undefined ) m.emissiveMap = this.txt.transition;;
 
         if( m.normalScale !== undefined ) m.normalScale = new THREE.Vector2( set.muscles, set.muscles );
         if( m.lightMapIntensity !== undefined ) m.lightMapIntensity = set.lightmap;
