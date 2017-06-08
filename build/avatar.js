@@ -66554,7 +66554,7 @@ var avatar = ( function () {
 
 'use strict';
 
-var modelName = 'avatar_test';
+var modelName = 'avatar_test_gs';
 var path = './assets'
 
 var assets = [
