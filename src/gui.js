@@ -4,6 +4,7 @@ var gui = ( function () {
 
 var ui;
 var content, main, menu, timebarre;
+var gender, genderIM
 var isOpen = false;
 
 var selectColor = '#db0bfa'
@@ -11,6 +12,8 @@ var selectColor = '#db0bfa'
 var BB = [ 'X', 'BASE', 'VIEW', 'VIDEO', 'ANIMATION', 'MATERIAL' ];
 
 var current = 'none';
+
+var isMan = true;
 
 
 gui = {
@@ -20,6 +23,28 @@ gui = {
         content = document.createElement( 'div' );
         content.style.cssText = 'position: absolute; top:0; left:0; pointer-events:none; width:100%; height:100%;';
         container.appendChild( content );
+
+        gender = document.createElement( 'div' );
+        gender.style.cssText = 'position: absolute; bottom:10px; left:10px; pointer-events:auto; width:60px; height:90px; cursor:pointer;';
+
+        genderIM = new Image();
+        genderIM.src = 'assets/textures/m.png';
+
+        gender.addEventListener( 'click', function(e){ 
+            if(isMan) {
+                isMan = false;
+                genderIM.src = 'assets/textures/w.png';
+            } else {
+                isMan = true;
+                genderIM.src = 'assets/textures/m.png';
+            }
+
+            avatar.switchModel();
+
+        }, false );
+
+        gender.appendChild( genderIM );
+        content.appendChild( gender );
 
         main = document.createElement( 'div' );
         main.style.cssText = 'position: absolute; top:50px; right:0; pointer-events:none; width:200px; height:100%; display:none;';
@@ -93,7 +118,7 @@ gui = {
 
         ui.add('slide', { name:'framerate', min:24, max:60, value:60, precision:0, step:1, stype:1 }).onChange( view.setFramerate );
         ui.add('slide',  { name:'animation', min:-3, max:3, value:1, precision:2, stype:1 }).onChange( avatar.setSpeed );
-        ui.add('Bool', { name:'MAN or WOMAN', value:false, p:60, h:20 } ).onChange(  avatar.switchModel );
+        //ui.add('Bool', { name:'MAN or WOMAN', value:false, p:60, h:20 } ).onChange(  avatar.switchModel );
         ui.add('button', { name:'LOAD', fontColor:'#D4B87B', h:40, drag:true, p:0 }).onChange( avatar.loadSingle );
 
     },

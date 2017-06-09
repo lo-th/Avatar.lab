@@ -1,6 +1,6 @@
 var V = {};
 
-V.Model = function ( type, meshs, txt, morph ) {
+V.Model = function ( type, meshs, morph ) {
 
     this.geoms = {
         man: meshs.man.geometry.clone(),
@@ -38,7 +38,7 @@ V.Model = function ( type, meshs, txt, morph ) {
     this.breath = 0;
     this.breathSide = -1;
 
-    this.txt = txt;
+    this.txt = null;
     this.type = type;
 
     this.mats = [];
@@ -127,6 +127,36 @@ V.Model = function ( type, meshs, txt, morph ) {
 
 
 V.Model.prototype = {
+
+    upTexture: function (){
+
+        this.mats[0].needsUpdate = true;
+        this.mats[1].needsUpdate = true;
+
+    },
+
+    setTextures: function ( txt ) {
+
+        this.txt = txt;
+
+        var m = this.mats[0];
+
+        if( m.map !== undefined ) m.map = this.txt.avatar_c;
+        if( m.envMap !== undefined ) m.envMap = this.txt.env;
+        if( m.normalMap !== undefined ) m.normalMap = this.type === 'man' ? this.txt.avatar_n_m : this.txt.avatar_n_w;
+        if( m.lightMap !== undefined ) m.lightMap = this.type === 'man' ? this.txt.avatar_l_m : this.txt.avatar_l_w;
+        if( m.aoMap !== undefined ) m.aoMap = this.txt.avatar_ao;
+        if( m.bumpMap !== undefined ) m.bumpMap = this.txt.muscular;
+
+        m = this.mats[1];
+
+        if( m.map !== undefined ) m.map = this.txt.eye;
+        if( m.envMap !== undefined ) m.envMap = this.txt.env;
+        if( m.normalMap !== undefined ) m.normalMap = this.txt.eye_n;
+
+        this.upTexture();
+
+    },
 
     switchGender: function () {
 
@@ -238,13 +268,13 @@ V.Model.prototype = {
 
         m = this.mats[0];
 
-        if( m.map !== undefined ) m.map = this.txt.avatar_c;
+        /*if( m.map !== undefined ) m.map = this.txt.avatar_c;
         if( m.envMap !== undefined ) m.envMap = this.txt.env;
         if( m.normalMap !== undefined ) m.normalMap = this.type === 'man' ? this.txt.avatar_n_m : this.txt.avatar_n_w;
         if( m.lightMap !== undefined ) m.lightMap = this.type === 'man' ? this.txt.avatar_l_m : this.txt.avatar_l_w;
         if( m.aoMap !== undefined ) m.aoMap = this.txt.avatar_ao;
         if( m.bumpMap !== undefined ) m.bumpMap = this.txt.muscular;
-        //if( m.emissiveMap !== undefined ) m.emissiveMap = this.txt.transition;;
+        //if( m.emissiveMap !== undefined ) m.emissiveMap = this.txt.transition;;*/
 
         if( m.normalScale !== undefined ) m.normalScale = new THREE.Vector2( set.muscles, set.muscles );
         if( m.lightMapIntensity !== undefined ) m.lightMapIntensity = set.lightmap;
@@ -263,9 +293,9 @@ V.Model.prototype = {
 
         m = this.mats[1];
 
-        if( m.map !== undefined ) m.map = this.txt.eye;
+        /*if( m.map !== undefined ) m.map = this.txt.eye;
         if( m.envMap !== undefined ) m.envMap = this.txt.env;
-        if( m.normalMap !== undefined ) m.normalMap = this.txt.eye_n;
+        if( m.normalMap !== undefined ) m.normalMap = this.txt.eye_n;*/
 
         if( m.normalScale !== undefined ) m.normalScale = new THREE.Vector2( 1, 1 );
         if( m.metalness !== undefined ) m.metalness = 0.9;

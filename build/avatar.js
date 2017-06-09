@@ -65137,7 +65137,7 @@ var pool = ( function () {
 })();
 var V = {};
 
-V.Model = function ( type, meshs, txt, morph ) {
+V.Model = function ( type, meshs, morph ) {
 
     this.geoms = {
         man: meshs.man.geometry.clone(),
@@ -65175,7 +65175,7 @@ V.Model = function ( type, meshs, txt, morph ) {
     this.breath = 0;
     this.breathSide = -1;
 
-    this.txt = txt;
+    this.txt = null;
     this.type = type;
 
     this.mats = [];
@@ -65264,6 +65264,36 @@ V.Model = function ( type, meshs, txt, morph ) {
 
 
 V.Model.prototype = {
+
+    upTexture: function (){
+
+        this.mats[0].needsUpdate = true;
+        this.mats[1].needsUpdate = true;
+
+    },
+
+    setTextures: function ( txt ) {
+
+        this.txt = txt;
+
+        var m = this.mats[0];
+
+        if( m.map !== undefined ) m.map = this.txt.avatar_c;
+        if( m.envMap !== undefined ) m.envMap = this.txt.env;
+        if( m.normalMap !== undefined ) m.normalMap = this.type === 'man' ? this.txt.avatar_n_m : this.txt.avatar_n_w;
+        if( m.lightMap !== undefined ) m.lightMap = this.type === 'man' ? this.txt.avatar_l_m : this.txt.avatar_l_w;
+        if( m.aoMap !== undefined ) m.aoMap = this.txt.avatar_ao;
+        if( m.bumpMap !== undefined ) m.bumpMap = this.txt.muscular;
+
+        m = this.mats[1];
+
+        if( m.map !== undefined ) m.map = this.txt.eye;
+        if( m.envMap !== undefined ) m.envMap = this.txt.env;
+        if( m.normalMap !== undefined ) m.normalMap = this.txt.eye_n;
+
+        this.upTexture();
+
+    },
 
     switchGender: function () {
 
@@ -65375,13 +65405,13 @@ V.Model.prototype = {
 
         m = this.mats[0];
 
-        if( m.map !== undefined ) m.map = this.txt.avatar_c;
+        /*if( m.map !== undefined ) m.map = this.txt.avatar_c;
         if( m.envMap !== undefined ) m.envMap = this.txt.env;
         if( m.normalMap !== undefined ) m.normalMap = this.type === 'man' ? this.txt.avatar_n_m : this.txt.avatar_n_w;
         if( m.lightMap !== undefined ) m.lightMap = this.type === 'man' ? this.txt.avatar_l_m : this.txt.avatar_l_w;
         if( m.aoMap !== undefined ) m.aoMap = this.txt.avatar_ao;
         if( m.bumpMap !== undefined ) m.bumpMap = this.txt.muscular;
-        //if( m.emissiveMap !== undefined ) m.emissiveMap = this.txt.transition;;
+        //if( m.emissiveMap !== undefined ) m.emissiveMap = this.txt.transition;;*/
 
         if( m.normalScale !== undefined ) m.normalScale = new THREE.Vector2( set.muscles, set.muscles );
         if( m.lightMapIntensity !== undefined ) m.lightMapIntensity = set.lightmap;
@@ -65400,9 +65430,9 @@ V.Model.prototype = {
 
         m = this.mats[1];
 
-        if( m.map !== undefined ) m.map = this.txt.eye;
+        /*if( m.map !== undefined ) m.map = this.txt.eye;
         if( m.envMap !== undefined ) m.envMap = this.txt.env;
-        if( m.normalMap !== undefined ) m.normalMap = this.txt.eye_n;
+        if( m.normalMap !== undefined ) m.normalMap = this.txt.eye_n;*/
 
         if( m.normalScale !== undefined ) m.normalScale = new THREE.Vector2( 1, 1 );
         if( m.metalness !== undefined ) m.metalness = 0.9;
@@ -65648,9 +65678,9 @@ view = {
         scene = new THREE.Scene();
 
         camera = new THREE.PerspectiveCamera( 50, vs.w / vs.h , 1, 1000 );
-        camera.position.set( 0, 50, 300 );
+        camera.position.set( 0, 50, 400 );
         controler = new THREE.OrbitControls( camera, renderer.domElement );
-        controler.target.set( 0, 50, 0 );
+        controler.target.set( 0, 40, 0 );
         controler.enableKeys = false;
         controler.update();
 
@@ -65671,7 +65701,7 @@ view = {
 
         requestAnimationFrame( this.render );
 
-        this.autoRotate( { distance:80, polar:75, azim:15 } );
+        this.autoRotate( { distance:100, polar:75, azim:15 } );
 
     },
 
@@ -65735,9 +65765,7 @@ view = {
 
         if(nup){
 
-            //main.updateMaterials();
-
-            //deskdemo.forceUpdate();
+            avatar.upTexture();
 
         }
 
@@ -66138,6 +66166,7 @@ var gui = ( function () {
 
 var ui;
 var content, main, menu, timebarre;
+var gender, genderIM
 var isOpen = false;
 
 var selectColor = '#db0bfa'
@@ -66145,6 +66174,8 @@ var selectColor = '#db0bfa'
 var BB = [ 'X', 'BASE', 'VIEW', 'VIDEO', 'ANIMATION', 'MATERIAL' ];
 
 var current = 'none';
+
+var isMan = true;
 
 
 gui = {
@@ -66154,6 +66185,28 @@ gui = {
         content = document.createElement( 'div' );
         content.style.cssText = 'position: absolute; top:0; left:0; pointer-events:none; width:100%; height:100%;';
         container.appendChild( content );
+
+        gender = document.createElement( 'div' );
+        gender.style.cssText = 'position: absolute; bottom:10px; left:10px; pointer-events:auto; width:60px; height:90px; cursor:pointer;';
+
+        genderIM = new Image();
+        genderIM.src = 'assets/textures/m.png';
+
+        gender.addEventListener( 'click', function(e){ 
+            if(isMan) {
+                isMan = false;
+                genderIM.src = 'assets/textures/w.png';
+            } else {
+                isMan = true;
+                genderIM.src = 'assets/textures/m.png';
+            }
+
+            avatar.switchModel();
+
+        }, false );
+
+        gender.appendChild( genderIM );
+        content.appendChild( gender );
 
         main = document.createElement( 'div' );
         main.style.cssText = 'position: absolute; top:50px; right:0; pointer-events:none; width:200px; height:100%; display:none;';
@@ -66227,7 +66280,7 @@ gui = {
 
         ui.add('slide', { name:'framerate', min:24, max:60, value:60, precision:0, step:1, stype:1 }).onChange( view.setFramerate );
         ui.add('slide',  { name:'animation', min:-3, max:3, value:1, precision:2, stype:1 }).onChange( avatar.setSpeed );
-        ui.add('Bool', { name:'MAN or WOMAN', value:false, p:60, h:20 } ).onChange(  avatar.switchModel );
+        //ui.add('Bool', { name:'MAN or WOMAN', value:false, p:60, h:20 } ).onChange(  avatar.switchModel );
         ui.add('button', { name:'LOAD', fontColor:'#D4B87B', h:40, drag:true, p:0 }).onChange( avatar.loadSingle );
 
     },
@@ -66558,6 +66611,13 @@ var modelName = 'avatar_test_gs';
 var path = './assets'
 
 var assets = [
+
+    '/bvh/base.z',
+    '/models/'+modelName+'.sea',
+
+];
+
+var texturesAssets = [
     
     '/textures/medium.jpg',
     '/textures/avatar_c.png', 
@@ -66573,15 +66633,11 @@ var assets = [
     '/textures/eye.png',
     '/textures/eye_n.png',
 
-    '/bvh/base.z',
-
-    '/models/'+modelName+'.sea',
-
 ];
 
 var timescale = 0.5;
 
-var man, woman, scene, bvhLoader, center = null;
+var man = null, woman = null, scene, bvhLoader, center = null;
 var model = null;
 var isMan = false;
 var isHelper = false;
@@ -66617,96 +66673,18 @@ avatar = {
 
     },
 
-    onLoad: function ( p ) {
+    loadTexture: function () {
 
-        // shader hack
+        var i = texturesAssets.length;
+        while(i--) {
+            texturesAssets[i] = path + texturesAssets[i];
+        }
+     
+        pool.load( texturesAssets, avatar.onLoadTextures );
 
-        //view.shaderPush('physical', 'fragment', [ "uniform sampler2D bumpMap;", "uniform float bumpScale;" ] );
+    },
 
-        //view.uniformPush('physical', 'muscle', {  value: txt['muscular']  });
-        //view.uniformPush('physical', 'skinAlpha', {  value: 0.0  });
-
-        var map = [
-        
-            '#ifdef USE_MAP',
-
-                'vec4 texelColor = mapTexelToLinear( texture2D( map, vUv ) );',
-                'vec4 baseColor = texelColor;',
-                
-                '#ifdef USE_BUMPMAP',
-
-                    'vec4 texelColor2 = mapTexelToLinear( texture2D( bumpMap, vUv ) );',
-                    'vec4 transitionTexel = vec4(0.0);',
-
-                    '#ifdef USE_EMISSIVEMAP',
-                        "transitionTexel = texture2D( emissiveMap, vUv );",
-                        'float mixRatio = 0.0;',
-                        'float threshold = 0.3;',
-
-                        'mixRatio = bumpScale;',
-
-                        "float r = mixRatio * (1.0 + threshold * 2.0) - threshold;",
-                        "float mixf = clamp((transitionTexel.r - r)*(1.0/threshold), 0.0, 1.0);",
-                        "baseColor = mix( texelColor2, texelColor, mixf );",
-                        //"baseColor = mix( texelColor, texelColor2, mixf );",
-                    '#else',
-                        "baseColor = mix( texelColor2, texelColor, 1.0 - bumpScale );",
-                    "#endif",
-
-                '#endif',
-
-                'diffuseColor *= baseColor;',
-
-            '#endif',
-
-        ];
-
-        /*var nr = [
-            '#ifdef USE_MAP',
-            'vec4 oldDiff = diffuseColor;',
-            'vec4 texelColor = texture2D( map, vUv );',
-            'texelColor = mapTexelToLinear( texelColor );',
-            'diffuseColor *= texelColor;',
-            '#if defined( USE_LIGHTMAP ) || defined( USE_AOMAP ) || defined( USE_BUMPMAP )',
-            '    vec4 muscleColor = texture2D( bumpMap, vUv );',
-            '    muscleColor = mapTexelToLinear( muscleColor );',
-            '    diffuseColor = oldDiff * mix( muscleColor, texelColor, bumpScale );',
-            '#endif',
-            '#endif',
-        ];*/
-
-        var nj = [
-            '#ifdef FLAT_SHADED',
-            'vec3 fdx = vec3( dFdx( vViewPosition.x ), dFdx( vViewPosition.y ), dFdx( vViewPosition.z ) );',
-            'vec3 fdy = vec3( dFdy( vViewPosition.x ), dFdy( vViewPosition.y ), dFdy( vViewPosition.z ) );',
-            'vec3 normal = normalize( cross( fdx, fdy ) );',
-            '#else',
-            '    vec3 normal = normalize( vNormal ) * flipNormal;',
-            '#endif',
-            '#ifdef USE_NORMALMAP',
-            '    normal = perturbNormal2Arb( -vViewPosition, normal );',
-            //'#elif defined( USE_BUMPMAP )',
-            //'    normal = perturbNormalArb( -vViewPosition, normal, dHdxy_fwd() );',
-            '#endif',
-        ];
-
-        view.shaderRemplace('physical', 'fragment', '#include <bumpmap_pars_fragment>', [ 'uniform sampler2D bumpMap;', 'uniform float bumpScale;' ].join("\n") );
-        view.shaderRemplace('physical', 'fragment', '#include <emissivemap_pars_fragment>', "uniform sampler2D emissiveMap;" );
-        view.shaderRemplace('physical', 'fragment', '#include <bumpmap_pars_fragment>', '' );
-        view.shaderRemplace('physical', 'fragment', '#include <map_fragment>', map.join("\n") );
-        view.shaderRemplace('physical', 'fragment', '#include <normal_fragment>', nj.join("\n") );
-        view.shaderRemplace('physical', 'fragment', '#include <emissivemap_fragment>', '' );
-        
-
-        view.shaderRemplace('phong', 'fragment', '#include <bumpmap_pars_fragment>', [ 'uniform sampler2D bumpMap;', 'uniform float bumpScale;' ].join("\n") );
-        view.shaderRemplace('phong', 'fragment', '#include <emissivemap_pars_fragment>', "uniform sampler2D emissiveMap;" );
-        view.shaderRemplace('phong', 'fragment', '#include <bumpmap_pars_fragment>', '' );
-        view.shaderRemplace('phong', 'fragment', '#include <map_fragment>', map.join("\n") );
-        view.shaderRemplace('phong', 'fragment', '#include <normal_fragment>', nj.join("\n") );
-        view.shaderRemplace('phong', 'fragment', '#include <emissivemap_fragment>', '' );
-        
-
-        // textures
+    onLoadTextures: function ( p ) {
 
         var txt = {};
 
@@ -66757,8 +66735,6 @@ avatar = {
 
         //
 
-        
-
         txt['eye'] = new THREE.Texture( p.eye );
         txt['eye'].flipY = false;
         txt['eye'].needsUpdate = true;
@@ -66767,6 +66743,85 @@ avatar = {
         txt['eye_n'].flipY = false;
         txt['eye_n'].needsUpdate = true;
 
+        man.setTextures( txt );
+        woman.setTextures( txt );
+
+    },
+
+    onLoad: function ( p ) {
+
+        // shader hack
+
+        //view.shaderPush('physical', 'fragment', [ "uniform sampler2D bumpMap;", "uniform float bumpScale;" ] );
+
+        //view.uniformPush('physical', 'muscle', {  value: txt['muscular']  });
+        //view.uniformPush('physical', 'skinAlpha', {  value: 0.0  });
+
+        var map = [
+        
+            '#ifdef USE_MAP',
+
+                'vec4 texelColor = mapTexelToLinear( texture2D( map, vUv ) );',
+                'vec4 baseColor = texelColor;',
+                
+                '#ifdef USE_BUMPMAP',
+
+                    'vec4 texelColor2 = mapTexelToLinear( texture2D( bumpMap, vUv ) );',
+                    'vec4 transitionTexel = vec4(0.0);',
+
+                    '#ifdef USE_EMISSIVEMAP',
+                        "transitionTexel = texture2D( emissiveMap, vUv );",
+                        'float mixRatio = 0.0;',
+                        'float threshold = 0.3;',
+
+                        'mixRatio = bumpScale;',
+
+                        "float r = mixRatio * (1.0 + threshold * 2.0) - threshold;",
+                        "float mixf = clamp((transitionTexel.r - r)*(1.0/threshold), 0.0, 1.0);",
+                        "baseColor = mix( texelColor2, texelColor, mixf );",
+                        //"baseColor = mix( texelColor, texelColor2, mixf );",
+                    '#else',
+                        "baseColor = mix( texelColor2, texelColor, 1.0 - bumpScale );",
+                    "#endif",
+
+                '#endif',
+
+                'diffuseColor *= baseColor;',
+
+            '#endif',
+
+        ];
+
+        var normal = [
+            '#ifdef FLAT_SHADED',
+            'vec3 fdx = vec3( dFdx( vViewPosition.x ), dFdx( vViewPosition.y ), dFdx( vViewPosition.z ) );',
+            'vec3 fdy = vec3( dFdy( vViewPosition.x ), dFdy( vViewPosition.y ), dFdy( vViewPosition.z ) );',
+            'vec3 normal = normalize( cross( fdx, fdy ) );',
+            '#else',
+            '    vec3 normal = normalize( vNormal ) * flipNormal;',
+            '#endif',
+            '#ifdef USE_NORMALMAP',
+            '    normal = perturbNormal2Arb( -vViewPosition, normal );',
+            //'#elif defined( USE_BUMPMAP )',
+            //'    normal = perturbNormalArb( -vViewPosition, normal, dHdxy_fwd() );',
+            '#endif',
+        ];
+
+        view.shaderRemplace('physical', 'fragment', '#include <bumpmap_pars_fragment>', [ 'uniform sampler2D bumpMap;', 'uniform float bumpScale;' ].join("\n") );
+        view.shaderRemplace('physical', 'fragment', '#include <emissivemap_pars_fragment>', "uniform sampler2D emissiveMap;" );
+        view.shaderRemplace('physical', 'fragment', '#include <bumpmap_pars_fragment>', '' );
+        view.shaderRemplace('physical', 'fragment', '#include <map_fragment>', map.join("\n") );
+        view.shaderRemplace('physical', 'fragment', '#include <normal_fragment>', normal.join("\n") );
+        view.shaderRemplace('physical', 'fragment', '#include <emissivemap_fragment>', '' );
+        
+
+        view.shaderRemplace('phong', 'fragment', '#include <bumpmap_pars_fragment>', [ 'uniform sampler2D bumpMap;', 'uniform float bumpScale;' ].join("\n") );
+        view.shaderRemplace('phong', 'fragment', '#include <emissivemap_pars_fragment>', "uniform sampler2D emissiveMap;" );
+        view.shaderRemplace('phong', 'fragment', '#include <bumpmap_pars_fragment>', '' );
+        view.shaderRemplace('phong', 'fragment', '#include <map_fragment>', map.join("\n") );
+        view.shaderRemplace('phong', 'fragment', '#include <normal_fragment>', normal.join("\n") );
+        view.shaderRemplace('phong', 'fragment', '#include <emissivemap_fragment>', '' );
+        
         // sea meshs
 
         var meshs = pool.meshByName ( modelName );
@@ -66814,21 +66869,17 @@ avatar = {
 
         animator = new Animator( meshs.man );
 
-        man = new V.Model( 'man', meshs, txt, isWithMorph );
-        woman = new V.Model( 'wom', meshs, txt, isWithMorph );
+        man = new V.Model( 'man', meshs, isWithMorph );
+        woman = new V.Model( 'wom', meshs, isWithMorph );
 
 
         avatar.switchModel();
 
-
         avatar.addAnimation( 'base', p.base );
 
-        //avatar.loadAnimation( path + '/bvh/base.z');
-
-
         isloaded = true;
-/**/
-        //avatar.addHelper()
+
+        avatar.loadTexture();
 
     },
 
@@ -66837,6 +66888,13 @@ avatar = {
         var d = bvhLoader.parse( data );
         name = name.substring(0, name.lastIndexOf('.') );
         avatar.parseBvhAnimation( name, d );
+
+    },
+
+    upTexture: function () {
+
+        if( man !== null ) man.upTexture();
+        if( woman !== null ) woman.upTexture();
 
     },
 

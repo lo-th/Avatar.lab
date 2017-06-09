@@ -147,9 +147,9 @@ view = {
         scene = new THREE.Scene();
 
         camera = new THREE.PerspectiveCamera( 50, vs.w / vs.h , 1, 1000 );
-        camera.position.set( 0, 50, 300 );
+        camera.position.set( 0, 50, 400 );
         controler = new THREE.OrbitControls( camera, renderer.domElement );
-        controler.target.set( 0, 50, 0 );
+        controler.target.set( 0, 40, 0 );
         controler.enableKeys = false;
         controler.update();
 
@@ -170,7 +170,7 @@ view = {
 
         requestAnimationFrame( this.render );
 
-        this.autoRotate( { distance:80, polar:75, azim:15 } );
+        this.autoRotate( { distance:100, polar:75, azim:15 } );
 
     },
 
@@ -234,9 +234,7 @@ view = {
 
         if(nup){
 
-            //main.updateMaterials();
-
-            //deskdemo.forceUpdate();
+            avatar.upTexture();
 
         }
 
