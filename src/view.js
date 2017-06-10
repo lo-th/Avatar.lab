@@ -2,12 +2,18 @@ var view = ( function () {
 
 'use strict';
 
-var renderer, scene, camera, controler, transformer, clock, plane, materialShadow, ambient, light, debug, follow;
+var renderer, scene, camera, controler, transformer, clock, plane, materialShadow, ambient, light, debug, follow, mouse, pixel, raycaster, content;
 var grid = null, capturer = null;
 var vs = { w:1, h:1, mx:0, my:0 };
 var t = { now:0, delta:0, then:0, inter:0, tmp:0, n:0 };
 var isCaptureMode = false;
 var isCapture = false;
+var isDown = false;
+var pixels, pixelsLength;
+var pickingTexture = null, mouseBase;
+var endPos, startPos;
+
+var mode = 'normal';
 
 var setting = {
 
@@ -32,8 +38,11 @@ view = {
     isMobile: false,
     isShadow: false,
     isGrid: false,
-
     videoSize: [1920/3,1080/3],
+
+ 
+
+    
 
     update: function (  ) {
 
@@ -86,6 +95,8 @@ view = {
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
 
+        if( pickingTexture !== null ) pickingTexture.setSize( Math.floor(w*0.5),  Math.floor(h*0.5) );
+
         if( gui ) gui.resize();
 
     },
@@ -97,19 +108,171 @@ view = {
 
     },
 
-    move: function ( e ) {
+    // MOUSE EVENT
 
-        vs.mx = ( e.clientX / vs.w ) * 2 - 1;
-        vs.my = ( e.clientY / vs.h ) * 2 - 1;
+    up: function ( e ) {
+
+        e.preventDefault();
+        isDown = false;
+
+        endPos = view.getCurrentPosition();
+
+        var ax = Math.abs( startPos.polar - endPos.polar );
+        var ay = Math.abs( startPos.azim - endPos.azim );
+
+        if( ax < 5 && ay < 5 ){
+
+        	view.findMouse( e );
+        	view.pickTest();
+
+        }
+
+        
+        //view.rayTest();
+
 
     },
 
+    down: function ( e ) {
+
+        e.preventDefault();
+        isDown = true;
+        startPos = view.getCurrentPosition();
+
+
+        view.findMouse( e );
+
+        //view.rayTest();
+
+    },
+
+    move: function ( e ) {
+
+        e.preventDefault();
+        view.findMouse( e );
+        //view.rayTest();
+
+    },
+
+    findMouse: function ( e ) {
+
+        if ( e.changedTouches ) {
+
+            mouseBase.x = e.changedTouches[ 0 ].pageX;
+            mouseBase.y = e.changedTouches[ 0 ].pageY;
+
+        } else {
+
+            mouseBase.x = e.clientX;
+            mouseBase.y = e.clientY;
+
+        }
+
+        mouse.set( ( mouseBase.x / vs.w ) * 2 - 1, - ( mouseBase.y / vs.h ) * 2 + 1 );
+
+    },
+
+    pickTest: function () {
+
+    	var color = view.pick();
+
+    	//console.log(color)
+
+    },
+
+    rayTest: function () {
+
+        raycaster.setFromCamera( mouse, camera );
+        var hits = raycaster.intersectObjects( content.children, true ), name, uv, x;
+
+        if( hits.length > 0 ){
+
+            name = hits[0].object.name;
+
+            if(name === 'man' || name ==='wom' ){
+
+                uv = hits[ 0 ].uv;
+                x =  Math.round(512*uv.x);
+                if(x<0) x = x+512;
+                pixel.set( x, Math.round(512*uv.y) );
+
+                var color = view.getPixelValue( pixel );
+
+                avatar.getModel().showBones( color );
+
+                console.log(pixel, color)
+
+            }
+
+            //console.log(name)
+
+            /*rayControl.position.copy( hits[0].point );
+            var n = hits[ 0 ].face.normal.clone();
+            n.multiplyScalar( 10 );
+            n.add( hits[ 0 ].point );
+            rayControl.lookAt( n );*/
+
+        }
+    
+    },
+
+    // 
+
+    setMode: function ( Mode ) { 
+    	if(mode ==='bones' && mode !== Mode ) avatar.getModel().hideBones();
+    	mode = Mode
+    },
+
+    //
+    getMode: function () { return mode; },
     getRenderer: function () { return renderer; },
     getControler: function () { return controler; },
     getCamera: function () { return camera; },
     getScene: function () { return scene; },
+    getContent: function () { return content; },
+
+    getSetting: function () { return setting; },
+
+    initPickScene: function () {
+
+    	//pickingScene = new THREE.Scene();
+		pickingTexture = new THREE.WebGLRenderTarget( Math.floor(vs.w*0.5),  Math.floor(vs.h*0.5) );
+		pickingTexture.texture.minFilter = THREE.LinearFilter;
+
+    },
+
+    pick: function () {
+
+    	if(mode!=='bones') return;
+
+    	if( pickingTexture === null ) view.initPickScene();
+
+    	var model = avatar.getModel();
+
+
+
+    	model.swapMaterial(true);
+    	plane.visible = false;
+    	renderer.render( scene, camera, pickingTexture );
+    	plane.visible = true;
+    	model.swapMaterial(false);
+
+    	var pixelBuffer = new Uint8Array( 4 );
+    	renderer.readRenderTargetPixels( pickingTexture,  Math.floor(mouseBase.x*0.5), Math.floor(vs.h*0.5) -  Math.floor(mouseBase.y*0.5), 1, 1, pixelBuffer );
+    	var color = Math.rgbToHex( pixelBuffer );
+
+    	model.showBones( color );
+
+    	return color;
+
+    },
 
     init: function ( container ) {
+
+        mouse = new THREE.Vector2();
+        mouseBase = new THREE.Vector2();
+        pixel = new THREE.Vector2();
+        raycaster = new THREE.Raycaster();
 
         toneMappings = {
             None: THREE.NoToneMapping,
@@ -153,6 +316,9 @@ view = {
         controler.enableKeys = false;
         controler.update();
 
+        content = new THREE.Group();
+        scene.add( content );
+
         follow = new THREE.Group();
         scene.add( follow );
 
@@ -163,6 +329,16 @@ view = {
         else renderer.setClearColor( 0x000000, 0 );
 
         window.addEventListener( 'resize', this.resize, false );
+
+        var dom = renderer.domElement;
+
+        dom.addEventListener( 'mousedown', view.down, false );
+        dom.addEventListener( 'mouseup', view.up, false );
+        dom.addEventListener( 'mousemove', view.move, false );
+
+        dom.addEventListener( 'touchstart', view.down, false );
+        dom.addEventListener( 'touchend', view.up, false );
+        dom.addEventListener( 'touchmove', view.move, false );
 
         //this.addGrid();
         this.addLight();
@@ -439,6 +615,22 @@ view = {
 
     // MODEL ADD
 
+    addVertexColor: function( geometry ){
+
+        var color = new THREE.Float32BufferAttribute( geometry.attributes.position.count*3, 3 );
+        var i = color.count, n;
+        //console.log('count', i)
+        while(i--){ 
+            n = i*3
+            color[n] = 1;
+            color[n+1] = 1;
+            color[n+2] = 1;
+        }
+        geometry.addAttribute( 'color', color );
+        geometry.attributes.color.needsUpdate = true;
+
+    },
+
     addUV2: function( geometry ){
 
         if( geometry ) geometry.addAttribute( 'uv2', geometry.attributes.uv );
@@ -559,7 +751,49 @@ view = {
         if( log ) console.log( JSON.stringify( p ) );
         return p;
 
-    }
+    },
+
+    initCanvasId: function ( img ){
+
+        var canvas = document.createElement( "canvas" ); 
+        canvas.width = canvas.height = 512;
+        var ctx = canvas.getContext( "2d" );
+        ctx.drawImage( img, 0, 0 );
+        
+        pixels = ctx.getImageData( 0, 0, 512, 512 ).data;
+        pixelsLength = pixels.length * 0.25;
+
+    },
+
+    getPixelValue: function ( v ) {
+
+
+        var cc = [0,0,0,0];
+        var color = 0x000000;
+
+        /*if( pix !== undefined ) {
+            pix.style.left = (x*0.5) + 'px';
+            pix.style.top =  (y*0.5) + 'px';
+        }*/
+
+        if( pixels !== undefined ){
+
+            var id = (v.y*512) + v.x;
+            var n = id * 4;
+
+            cc[0] = pixels[n];
+            cc[1] = pixels[n+1];
+            cc[2] = pixels[n+2];
+            cc[3] = pixels[n+3];
+ 
+            color = Math.rgbToHex( cc );
+
+        }
+
+        return color;
+
+        
+    },
 
 
 

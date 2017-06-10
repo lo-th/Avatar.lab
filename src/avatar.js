@@ -24,6 +24,7 @@ var texturesAssets = [
     '/textures/muscular.png',
     '/textures/metalmuscl.png',
     '/textures/transition/t5.png',
+    '/textures/avatar_id.png',
 
     '/textures/eye.png',
     '/textures/eye_n.png',
@@ -55,7 +56,7 @@ avatar = {
 
         if( Path !== undefined ) path = Path;
 
-        scene = view.getScene();
+        scene = view.getContent();
         bvhLoader = new THREE.BVHLoader();
 
         var i = assets.length;
@@ -128,6 +129,11 @@ avatar = {
         txt['muscular'].flipY = false;
         txt['muscular'].needsUpdate = true;
 
+        txt['avatar_id'] = new THREE.Texture( p.avatar_id );
+        txt['avatar_id'].wrapS = THREE.RepeatWrapping;
+        txt['avatar_id'].flipY = false;
+        txt['avatar_id'].needsUpdate = true;
+
         //
 
         txt['eye'] = new THREE.Texture( p.eye );
@@ -141,6 +147,8 @@ avatar = {
         man.setTextures( txt );
         woman.setTextures( txt );
 
+        //view.initCanvasId( p.avatar_id );
+
     },
 
     onLoad: function ( p ) {
@@ -151,6 +159,17 @@ avatar = {
 
         //view.uniformPush('physical', 'muscle', {  value: txt['muscular']  });
         //view.uniformPush('physical', 'skinAlpha', {  value: 0.0  });
+
+        var mapBasic = [
+            '#ifdef USE_MAP',
+
+                'vec4 texelColor = texture2D( map, vUv );',
+
+                //'texelColor = mapTexelToLinear( texelColor );',
+                'diffuseColor *= texelColor;',
+
+            '#endif',
+        ];
 
         var map = [
         
@@ -216,6 +235,8 @@ avatar = {
         view.shaderRemplace('phong', 'fragment', '#include <map_fragment>', map.join("\n") );
         view.shaderRemplace('phong', 'fragment', '#include <normal_fragment>', normal.join("\n") );
         view.shaderRemplace('phong', 'fragment', '#include <emissivemap_fragment>', '' );
+
+        view.shaderRemplace('basic', 'fragment', '#include <map_fragment>', mapBasic.join("\n") );
         
         // sea meshs
 
@@ -232,6 +253,9 @@ avatar = {
         //
         view.reversUV( meshs.man.geometry );
         view.reversUV( meshs.woman.geometry );
+
+        view.addVertexColor( meshs.man.geometry );
+        view.addVertexColor( meshs.woman.geometry );
 
 
         if(isWithMorph){
@@ -418,15 +442,11 @@ avatar = {
 
         if( isMan ){
 
-            //model.switchGender();
-
             isMan = false;
             model = woman;
             model.addToScene( scene );
 
         } else {
-
-            //model.switchGender();
 
             isMan = true;
             model = man;
@@ -435,6 +455,8 @@ avatar = {
         }
 
         avatar.setTimescale();
+
+        if( view.getMode() === 'bones' ) gui.bones();
 
         if( currentPlay ) avatar.play( currentPlay );
 

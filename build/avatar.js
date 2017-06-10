@@ -176,16 +176,9 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 				event.target = this;
 
-				var array = [], i = 0;
-				var length = listenerArray.length;
+				var array = listenerArray.slice( 0 );
 
-				for ( i = 0; i < length; i ++ ) {
-
-					array[ i ] = listenerArray[ i ];
-
-				}
-
-				for ( i = 0; i < length; i ++ ) {
+				for ( var i = 0, l = array.length; i < l; i ++ ) {
 
 					array[ i ].call( this, event );
 
@@ -7168,6 +7161,8 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 	Object.assign( Material.prototype, EventDispatcher.prototype, {
 
 		isMaterial: true,
+
+		onBeforeCompile: function () {},
 
 		setValues: function ( values ) {
 
@@ -16118,6 +16113,8 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 		function remove( attribute ) {
 
+			if ( attribute.isInterleavedBufferAttribute ) attribute = attribute.data;
+			
 			var data = buffers[ attribute.uuid ];
 
 			if ( data ) {
@@ -17035,15 +17032,15 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 	}
 
-	function WebGLProgram( renderer, code, material, parameters ) {
+	function WebGLProgram( renderer, code, material, shader, parameters ) {
 
 		var gl = renderer.context;
 
 		var extensions = material.extensions;
 		var defines = material.defines;
 
-		var vertexShader = material.__webglShader.vertexShader;
-		var fragmentShader = material.__webglShader.fragmentShader;
+		var vertexShader = shader.vertexShader;
+		var fragmentShader = shader.fragmentShader;
 
 		var shadowMapTypeDefine = 'SHADOWMAP_TYPE_BASIC';
 
@@ -17155,7 +17152,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 				'precision ' + parameters.precision + ' float;',
 				'precision ' + parameters.precision + ' int;',
 
-				'#define SHADER_NAME ' + material.__webglShader.name,
+				'#define SHADER_NAME ' + shader.name,
 
 				customDefines,
 
@@ -17262,7 +17259,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 				'precision ' + parameters.precision + ' float;',
 				'precision ' + parameters.precision + ' int;',
 
-				'#define SHADER_NAME ' + material.__webglShader.name,
+				'#define SHADER_NAME ' + shader.name,
 
 				customDefines,
 
@@ -17750,13 +17747,15 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 			}
 
+			array.push( material.onBeforeCompile.toString() );
+
 			array.push( renderer.gammaOutput );
 
 			return array.join();
 
 		};
 
-		this.acquireProgram = function ( material, parameters, code ) {
+		this.acquireProgram = function ( material, shader, parameters, code ) {
 
 			var program;
 
@@ -17778,7 +17777,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 			if ( program === undefined ) {
 
-				program = new WebGLProgram( renderer, code, material, parameters );
+				program = new WebGLProgram( renderer, code, material, shader, parameters );
 				programs.push( program );
 
 			}
@@ -17875,6 +17874,13 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 			return ( texture.wrapS !== ClampToEdgeWrapping || texture.wrapT !== ClampToEdgeWrapping ) ||
 				( texture.minFilter !== NearestFilter && texture.minFilter !== LinearFilter );
+
+		}
+
+		function textureNeedsGenerateMipmaps( texture, isPowerOfTwo ) {
+
+			return texture.generateMipmaps && isPowerOfTwo &&
+				texture.minFilter !== NearestFilter && texture.minFilter !== LinearFilter;
 
 		}
 
@@ -18115,7 +18121,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 					}
 
-					if ( texture.generateMipmaps && isPowerOfTwoImage ) {
+					if ( textureNeedsGenerateMipmaps( texture, isPowerOfTwoImage ) ) {
 
 						_gl.generateMipmap( _gl.TEXTURE_CUBE_MAP );
 
@@ -18364,7 +18370,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 			}
 
-			if ( texture.generateMipmaps && isPowerOfTwoImage ) _gl.generateMipmap( _gl.TEXTURE_2D );
+			if ( textureNeedsGenerateMipmaps( texture, isPowerOfTwoImage ) ) _gl.generateMipmap( _gl.TEXTURE_2D );
 
 			textureProperties.__version = texture.version;
 
@@ -18542,7 +18548,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 				}
 
-				if ( renderTarget.texture.generateMipmaps && isTargetPowerOfTwo ) _gl.generateMipmap( _gl.TEXTURE_CUBE_MAP );
+				if ( textureNeedsGenerateMipmaps( renderTarget.texture, isTargetPowerOfTwo ) ) _gl.generateMipmap( _gl.TEXTURE_CUBE_MAP );
 				state.bindTexture( _gl.TEXTURE_CUBE_MAP, null );
 
 			} else {
@@ -18551,7 +18557,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 				setTextureParameters( _gl.TEXTURE_2D, renderTarget.texture, isTargetPowerOfTwo );
 				setupFrameBufferTexture( renderTargetProperties.__webglFramebuffer, renderTarget, _gl.COLOR_ATTACHMENT0, _gl.TEXTURE_2D );
 
-				if ( renderTarget.texture.generateMipmaps && isTargetPowerOfTwo ) _gl.generateMipmap( _gl.TEXTURE_2D );
+				if ( textureNeedsGenerateMipmaps( renderTarget.texture, isTargetPowerOfTwo ) ) _gl.generateMipmap( _gl.TEXTURE_2D );
 				state.bindTexture( _gl.TEXTURE_2D, null );
 
 			}
@@ -18569,12 +18575,11 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 		function updateRenderTargetMipmap( renderTarget ) {
 
 			var texture = renderTarget.texture;
+			var isTargetPowerOfTwo = isPowerOfTwo( renderTarget );
 
-			if ( texture.generateMipmaps && isPowerOfTwo( renderTarget ) &&
-					texture.minFilter !== NearestFilter &&
-					texture.minFilter !== LinearFilter ) {
+			if ( textureNeedsGenerateMipmaps( texture, isTargetPowerOfTwo ) ) {
 
-				var target = (renderTarget && renderTarget.isWebGLRenderTargetCube) ? _gl.TEXTURE_CUBE_MAP : _gl.TEXTURE_2D;
+				var target = renderTarget.isWebGLRenderTargetCube ? _gl.TEXTURE_CUBE_MAP : _gl.TEXTURE_2D;
 				var webglTexture = properties.get( texture ).__webglTexture;
 
 				state.bindTexture( target, webglTexture );
@@ -21412,7 +21417,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 					var shader = ShaderLib[ parameters.shaderID ];
 
-					materialProperties.__webglShader = {
+					materialProperties.shader = {
 						name: material.type,
 						uniforms: UniformsUtils.clone( shader.uniforms ),
 						vertexShader: shader.vertexShader,
@@ -21421,7 +21426,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 				} else {
 
-					materialProperties.__webglShader = {
+					materialProperties.shader = {
 						name: material.type,
 						uniforms: material.uniforms,
 						vertexShader: material.vertexShader,
@@ -21430,9 +21435,9 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 				}
 
-				material.__webglShader = materialProperties.__webglShader;
+				material.onBeforeCompile( materialProperties.shader );
 
-				program = programCache.acquireProgram( material, parameters, code );
+				program = programCache.acquireProgram( material, materialProperties.shader, parameters, code );
 
 				materialProperties.program = program;
 				material.program = program;
@@ -21473,7 +21478,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 			}
 
-			var uniforms = materialProperties.__webglShader.uniforms;
+			var uniforms = materialProperties.shader.uniforms;
 
 			if ( ! material.isShaderMaterial &&
 				! material.isRawShaderMaterial ||
@@ -21582,7 +21587,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 			var program = materialProperties.program,
 				p_uniforms = program.getUniforms(),
-				m_uniforms = materialProperties.__webglShader.uniforms;
+				m_uniforms = materialProperties.shader.uniforms;
 
 			if ( program.id !== _currentProgram ) {
 
@@ -64735,6 +64740,12 @@ Math.colorDistance = function ( a, b ){
 
 };
 
+Math.rgbToHex = function( rgb ){
+
+    return '0x' + ( '000000' + ( ( rgb[0] * 255 ) << 16 ^ ( rgb[1] * 255 ) << 8 ^ ( rgb[2] * 255 ) << 0 ).toString( 16 ) ).slice( - 6 );
+
+};
+
 Math.hslToRgb = function (h, s, l){
 
     var r, g, b;
@@ -65158,6 +65169,61 @@ V.Model = function ( type, meshs, morph ) {
 
     };
 
+    this.colorBones = [
+        "0x000000",//root
+        "0x1600e3",// hip
+        "0x2600d8",// abdomen
+        "0x0018ff",//rThigh
+        "0x1818e7",//lThigh
+        "0x86005e",//chest
+        "0x1414eb",//lShin
+        "0x0014ff",//rShin
+        "0x0015ff",//rFoot
+        "0x0022ff",//rCollar
+        "0x1515ec",//lFoot
+        "0x880053",//neck
+        "0x2222dd",//lCollar
+        "0x1313ee",//lToe
+        "0x2020df",//lShldr
+        "0x0020ff",//rShldr
+        "0xcb001d",// head
+        "0x0013ff",//rToe
+        "0x001eff",//rForeArm
+        "0x1e1ee1",//lForeArm
+        "0x5d5da4",//lHand
+        "0x005dff",//rHand
+        "0x004eff",//rfinger20
+        "0x5454ab",//lfinger10
+        "0x003eff",//rfinger00
+        "0x0054ff",//rfinger10
+        "0x3e3ec1",//lfinger00
+        "0x4e4eb1",//lfinger20
+        "0x0048ff",//rfinger30
+        "0x0042ff",//rfinger40
+        "0x4848b7",//lfinger30
+        "0x4242bd",//lfinger40
+        "0x004aff",//rfinger31
+        "0x4a4ab5",//lfinger31
+        "0x4444bb",//lfinger41
+        "0x5050af",//lfinger21
+        "0x5656a9",//lfinger11
+        "0x0043ff",//rfinger01
+        "0x0050ff",//rfinger21
+        "0x4343be",//lfinger01
+        "0x0056ff",//rfinger11
+        "0x0044ff",//rfinger41
+        "0x0058ff",//rfinger12
+        "0x0041ff",//rfinger02
+        "0x0052ff",//rfinger22
+        "0x4646b9",//lfinger42
+        "0x4c4cb3",//lfinger32
+        "0x004cff",//rfinger32
+        "0x5252ad",//lfinger22
+        "0x4141c0",//lfinger02
+        "0x0046ff",//rfinger42
+        "0x5858a7"//lfinger12
+    ]
+
     this.ref = meshs;
 
     this.isFirst = true;
@@ -65199,11 +65265,12 @@ V.Model = function ( type, meshs, morph ) {
     var i, name, bone, lng = this.bones.length, v;
 
     this.poseMatrix = [];
+    this.bonesNames = [];
     this.b = {};
 
     for( i=0; i<lng; i++){
 
-        v = null;
+        v = new THREE.Vector3( 1, 1, 1 );
         bone = this.bones[i];
         name = bone.name;
         bone.name = name;
@@ -65227,13 +65294,18 @@ V.Model = function ( type, meshs, morph ) {
 
 
         this.b[ name ] = bone;
+        this.bonesNames.push( name );
         this.poseMatrix[i] = bone.matrixWorld.clone();
+
+
 
         if(name === 'hip') this.hipPos.setFromMatrixPosition( this.poseMatrix[i] );
 
     }
 
     this.mesh.userData.posY = this.hipPos.y;
+
+    this.geometry = this.mesh.geometry;
 
     //console.log(this.mesh)
 
@@ -65265,10 +65337,23 @@ V.Model = function ( type, meshs, morph ) {
 
 V.Model.prototype = {
 
+    swapMaterial: function ( b ){
+
+        if(b){ 
+            this.mesh.material = this.mats[2];
+            this.mats[1].visible = false;
+        } else {
+            this.mesh.material = this.mats[0];
+            this.mats[1].visible = true;
+        }
+
+    },
+
     upTexture: function (){
 
         this.mats[0].needsUpdate = true;
         this.mats[1].needsUpdate = true;
+        this.mats[2].needsUpdate = true;
 
     },
 
@@ -65290,6 +65375,9 @@ V.Model.prototype = {
         if( m.map !== undefined ) m.map = this.txt.eye;
         if( m.envMap !== undefined ) m.envMap = this.txt.env;
         if( m.normalMap !== undefined ) m.normalMap = this.txt.eye_n;
+
+        m = this.mats[2];
+        m.map = this.txt.avatar_id;
 
         this.upTexture();
 
@@ -65401,7 +65489,7 @@ V.Model.prototype = {
         
 
         // define new material type
-        this.mats = [ new THREE[ mtype ](), new THREE[ mtype ]() ];
+        this.mats = [ new THREE[ mtype ](), new THREE[ mtype ](), new THREE.MeshBasicMaterial() ];
 
         m = this.mats[0];
 
@@ -65422,6 +65510,7 @@ V.Model.prototype = {
         if( m.bumpScale !== undefined ) m.bumpScale = set.skinAlpha;
         if( m.opacity !== undefined ) m.opacity = set.opacity;
         if( m.transparent !== undefined ) m.transparent = true;
+        
         //if( m.alphaTest !== undefined ) m.alphaTest = 0.9;
         
     
@@ -65442,6 +65531,16 @@ V.Model.prototype = {
         this.mesh.material = this.mats[0];
         this.eyes.children[0].material = this.mats[1];
         this.eyes.children[1].material = this.mats[1];
+
+        m = this.mats[2];
+        m.skinning = true;
+
+
+
+
+        //this.showBones('lShin')
+
+        
 
     },
 
@@ -65528,17 +65627,113 @@ V.Model.prototype = {
         return { name:anim.name, frame: Math.round(t/f), total:Math.round( d/f ) }
 
     },
+
+    /*findID: function ( name ){
+
+        return this.bonesNames.indexOf(name);
+
+    },*/
+
+    setScalling: function ( axe, v ){
+
+        if(this.boneSelect===null) return;
+        this.boneSelect.scalling[ axe ] = v;
+
+    },
+
+    hideBones: function () {
+
+        this.boneSelect = null;
+        this.mats[0].vertexColors = THREE.NoColors;
+        this.mats[0].needsUpdate = true
+
+    },
+
+    showBones: function ( name ) {
+
+        var i, lng, n, n4, w0, w1, w2, w3, x;
+
+        var id = id = this.colorBones.indexOf(name);
+
+        if( name === '0x1100e5' ){
+            if(this.type === 'man' ) id = 1;
+            else id = 5; 
+        }
+
+        if(id === -1) this.bonesNames.indexOf( name );
+
+     
+
+        if(id === -1) return;
+
+        if( id === 0 ){
+            this.hideBones()
+            return;
+        } else {
+            this.boneSelect = this.bones[id];
+            this.mats[0].vertexColors = THREE.VertexColors;
+            this.mats[0].needsUpdate = true;
+        }
+
+        
+
+
+        if(gui){
+
+            gui.setBones( this.bonesNames[id], id, this.boneSelect.scalling );
+
+        }
+
+        
+
+        
+
+        var colors = this.geometry.attributes.color.array;
+        var index = this.geometry.attributes.skinIndex.array;
+        var weight = this.geometry.attributes.skinWeight.array;
+
+        lng = colors.length;
+
+        for( i = 0; i<lng; i++){
+
+            n = i*3
+            n4 = i*4;
+
+            w0 = index[n4] === id ? weight[n4] : 0;
+            w1 = index[n4+1] === id ? weight[n4+1] : 0;
+            w2 = index[n4+2] === id ? weight[n4+2] : 0;
+            w3 = index[n4+3] === id ? weight[n4+3] : 0;
+
+            x = w0+w1+w2+w3;
+
+            colors[n] = 1;
+            colors[n+1] =  1-x;
+            colors[n+2] =  1-x;
+
+        }
+
+        this.geometry.attributes.color.needsUpdate = true;
+        //this.mats[0].vertexColors = THREE.VertexColors;
+
+    },
+
 }
 var view = ( function () {
 
 'use strict';
 
-var renderer, scene, camera, controler, transformer, clock, plane, materialShadow, ambient, light, debug, follow;
+var renderer, scene, camera, controler, transformer, clock, plane, materialShadow, ambient, light, debug, follow, mouse, pixel, raycaster, content;
 var grid = null, capturer = null;
 var vs = { w:1, h:1, mx:0, my:0 };
 var t = { now:0, delta:0, then:0, inter:0, tmp:0, n:0 };
 var isCaptureMode = false;
 var isCapture = false;
+var isDown = false;
+var pixels, pixelsLength;
+var pickingTexture = null, mouseBase;
+var endPos, startPos;
+
+var mode = 'normal';
 
 var setting = {
 
@@ -65563,8 +65758,11 @@ view = {
     isMobile: false,
     isShadow: false,
     isGrid: false,
-
     videoSize: [1920/3,1080/3],
+
+ 
+
+    
 
     update: function (  ) {
 
@@ -65617,6 +65815,8 @@ view = {
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
 
+        if( pickingTexture !== null ) pickingTexture.setSize( Math.floor(w*0.5),  Math.floor(h*0.5) );
+
         if( gui ) gui.resize();
 
     },
@@ -65628,19 +65828,171 @@ view = {
 
     },
 
-    move: function ( e ) {
+    // MOUSE EVENT
 
-        vs.mx = ( e.clientX / vs.w ) * 2 - 1;
-        vs.my = ( e.clientY / vs.h ) * 2 - 1;
+    up: function ( e ) {
+
+        e.preventDefault();
+        isDown = false;
+
+        endPos = view.getCurrentPosition();
+
+        var ax = Math.abs( startPos.polar - endPos.polar );
+        var ay = Math.abs( startPos.azim - endPos.azim );
+
+        if( ax < 5 && ay < 5 ){
+
+        	view.findMouse( e );
+        	view.pickTest();
+
+        }
+
+        
+        //view.rayTest();
+
 
     },
 
+    down: function ( e ) {
+
+        e.preventDefault();
+        isDown = true;
+        startPos = view.getCurrentPosition();
+
+
+        view.findMouse( e );
+
+        //view.rayTest();
+
+    },
+
+    move: function ( e ) {
+
+        e.preventDefault();
+        view.findMouse( e );
+        //view.rayTest();
+
+    },
+
+    findMouse: function ( e ) {
+
+        if ( e.changedTouches ) {
+
+            mouseBase.x = e.changedTouches[ 0 ].pageX;
+            mouseBase.y = e.changedTouches[ 0 ].pageY;
+
+        } else {
+
+            mouseBase.x = e.clientX;
+            mouseBase.y = e.clientY;
+
+        }
+
+        mouse.set( ( mouseBase.x / vs.w ) * 2 - 1, - ( mouseBase.y / vs.h ) * 2 + 1 );
+
+    },
+
+    pickTest: function () {
+
+    	var color = view.pick();
+
+    	//console.log(color)
+
+    },
+
+    rayTest: function () {
+
+        raycaster.setFromCamera( mouse, camera );
+        var hits = raycaster.intersectObjects( content.children, true ), name, uv, x;
+
+        if( hits.length > 0 ){
+
+            name = hits[0].object.name;
+
+            if(name === 'man' || name ==='wom' ){
+
+                uv = hits[ 0 ].uv;
+                x =  Math.round(512*uv.x);
+                if(x<0) x = x+512;
+                pixel.set( x, Math.round(512*uv.y) );
+
+                var color = view.getPixelValue( pixel );
+
+                avatar.getModel().showBones( color );
+
+                console.log(pixel, color)
+
+            }
+
+            //console.log(name)
+
+            /*rayControl.position.copy( hits[0].point );
+            var n = hits[ 0 ].face.normal.clone();
+            n.multiplyScalar( 10 );
+            n.add( hits[ 0 ].point );
+            rayControl.lookAt( n );*/
+
+        }
+    
+    },
+
+    // 
+
+    setMode: function ( Mode ) { 
+    	if(mode ==='bones' && mode !== Mode ) avatar.getModel().hideBones();
+    	mode = Mode
+    },
+
+    //
+    getMode: function () { return mode; },
     getRenderer: function () { return renderer; },
     getControler: function () { return controler; },
     getCamera: function () { return camera; },
     getScene: function () { return scene; },
+    getContent: function () { return content; },
+
+    getSetting: function () { return setting; },
+
+    initPickScene: function () {
+
+    	//pickingScene = new THREE.Scene();
+		pickingTexture = new THREE.WebGLRenderTarget( Math.floor(vs.w*0.5),  Math.floor(vs.h*0.5) );
+		pickingTexture.texture.minFilter = THREE.LinearFilter;
+
+    },
+
+    pick: function () {
+
+    	if(mode!=='bones') return;
+
+    	if( pickingTexture === null ) view.initPickScene();
+
+    	var model = avatar.getModel();
+
+
+
+    	model.swapMaterial(true);
+    	plane.visible = false;
+    	renderer.render( scene, camera, pickingTexture );
+    	plane.visible = true;
+    	model.swapMaterial(false);
+
+    	var pixelBuffer = new Uint8Array( 4 );
+    	renderer.readRenderTargetPixels( pickingTexture,  Math.floor(mouseBase.x*0.5), Math.floor(vs.h*0.5) -  Math.floor(mouseBase.y*0.5), 1, 1, pixelBuffer );
+    	var color = Math.rgbToHex( pixelBuffer );
+
+    	model.showBones( color );
+
+    	return color;
+
+    },
 
     init: function ( container ) {
+
+        mouse = new THREE.Vector2();
+        mouseBase = new THREE.Vector2();
+        pixel = new THREE.Vector2();
+        raycaster = new THREE.Raycaster();
 
         toneMappings = {
             None: THREE.NoToneMapping,
@@ -65684,6 +66036,9 @@ view = {
         controler.enableKeys = false;
         controler.update();
 
+        content = new THREE.Group();
+        scene.add( content );
+
         follow = new THREE.Group();
         scene.add( follow );
 
@@ -65694,6 +66049,16 @@ view = {
         else renderer.setClearColor( 0x000000, 0 );
 
         window.addEventListener( 'resize', this.resize, false );
+
+        var dom = renderer.domElement;
+
+        dom.addEventListener( 'mousedown', view.down, false );
+        dom.addEventListener( 'mouseup', view.up, false );
+        dom.addEventListener( 'mousemove', view.move, false );
+
+        dom.addEventListener( 'touchstart', view.down, false );
+        dom.addEventListener( 'touchend', view.up, false );
+        dom.addEventListener( 'touchmove', view.move, false );
 
         //this.addGrid();
         this.addLight();
@@ -65970,6 +66335,22 @@ view = {
 
     // MODEL ADD
 
+    addVertexColor: function( geometry ){
+
+        var color = new THREE.Float32BufferAttribute( geometry.attributes.position.count*3, 3 );
+        var i = color.count, n;
+        //console.log('count', i)
+        while(i--){ 
+            n = i*3
+            color[n] = 1;
+            color[n+1] = 1;
+            color[n+2] = 1;
+        }
+        geometry.addAttribute( 'color', color );
+        geometry.attributes.color.needsUpdate = true;
+
+    },
+
     addUV2: function( geometry ){
 
         if( geometry ) geometry.addAttribute( 'uv2', geometry.attributes.uv );
@@ -66090,7 +66471,49 @@ view = {
         if( log ) console.log( JSON.stringify( p ) );
         return p;
 
-    }
+    },
+
+    initCanvasId: function ( img ){
+
+        var canvas = document.createElement( "canvas" ); 
+        canvas.width = canvas.height = 512;
+        var ctx = canvas.getContext( "2d" );
+        ctx.drawImage( img, 0, 0 );
+        
+        pixels = ctx.getImageData( 0, 0, 512, 512 ).data;
+        pixelsLength = pixels.length * 0.25;
+
+    },
+
+    getPixelValue: function ( v ) {
+
+
+        var cc = [0,0,0,0];
+        var color = 0x000000;
+
+        /*if( pix !== undefined ) {
+            pix.style.left = (x*0.5) + 'px';
+            pix.style.top =  (y*0.5) + 'px';
+        }*/
+
+        if( pixels !== undefined ){
+
+            var id = (v.y*512) + v.x;
+            var n = id * 4;
+
+            cc[0] = pixels[n];
+            cc[1] = pixels[n+1];
+            cc[2] = pixels[n+2];
+            cc[3] = pixels[n+3];
+ 
+            color = Math.rgbToHex( cc );
+
+        }
+
+        return color;
+
+        
+    },
 
 
 
@@ -66171,11 +66594,13 @@ var isOpen = false;
 
 var selectColor = '#db0bfa'
 
-var BB = [ 'X', 'BASE', 'VIEW', 'VIDEO', 'ANIMATION', 'MATERIAL' ];
+var BB = [ 'X', 'VIEW', 'VIDEO', 'ANIMATION', 'MATERIAL', 'BONES' ];
 
 var current = 'none';
 
 var isMan = true;
+
+var bone, sx, sy, sz;
 
 
 gui = {
@@ -66187,7 +66612,7 @@ gui = {
         container.appendChild( content );
 
         gender = document.createElement( 'div' );
-        gender.style.cssText = 'position: absolute; bottom:10px; left:10px; pointer-events:auto; width:60px; height:90px; cursor:pointer;';
+        gender.style.cssText = 'position: absolute; bottom:50px; left:10px; pointer-events:auto; width:60px; height:90px; cursor:pointer;';
 
         genderIM = new Image();
         genderIM.src = 'assets/textures/m.png';
@@ -66259,6 +66684,8 @@ gui = {
 
     select: function ( id ) {
 
+        view.setMode('normal');
+
         id = Number(id);
         ui.clear();
         timebarre.hide();
@@ -66266,32 +66693,35 @@ gui = {
 
         switch( id ){
             case 0: gui.close(); break;
-            case 1: gui.basic(); break;
-            case 2: gui.option(); break;
-            case 3: gui.video(); break;
-            case 4: gui.anim(); break;
-            case 5: gui.material(); break;
+            case 1: gui.view(); break;
+            case 2: gui.video(); break;
+            case 3: gui.anim(); break;
+            case 4: gui.material(); break;
+            case 5: gui.bones(); break;
            // case 5: gui.morph(); break;
         }
 
     },
 
-    basic: function () {
 
-        ui.add('slide', { name:'framerate', min:24, max:60, value:60, precision:0, step:1, stype:1 }).onChange( view.setFramerate );
-        ui.add('slide',  { name:'animation', min:-3, max:3, value:1, precision:2, stype:1 }).onChange( avatar.setSpeed );
-        //ui.add('Bool', { name:'MAN or WOMAN', value:false, p:60, h:20 } ).onChange(  avatar.switchModel );
-        ui.add('button', { name:'LOAD', fontColor:'#D4B87B', h:40, drag:true, p:0 }).onChange( avatar.loadSingle );
+    view: function () {
 
-    },
-
-    option: function () {
+        var params = view.getSetting();
 
         ui.add('Bool', { name:'MID RESOLUTION', value:view.pixelRatio === 1 ? false : true, p:60 } ).onChange( view.setPixelRatio );
 
         ui.add('Bool', { name:'GRID', value:view.isGrid, p:60 } ).onChange( view.addGrid );
         ui.add('Bool', { name:'SHADOW', value:view.isShadow, p:60 } ).onChange( view.addShadow );
         ui.add('Bool', { name:'SKELETON', value:avatar.getModel().isSkeleton, p:60 } ).onChange( avatar.addSkeleton );
+
+        ui.add('title',  { name:' ', h:30});
+
+        ui.add( params, 'gammaInput', { type:'Bool', fontColor:'#EEE', bColor:'#b2b2b2', p:60  } ).onChange( function(){ view.setTone( 'up' ); } );
+        ui.add( params, 'gammaOutput', { type:'Bool', fontColor:'#EEE', bColor:'#b2b2b2', p:60  } ).onChange( function(){ view.setTone( 'up' ); } );
+
+        ui.add( params, 'exposure', { min:0, max:10, precision:2, fontColor:'#fc4100' } ).onChange( function(){ view.setTone(); } );
+        ui.add( params, 'whitePoint', { min:0, max:10, precision:1, fontColor:'#fc4100' } ).onChange( function(){ view.setTone(); } );
+        ui.add('list', { name:'type',  bColor:'#b2b2b2', list:['None', 'Linear', 'Reinhard', 'Uncharted2', 'Cineon'], fontColor:'#333', value:params.tone, h:30 }).onChange( function(v){ view.setTone(v); } );
 
     },
 
@@ -66301,8 +66731,7 @@ gui = {
         ui.add('number', { name:'resolution', value:view.videoSize, precision:0, step:10 }).onChange( view.setVideoSize );
         ui.add('button', { name:'START', h:20, p:0 }).onChange( function( ){view.startCapture()} );
         ui.add('button', { name:'STOP', h:20, p:0 }).onChange( function( ){view.saveCapture()}  );
-        
- 
+
     },
 
     material: function () {
@@ -66331,12 +66760,38 @@ gui = {
 
     },
 
+    bones: function () {
+
+        view.setMode('bones');
+
+        bone = ui.add('title', { name:'none', h:30, r:10 } );
+
+        var model = avatar.getModel();
+
+        sx = ui.add('slide',  { name:'scale X',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ model.setScalling('x', v); } );
+        sy = ui.add('slide',  { name:'scale Y',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ model.setScalling('y', v); } );
+        sz = ui.add('slide',  { name:'scale Z',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ model.setScalling('z', v); } );
+
+    },
+
+    setBones: function( name, id, v ){
+
+        bone.text( name );
+        bone.text2( id );
+        sx.setValue(v.x);
+        sy.setValue(v.y);
+        sz.setValue(v.z);
+
+    },
+
     anim: function () {
+
+        ui.add('slide', { name:'framerate', min:24, max:60, value:60, precision:0, step:1, stype:1 }).onChange( view.setFramerate );
 
         current = 'anim';
         ui.add('slide',  { name:'animation', min:-1, max:1, value:avatar.getTimescale(), precision:2, stype:1 }).onChange( avatar.setTimescale );
         ui.add('Bool', { name:'LOCK HIP', value:avatar.getModel().isLockHip, p:60 } ).onChange( avatar.lockHip );
-        ui.add('button', { name:'LOAD', fontColor:'#D4B87B', h:40, drag:true, p:0 }).onChange( avatar.loadSingle );
+        ui.add('button', { name:'LOAD BVH', fontColor:'#D4B87B', h:40, drag:true, p:0 }).onChange( avatar.loadSingle );
 
         var an = avatar.getAnimations(), name;
 
@@ -66629,6 +67084,7 @@ var texturesAssets = [
     '/textures/muscular.png',
     '/textures/metalmuscl.png',
     '/textures/transition/t5.png',
+    '/textures/avatar_id.png',
 
     '/textures/eye.png',
     '/textures/eye_n.png',
@@ -66660,7 +67116,7 @@ avatar = {
 
         if( Path !== undefined ) path = Path;
 
-        scene = view.getScene();
+        scene = view.getContent();
         bvhLoader = new THREE.BVHLoader();
 
         var i = assets.length;
@@ -66733,6 +67189,11 @@ avatar = {
         txt['muscular'].flipY = false;
         txt['muscular'].needsUpdate = true;
 
+        txt['avatar_id'] = new THREE.Texture( p.avatar_id );
+        txt['avatar_id'].wrapS = THREE.RepeatWrapping;
+        txt['avatar_id'].flipY = false;
+        txt['avatar_id'].needsUpdate = true;
+
         //
 
         txt['eye'] = new THREE.Texture( p.eye );
@@ -66746,6 +67207,8 @@ avatar = {
         man.setTextures( txt );
         woman.setTextures( txt );
 
+        //view.initCanvasId( p.avatar_id );
+
     },
 
     onLoad: function ( p ) {
@@ -66756,6 +67219,17 @@ avatar = {
 
         //view.uniformPush('physical', 'muscle', {  value: txt['muscular']  });
         //view.uniformPush('physical', 'skinAlpha', {  value: 0.0  });
+
+        var mapBasic = [
+            '#ifdef USE_MAP',
+
+                'vec4 texelColor = texture2D( map, vUv );',
+
+                //'texelColor = mapTexelToLinear( texelColor );',
+                'diffuseColor *= texelColor;',
+
+            '#endif',
+        ];
 
         var map = [
         
@@ -66821,6 +67295,8 @@ avatar = {
         view.shaderRemplace('phong', 'fragment', '#include <map_fragment>', map.join("\n") );
         view.shaderRemplace('phong', 'fragment', '#include <normal_fragment>', normal.join("\n") );
         view.shaderRemplace('phong', 'fragment', '#include <emissivemap_fragment>', '' );
+
+        view.shaderRemplace('basic', 'fragment', '#include <map_fragment>', mapBasic.join("\n") );
         
         // sea meshs
 
@@ -66837,6 +67313,9 @@ avatar = {
         //
         view.reversUV( meshs.man.geometry );
         view.reversUV( meshs.woman.geometry );
+
+        view.addVertexColor( meshs.man.geometry );
+        view.addVertexColor( meshs.woman.geometry );
 
 
         if(isWithMorph){
@@ -67023,15 +67502,11 @@ avatar = {
 
         if( isMan ){
 
-            //model.switchGender();
-
             isMan = false;
             model = woman;
             model.addToScene( scene );
 
         } else {
-
-            //model.switchGender();
 
             isMan = true;
             model = man;
@@ -67040,6 +67515,8 @@ avatar = {
         }
 
         avatar.setTimescale();
+
+        if( view.getMode() === 'bones' ) gui.bones();
 
         if( currentPlay ) avatar.play( currentPlay );
 
@@ -67300,7 +67777,6 @@ var main = ( function () {
 
 'use strict';
 
-
 main = {
 
     // --------------------------
@@ -67314,6 +67790,7 @@ main = {
         avatar.init();
 
     },
+
 
 }
 

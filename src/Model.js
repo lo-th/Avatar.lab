@@ -21,6 +21,61 @@ V.Model = function ( type, meshs, morph ) {
 
     };
 
+    this.colorBones = [
+        "0x000000",//root
+        "0x1600e3",// hip
+        "0x2600d8",// abdomen
+        "0x0018ff",//rThigh
+        "0x1818e7",//lThigh
+        "0x86005e",//chest
+        "0x1414eb",//lShin
+        "0x0014ff",//rShin
+        "0x0015ff",//rFoot
+        "0x0022ff",//rCollar
+        "0x1515ec",//lFoot
+        "0x880053",//neck
+        "0x2222dd",//lCollar
+        "0x1313ee",//lToe
+        "0x2020df",//lShldr
+        "0x0020ff",//rShldr
+        "0xcb001d",// head
+        "0x0013ff",//rToe
+        "0x001eff",//rForeArm
+        "0x1e1ee1",//lForeArm
+        "0x5d5da4",//lHand
+        "0x005dff",//rHand
+        "0x004eff",//rfinger20
+        "0x5454ab",//lfinger10
+        "0x003eff",//rfinger00
+        "0x0054ff",//rfinger10
+        "0x3e3ec1",//lfinger00
+        "0x4e4eb1",//lfinger20
+        "0x0048ff",//rfinger30
+        "0x0042ff",//rfinger40
+        "0x4848b7",//lfinger30
+        "0x4242bd",//lfinger40
+        "0x004aff",//rfinger31
+        "0x4a4ab5",//lfinger31
+        "0x4444bb",//lfinger41
+        "0x5050af",//lfinger21
+        "0x5656a9",//lfinger11
+        "0x0043ff",//rfinger01
+        "0x0050ff",//rfinger21
+        "0x4343be",//lfinger01
+        "0x0056ff",//rfinger11
+        "0x0044ff",//rfinger41
+        "0x0058ff",//rfinger12
+        "0x0041ff",//rfinger02
+        "0x0052ff",//rfinger22
+        "0x4646b9",//lfinger42
+        "0x4c4cb3",//lfinger32
+        "0x004cff",//rfinger32
+        "0x5252ad",//lfinger22
+        "0x4141c0",//lfinger02
+        "0x0046ff",//rfinger42
+        "0x5858a7"//lfinger12
+    ]
+
     this.ref = meshs;
 
     this.isFirst = true;
@@ -62,11 +117,12 @@ V.Model = function ( type, meshs, morph ) {
     var i, name, bone, lng = this.bones.length, v;
 
     this.poseMatrix = [];
+    this.bonesNames = [];
     this.b = {};
 
     for( i=0; i<lng; i++){
 
-        v = null;
+        v = new THREE.Vector3( 1, 1, 1 );
         bone = this.bones[i];
         name = bone.name;
         bone.name = name;
@@ -90,13 +146,18 @@ V.Model = function ( type, meshs, morph ) {
 
 
         this.b[ name ] = bone;
+        this.bonesNames.push( name );
         this.poseMatrix[i] = bone.matrixWorld.clone();
+
+
 
         if(name === 'hip') this.hipPos.setFromMatrixPosition( this.poseMatrix[i] );
 
     }
 
     this.mesh.userData.posY = this.hipPos.y;
+
+    this.geometry = this.mesh.geometry;
 
     //console.log(this.mesh)
 
@@ -128,10 +189,23 @@ V.Model = function ( type, meshs, morph ) {
 
 V.Model.prototype = {
 
+    swapMaterial: function ( b ){
+
+        if(b){ 
+            this.mesh.material = this.mats[2];
+            this.mats[1].visible = false;
+        } else {
+            this.mesh.material = this.mats[0];
+            this.mats[1].visible = true;
+        }
+
+    },
+
     upTexture: function (){
 
         this.mats[0].needsUpdate = true;
         this.mats[1].needsUpdate = true;
+        this.mats[2].needsUpdate = true;
 
     },
 
@@ -153,6 +227,9 @@ V.Model.prototype = {
         if( m.map !== undefined ) m.map = this.txt.eye;
         if( m.envMap !== undefined ) m.envMap = this.txt.env;
         if( m.normalMap !== undefined ) m.normalMap = this.txt.eye_n;
+
+        m = this.mats[2];
+        m.map = this.txt.avatar_id;
 
         this.upTexture();
 
@@ -264,7 +341,7 @@ V.Model.prototype = {
         
 
         // define new material type
-        this.mats = [ new THREE[ mtype ](), new THREE[ mtype ]() ];
+        this.mats = [ new THREE[ mtype ](), new THREE[ mtype ](), new THREE.MeshBasicMaterial() ];
 
         m = this.mats[0];
 
@@ -285,6 +362,7 @@ V.Model.prototype = {
         if( m.bumpScale !== undefined ) m.bumpScale = set.skinAlpha;
         if( m.opacity !== undefined ) m.opacity = set.opacity;
         if( m.transparent !== undefined ) m.transparent = true;
+        
         //if( m.alphaTest !== undefined ) m.alphaTest = 0.9;
         
     
@@ -305,6 +383,16 @@ V.Model.prototype = {
         this.mesh.material = this.mats[0];
         this.eyes.children[0].material = this.mats[1];
         this.eyes.children[1].material = this.mats[1];
+
+        m = this.mats[2];
+        m.skinning = true;
+
+
+
+
+        //this.showBones('lShin')
+
+        
 
     },
 
@@ -391,4 +479,94 @@ V.Model.prototype = {
         return { name:anim.name, frame: Math.round(t/f), total:Math.round( d/f ) }
 
     },
+
+    /*findID: function ( name ){
+
+        return this.bonesNames.indexOf(name);
+
+    },*/
+
+    setScalling: function ( axe, v ){
+
+        if(this.boneSelect===null) return;
+        this.boneSelect.scalling[ axe ] = v;
+
+    },
+
+    hideBones: function () {
+
+        this.boneSelect = null;
+        this.mats[0].vertexColors = THREE.NoColors;
+        this.mats[0].needsUpdate = true
+
+    },
+
+    showBones: function ( name ) {
+
+        var i, lng, n, n4, w0, w1, w2, w3, x;
+
+        var id = id = this.colorBones.indexOf(name);
+
+        if( name === '0x1100e5' ){
+            if(this.type === 'man' ) id = 1;
+            else id = 5; 
+        }
+
+        if(id === -1) this.bonesNames.indexOf( name );
+
+     
+
+        if(id === -1) return;
+
+        if( id === 0 ){
+            this.hideBones()
+            return;
+        } else {
+            this.boneSelect = this.bones[id];
+            this.mats[0].vertexColors = THREE.VertexColors;
+            this.mats[0].needsUpdate = true;
+        }
+
+        
+
+
+        if(gui){
+
+            gui.setBones( this.bonesNames[id], id, this.boneSelect.scalling );
+
+        }
+
+        
+
+        
+
+        var colors = this.geometry.attributes.color.array;
+        var index = this.geometry.attributes.skinIndex.array;
+        var weight = this.geometry.attributes.skinWeight.array;
+
+        lng = colors.length;
+
+        for( i = 0; i<lng; i++){
+
+            n = i*3
+            n4 = i*4;
+
+            w0 = index[n4] === id ? weight[n4] : 0;
+            w1 = index[n4+1] === id ? weight[n4+1] : 0;
+            w2 = index[n4+2] === id ? weight[n4+2] : 0;
+            w3 = index[n4+3] === id ? weight[n4+3] : 0;
+
+            x = w0+w1+w2+w3;
+
+            colors[n] = 1;
+            colors[n+1] =  1-x;
+            colors[n+2] =  1-x;
+
+        }
+
+        this.geometry.attributes.color.needsUpdate = true;
+        //this.mats[0].vertexColors = THREE.VertexColors;
+
+    },
+
 }

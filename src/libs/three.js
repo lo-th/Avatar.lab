@@ -173,16 +173,9 @@
 
 				event.target = this;
 
-				var array = [], i = 0;
-				var length = listenerArray.length;
+				var array = listenerArray.slice( 0 );
 
-				for ( i = 0; i < length; i ++ ) {
-
-					array[ i ] = listenerArray[ i ];
-
-				}
-
-				for ( i = 0; i < length; i ++ ) {
+				for ( var i = 0, l = array.length; i < l; i ++ ) {
 
 					array[ i ].call( this, event );
 
@@ -7165,6 +7158,8 @@
 	Object.assign( Material.prototype, EventDispatcher.prototype, {
 
 		isMaterial: true,
+
+		onBeforeCompile: function () {},
 
 		setValues: function ( values ) {
 
@@ -16115,6 +16110,8 @@
 
 		function remove( attribute ) {
 
+			if ( attribute.isInterleavedBufferAttribute ) attribute = attribute.data;
+			
 			var data = buffers[ attribute.uuid ];
 
 			if ( data ) {
@@ -17032,15 +17029,15 @@
 
 	}
 
-	function WebGLProgram( renderer, code, material, parameters ) {
+	function WebGLProgram( renderer, code, material, shader, parameters ) {
 
 		var gl = renderer.context;
 
 		var extensions = material.extensions;
 		var defines = material.defines;
 
-		var vertexShader = material.__webglShader.vertexShader;
-		var fragmentShader = material.__webglShader.fragmentShader;
+		var vertexShader = shader.vertexShader;
+		var fragmentShader = shader.fragmentShader;
 
 		var shadowMapTypeDefine = 'SHADOWMAP_TYPE_BASIC';
 
@@ -17152,7 +17149,7 @@
 				'precision ' + parameters.precision + ' float;',
 				'precision ' + parameters.precision + ' int;',
 
-				'#define SHADER_NAME ' + material.__webglShader.name,
+				'#define SHADER_NAME ' + shader.name,
 
 				customDefines,
 
@@ -17259,7 +17256,7 @@
 				'precision ' + parameters.precision + ' float;',
 				'precision ' + parameters.precision + ' int;',
 
-				'#define SHADER_NAME ' + material.__webglShader.name,
+				'#define SHADER_NAME ' + shader.name,
 
 				customDefines,
 
@@ -17747,13 +17744,15 @@
 
 			}
 
+			array.push( material.onBeforeCompile.toString() );
+
 			array.push( renderer.gammaOutput );
 
 			return array.join();
 
 		};
 
-		this.acquireProgram = function ( material, parameters, code ) {
+		this.acquireProgram = function ( material, shader, parameters, code ) {
 
 			var program;
 
@@ -17775,7 +17774,7 @@
 
 			if ( program === undefined ) {
 
-				program = new WebGLProgram( renderer, code, material, parameters );
+				program = new WebGLProgram( renderer, code, material, shader, parameters );
 				programs.push( program );
 
 			}
@@ -17872,6 +17871,13 @@
 
 			return ( texture.wrapS !== ClampToEdgeWrapping || texture.wrapT !== ClampToEdgeWrapping ) ||
 				( texture.minFilter !== NearestFilter && texture.minFilter !== LinearFilter );
+
+		}
+
+		function textureNeedsGenerateMipmaps( texture, isPowerOfTwo ) {
+
+			return texture.generateMipmaps && isPowerOfTwo &&
+				texture.minFilter !== NearestFilter && texture.minFilter !== LinearFilter;
 
 		}
 
@@ -18112,7 +18118,7 @@
 
 					}
 
-					if ( texture.generateMipmaps && isPowerOfTwoImage ) {
+					if ( textureNeedsGenerateMipmaps( texture, isPowerOfTwoImage ) ) {
 
 						_gl.generateMipmap( _gl.TEXTURE_CUBE_MAP );
 
@@ -18361,7 +18367,7 @@
 
 			}
 
-			if ( texture.generateMipmaps && isPowerOfTwoImage ) _gl.generateMipmap( _gl.TEXTURE_2D );
+			if ( textureNeedsGenerateMipmaps( texture, isPowerOfTwoImage ) ) _gl.generateMipmap( _gl.TEXTURE_2D );
 
 			textureProperties.__version = texture.version;
 
@@ -18539,7 +18545,7 @@
 
 				}
 
-				if ( renderTarget.texture.generateMipmaps && isTargetPowerOfTwo ) _gl.generateMipmap( _gl.TEXTURE_CUBE_MAP );
+				if ( textureNeedsGenerateMipmaps( renderTarget.texture, isTargetPowerOfTwo ) ) _gl.generateMipmap( _gl.TEXTURE_CUBE_MAP );
 				state.bindTexture( _gl.TEXTURE_CUBE_MAP, null );
 
 			} else {
@@ -18548,7 +18554,7 @@
 				setTextureParameters( _gl.TEXTURE_2D, renderTarget.texture, isTargetPowerOfTwo );
 				setupFrameBufferTexture( renderTargetProperties.__webglFramebuffer, renderTarget, _gl.COLOR_ATTACHMENT0, _gl.TEXTURE_2D );
 
-				if ( renderTarget.texture.generateMipmaps && isTargetPowerOfTwo ) _gl.generateMipmap( _gl.TEXTURE_2D );
+				if ( textureNeedsGenerateMipmaps( renderTarget.texture, isTargetPowerOfTwo ) ) _gl.generateMipmap( _gl.TEXTURE_2D );
 				state.bindTexture( _gl.TEXTURE_2D, null );
 
 			}
@@ -18566,12 +18572,11 @@
 		function updateRenderTargetMipmap( renderTarget ) {
 
 			var texture = renderTarget.texture;
+			var isTargetPowerOfTwo = isPowerOfTwo( renderTarget );
 
-			if ( texture.generateMipmaps && isPowerOfTwo( renderTarget ) &&
-					texture.minFilter !== NearestFilter &&
-					texture.minFilter !== LinearFilter ) {
+			if ( textureNeedsGenerateMipmaps( texture, isTargetPowerOfTwo ) ) {
 
-				var target = (renderTarget && renderTarget.isWebGLRenderTargetCube) ? _gl.TEXTURE_CUBE_MAP : _gl.TEXTURE_2D;
+				var target = renderTarget.isWebGLRenderTargetCube ? _gl.TEXTURE_CUBE_MAP : _gl.TEXTURE_2D;
 				var webglTexture = properties.get( texture ).__webglTexture;
 
 				state.bindTexture( target, webglTexture );
@@ -21409,7 +21414,7 @@
 
 					var shader = ShaderLib[ parameters.shaderID ];
 
-					materialProperties.__webglShader = {
+					materialProperties.shader = {
 						name: material.type,
 						uniforms: UniformsUtils.clone( shader.uniforms ),
 						vertexShader: shader.vertexShader,
@@ -21418,7 +21423,7 @@
 
 				} else {
 
-					materialProperties.__webglShader = {
+					materialProperties.shader = {
 						name: material.type,
 						uniforms: material.uniforms,
 						vertexShader: material.vertexShader,
@@ -21427,9 +21432,9 @@
 
 				}
 
-				material.__webglShader = materialProperties.__webglShader;
+				material.onBeforeCompile( materialProperties.shader );
 
-				program = programCache.acquireProgram( material, parameters, code );
+				program = programCache.acquireProgram( material, materialProperties.shader, parameters, code );
 
 				materialProperties.program = program;
 				material.program = program;
@@ -21470,7 +21475,7 @@
 
 			}
 
-			var uniforms = materialProperties.__webglShader.uniforms;
+			var uniforms = materialProperties.shader.uniforms;
 
 			if ( ! material.isShaderMaterial &&
 				! material.isRawShaderMaterial ||
@@ -21579,7 +21584,7 @@
 
 			var program = materialProperties.program,
 				p_uniforms = program.getUniforms(),
-				m_uniforms = materialProperties.__webglShader.uniforms;
+				m_uniforms = materialProperties.shader.uniforms;
 
 			if ( program.id !== _currentProgram ) {
 

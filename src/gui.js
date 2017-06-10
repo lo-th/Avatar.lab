@@ -9,11 +9,13 @@ var isOpen = false;
 
 var selectColor = '#db0bfa'
 
-var BB = [ 'X', 'BASE', 'VIEW', 'VIDEO', 'ANIMATION', 'MATERIAL' ];
+var BB = [ 'X', 'VIEW', 'VIDEO', 'ANIMATION', 'MATERIAL', 'BONES' ];
 
 var current = 'none';
 
 var isMan = true;
+
+var bone, sx, sy, sz;
 
 
 gui = {
@@ -25,7 +27,7 @@ gui = {
         container.appendChild( content );
 
         gender = document.createElement( 'div' );
-        gender.style.cssText = 'position: absolute; bottom:10px; left:10px; pointer-events:auto; width:60px; height:90px; cursor:pointer;';
+        gender.style.cssText = 'position: absolute; bottom:50px; left:10px; pointer-events:auto; width:60px; height:90px; cursor:pointer;';
 
         genderIM = new Image();
         genderIM.src = 'assets/textures/m.png';
@@ -97,6 +99,8 @@ gui = {
 
     select: function ( id ) {
 
+        view.setMode('normal');
+
         id = Number(id);
         ui.clear();
         timebarre.hide();
@@ -104,32 +108,35 @@ gui = {
 
         switch( id ){
             case 0: gui.close(); break;
-            case 1: gui.basic(); break;
-            case 2: gui.option(); break;
-            case 3: gui.video(); break;
-            case 4: gui.anim(); break;
-            case 5: gui.material(); break;
+            case 1: gui.view(); break;
+            case 2: gui.video(); break;
+            case 3: gui.anim(); break;
+            case 4: gui.material(); break;
+            case 5: gui.bones(); break;
            // case 5: gui.morph(); break;
         }
 
     },
 
-    basic: function () {
 
-        ui.add('slide', { name:'framerate', min:24, max:60, value:60, precision:0, step:1, stype:1 }).onChange( view.setFramerate );
-        ui.add('slide',  { name:'animation', min:-3, max:3, value:1, precision:2, stype:1 }).onChange( avatar.setSpeed );
-        //ui.add('Bool', { name:'MAN or WOMAN', value:false, p:60, h:20 } ).onChange(  avatar.switchModel );
-        ui.add('button', { name:'LOAD', fontColor:'#D4B87B', h:40, drag:true, p:0 }).onChange( avatar.loadSingle );
+    view: function () {
 
-    },
-
-    option: function () {
+        var params = view.getSetting();
 
         ui.add('Bool', { name:'MID RESOLUTION', value:view.pixelRatio === 1 ? false : true, p:60 } ).onChange( view.setPixelRatio );
 
         ui.add('Bool', { name:'GRID', value:view.isGrid, p:60 } ).onChange( view.addGrid );
         ui.add('Bool', { name:'SHADOW', value:view.isShadow, p:60 } ).onChange( view.addShadow );
         ui.add('Bool', { name:'SKELETON', value:avatar.getModel().isSkeleton, p:60 } ).onChange( avatar.addSkeleton );
+
+        ui.add('title',  { name:' ', h:30});
+
+        ui.add( params, 'gammaInput', { type:'Bool', fontColor:'#EEE', bColor:'#b2b2b2', p:60  } ).onChange( function(){ view.setTone( 'up' ); } );
+        ui.add( params, 'gammaOutput', { type:'Bool', fontColor:'#EEE', bColor:'#b2b2b2', p:60  } ).onChange( function(){ view.setTone( 'up' ); } );
+
+        ui.add( params, 'exposure', { min:0, max:10, precision:2, fontColor:'#fc4100' } ).onChange( function(){ view.setTone(); } );
+        ui.add( params, 'whitePoint', { min:0, max:10, precision:1, fontColor:'#fc4100' } ).onChange( function(){ view.setTone(); } );
+        ui.add('list', { name:'type',  bColor:'#b2b2b2', list:['None', 'Linear', 'Reinhard', 'Uncharted2', 'Cineon'], fontColor:'#333', value:params.tone, h:30 }).onChange( function(v){ view.setTone(v); } );
 
     },
 
@@ -139,8 +146,7 @@ gui = {
         ui.add('number', { name:'resolution', value:view.videoSize, precision:0, step:10 }).onChange( view.setVideoSize );
         ui.add('button', { name:'START', h:20, p:0 }).onChange( function( ){view.startCapture()} );
         ui.add('button', { name:'STOP', h:20, p:0 }).onChange( function( ){view.saveCapture()}  );
-        
- 
+
     },
 
     material: function () {
@@ -169,12 +175,38 @@ gui = {
 
     },
 
+    bones: function () {
+
+        view.setMode('bones');
+
+        bone = ui.add('title', { name:'none', h:30, r:10 } );
+
+        var model = avatar.getModel();
+
+        sx = ui.add('slide',  { name:'scale X',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ model.setScalling('x', v); } );
+        sy = ui.add('slide',  { name:'scale Y',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ model.setScalling('y', v); } );
+        sz = ui.add('slide',  { name:'scale Z',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ model.setScalling('z', v); } );
+
+    },
+
+    setBones: function( name, id, v ){
+
+        bone.text( name );
+        bone.text2( id );
+        sx.setValue(v.x);
+        sy.setValue(v.y);
+        sz.setValue(v.z);
+
+    },
+
     anim: function () {
+
+        ui.add('slide', { name:'framerate', min:24, max:60, value:60, precision:0, step:1, stype:1 }).onChange( view.setFramerate );
 
         current = 'anim';
         ui.add('slide',  { name:'animation', min:-1, max:1, value:avatar.getTimescale(), precision:2, stype:1 }).onChange( avatar.setTimescale );
         ui.add('Bool', { name:'LOCK HIP', value:avatar.getModel().isLockHip, p:60 } ).onChange( avatar.lockHip );
-        ui.add('button', { name:'LOAD', fontColor:'#D4B87B', h:40, drag:true, p:0 }).onChange( avatar.loadSingle );
+        ui.add('button', { name:'LOAD BVH', fontColor:'#D4B87B', h:40, drag:true, p:0 }).onChange( avatar.loadSingle );
 
         var an = avatar.getAnimations(), name;
 

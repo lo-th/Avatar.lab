@@ -2,7 +2,6 @@ var main = ( function () {
 
 'use strict';
 
-
 main = {
 
     // --------------------------
@@ -16,6 +15,7 @@ main = {
         avatar.init();
 
     },
+
 
 }
 

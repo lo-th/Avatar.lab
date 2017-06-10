@@ -58,6 +58,12 @@ Math.colorDistance = function ( a, b ){
 
 };
 
+Math.rgbToHex = function( rgb ){
+
+    return '0x' + ( '000000' + ( ( rgb[0] * 255 ) << 16 ^ ( rgb[1] * 255 ) << 8 ^ ( rgb[2] * 255 ) << 0 ).toString( 16 ) ).slice( - 6 );
+
+};
+
 Math.hslToRgb = function (h, s, l){
 
     var r, g, b;
