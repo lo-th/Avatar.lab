@@ -2,13 +2,13 @@ var avatar = ( function () {
 
 'use strict';
 
-var modelName = 'avatar_test_gs';
+var modelName = 'avatar.tjs';
 var path = './assets'
 
 var assets = [
 
     '/bvh/base.z',
-    '/models/'+modelName+'.sea',
+    '/models/' + modelName + '.sea',
 
 ];
 
@@ -221,11 +221,156 @@ avatar = {
             '#endif',
         ];
 
+
+        var aoFrag = [
+            '#ifdef USE_AOMAP',
+                'float ambientOcclusion = ( texture2D( aoMap, vUv ).r - 1.0 ) * aoMapIntensity + 1.0;',
+                'reflectedLight.indirectDiffuse *= ambientOcclusion;',
+                '#if defined( USE_ENVMAP ) && defined( PHYSICAL )',
+                    'float dotNV = saturate( dot( geometry.normal, geometry.viewDir ) );',
+                    'reflectedLight.indirectSpecular *= computeSpecularOcclusion( dotNV, ambientOcclusion, material.specularRoughness );',
+                '#endif',
+            '#endif',
+        ];
+
+        /*var aoFrag = [
+            '#ifdef USE_AOMAP',
+                'float ambientOcclusion = ( texture2D( aoMap, vUv ).r - 1.0 ) * aoMapIntensity + 1.0;',
+                'reflectedLight.indirectDiffuse *= ambientOcclusion;',
+                '#if defined( USE_ENVMAP ) && defined( PHYSICAL )',
+                    'float dotNV = saturate( dot( geometry.normal, geometry.viewDir ) );',
+                    'reflectedLight.indirectSpecular *= computeSpecularOcclusion( dotNV, ambientOcclusion, material.specularRoughness );',
+                '#endif',
+            '#endif',
+        ];
+
+        var lightMapFrag = [
+            '#ifdef USE_LIGHTMAP',
+                'reflectedLight.indirectDiffuse += PI * texture2D( lightMap, vUv ).xyz * lightMapIntensity;',
+            '#endif',
+        ];
+
+        var light = [
+            'GeometricContext geometry;',
+
+            'geometry.position = - vViewPosition;',
+            'geometry.normal = normal;',
+            'geometry.viewDir = normalize( vViewPosition );',
+
+            'IncidentLight directLight;',
+
+            '#if ( NUM_POINT_LIGHTS > 0 ) && defined( RE_Direct )',
+
+                'PointLight pointLight;',
+
+                'for ( int i = 0; i < NUM_POINT_LIGHTS; i ++ ) {',
+
+                    'pointLight = pointLights[ i ];',
+                    'getPointDirectLightIrradiance( pointLight, geometry, directLight );',
+                    '#ifdef USE_SHADOWMAP',
+                    'directLight.color *= all( bvec2( pointLight.shadow, directLight.visible ) ) ? getPointShadow( pointShadowMap[ i ], pointLight.shadowMapSize, pointLight.shadowBias, pointLight.shadowRadius, vPointShadowCoord[ i ] ) : 1.0;',
+                    '#endif',
+                    'RE_Direct( directLight, geometry, material, reflectedLight );',
+
+                '}',
+
+            '#endif',
+
+            '#if ( NUM_SPOT_LIGHTS > 0 ) && defined( RE_Direct )',
+
+                'SpotLight spotLight;',
+
+                'for ( int i = 0; i < NUM_SPOT_LIGHTS; i ++ ) {',
+
+                    'spotLight = spotLights[ i ];',
+                    'getSpotDirectLightIrradiance( spotLight, geometry, directLight );',
+                    '#ifdef USE_SHADOWMAP',
+                    'directLight.color *= all( bvec2( spotLight.shadow, directLight.visible ) ) ? getShadow( spotShadowMap[ i ], spotLight.shadowMapSize, spotLight.shadowBias, spotLight.shadowRadius, vSpotShadowCoord[ i ] ) : 1.0;',
+                    '#endif',
+
+                    'RE_Direct( directLight, geometry, material, reflectedLight );',
+
+                '}',
+
+            '#endif',
+
+            '#if ( NUM_DIR_LIGHTS > 0 ) && defined( RE_Direct )',
+
+                'DirectionalLight directionalLight;',
+
+                'for ( int i = 0; i < NUM_DIR_LIGHTS; i ++ ) {',
+
+                    'directionalLight = directionalLights[ i ];',
+                    'getDirectionalDirectLightIrradiance( directionalLight, geometry, directLight );',
+                    '#ifdef USE_SHADOWMAP',
+                    'directLight.color *= all( bvec2( directionalLight.shadow, directLight.visible ) ) ? getShadow( directionalShadowMap[ i ], directionalLight.shadowMapSize, directionalLight.shadowBias, directionalLight.shadowRadius, vDirectionalShadowCoord[ i ] ) : 1.0;',
+                    '#endif',
+                    'RE_Direct( directLight, geometry, material, reflectedLight );',
+
+                '}',
+
+            '#endif',
+
+            '#if ( NUM_RECT_AREA_LIGHTS > 0 ) && defined( RE_Direct_RectArea )',
+
+                'RectAreaLight rectAreaLight;',
+                'for ( int i = 0; i < NUM_RECT_AREA_LIGHTS; i ++ ) {',
+                    'rectAreaLight = rectAreaLights[ i ];',
+                    'RE_Direct_RectArea( rectAreaLight, geometry, material, reflectedLight );',
+                '}',
+
+            '#endif',
+
+            '#if defined( RE_IndirectDiffuse )',
+
+                'vec3 irradiance = getAmbientLightIrradiance( ambientLightColor );',
+
+                '#ifdef USE_LIGHTMAP',
+
+                    'vec3 lightMapIrradiance = texture2D( lightMap, vUv ).xyz * lightMapIntensity;',
+                    '#ifndef PHYSICALLY_CORRECT_LIGHTS',
+                        'lightMapIrradiance *= PI;', // factor of PI should not be present; included here to prevent breakage
+                    '#endif',
+                    'irradiance += lightMapIrradiance;',
+
+                '#endif',
+
+                '#if ( NUM_HEMI_LIGHTS > 0 )',
+
+                    'for ( int i = 0; i < NUM_HEMI_LIGHTS; i ++ ) {',
+                        'irradiance += getHemisphereLightIrradiance( hemisphereLights[ i ], geometry );',
+                    '}',
+
+                '#endif',
+
+                '#if defined( USE_ENVMAP ) && defined( PHYSICAL ) && defined( ENVMAP_TYPE_CUBE_UV )',
+                    'irradiance += getLightProbeIndirectIrradiance(  geometry, 8 );',
+                '#endif',
+
+                'RE_IndirectDiffuse( irradiance, geometry, material, reflectedLight );',
+
+            '#endif',
+
+            '#if defined( USE_ENVMAP ) && defined( RE_IndirectSpecular )',
+
+                'vec3 radiance = getLightProbeIndirectRadiance( geometry, Material_BlinnShininessExponent( material ), 8 );',
+                '#ifndef STANDARD',
+                    'vec3 clearCoatRadiance = getLightProbeIndirectRadiance(  geometry, Material_ClearCoat_BlinnShininessExponent( material ), 8 );',
+                '#else',
+                    'vec3 clearCoatRadiance = vec3( 0.0 );',
+                '#endif',
+                'RE_IndirectSpecular( radiance, clearCoatRadiance, geometry, material, reflectedLight );',
+
+            '#endif',
+        ];*/
+
         view.shaderRemplace('physical', 'fragment', '#include <bumpmap_pars_fragment>', [ 'uniform sampler2D bumpMap;', 'uniform float bumpScale;' ].join("\n") );
         view.shaderRemplace('physical', 'fragment', '#include <emissivemap_pars_fragment>', "uniform sampler2D emissiveMap;" );
         view.shaderRemplace('physical', 'fragment', '#include <bumpmap_pars_fragment>', '' );
         view.shaderRemplace('physical', 'fragment', '#include <map_fragment>', map.join("\n") );
         view.shaderRemplace('physical', 'fragment', '#include <normal_fragment>', normal.join("\n") );
+        //view.shaderRemplace('physical', 'fragment', '#include <lights_template>', light.join("\n") );
+        //view.shaderRemplace('physical', 'fragment', '#include <aomap_fragment>', aoFrag.join("\n") );
         view.shaderRemplace('physical', 'fragment', '#include <emissivemap_fragment>', '' );
         
 
