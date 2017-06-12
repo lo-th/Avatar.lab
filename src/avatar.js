@@ -18,6 +18,8 @@ var texturesAssets = [
     '/textures/avatar_c.png', 
     '/textures/avatar_n_m.png',
     '/textures/avatar_n_w.png', 
+    '/textures/avatar_skin_n_m.png',
+    '/textures/avatar_skin_n_w.png', 
     '/textures/avatar_l_m.png',
     '/textures/avatar_l_w.png', 
     '/textures/avatar_ao.png',
@@ -26,7 +28,8 @@ var texturesAssets = [
     '/textures/transition/t5.png',
     '/textures/avatar_id.png',
 
-    '/textures/eye.png',
+    '/textures/eye_m.png',
+    '/textures/eye_w.png',
     '/textures/eye_n.png',
 
 ];
@@ -108,6 +111,16 @@ avatar = {
         txt['avatar_n_w'].flipY = false;
         txt['avatar_n_w'].needsUpdate = true;
 
+        txt['avatar_skin_n_m'] = new THREE.Texture( p.avatar_skin_n_m );
+        txt['avatar_skin_n_m'].wrapS = THREE.RepeatWrapping;
+        txt['avatar_skin_n_m'].flipY = false;
+        txt['avatar_skin_n_m'].needsUpdate = true;
+
+        txt['avatar_skin_n_w'] = new THREE.Texture( p.avatar_skin_n_w );
+        txt['avatar_skin_n_w'].wrapS = THREE.RepeatWrapping;
+        txt['avatar_skin_n_w'].flipY = false;
+        txt['avatar_skin_n_w'].needsUpdate = true;
+
         txt['avatar_l_m'] = new THREE.Texture( p.avatar_l_m );
         txt['avatar_l_m'].wrapS = THREE.RepeatWrapping;
         txt['avatar_l_m'].flipY = false;
@@ -136,9 +149,13 @@ avatar = {
 
         //
 
-        txt['eye'] = new THREE.Texture( p.eye );
-        txt['eye'].flipY = false;
-        txt['eye'].needsUpdate = true;
+        txt['eye_m'] = new THREE.Texture( p.eye_m );
+        txt['eye_m'].flipY = false;
+        txt['eye_m'].needsUpdate = true;
+
+        txt['eye_w'] = new THREE.Texture( p.eye_w );
+        txt['eye_w'].flipY = false;
+        txt['eye_w'].needsUpdate = true;
 
         txt['eye_n'] = new THREE.Texture( p.eye_n );
         txt['eye_n'].flipY = false;
@@ -206,6 +223,31 @@ avatar = {
 
         ];
 
+        var normalPart = [
+            '#ifdef USE_NORMALMAP',
+                'uniform sampler2D normalMap;',
+                'uniform vec2 normalScale;',
+
+                'vec3 perturbNormal2Arb( sampler2D Nmap, vec3 eye_pos, vec3 surf_norm ) {',
+
+                    'vec3 q0 = vec3( dFdx( eye_pos.x ), dFdx( eye_pos.y ), dFdx( eye_pos.z ) );',
+                    'vec3 q1 = vec3( dFdy( eye_pos.x ), dFdy( eye_pos.y ), dFdy( eye_pos.z ) );',
+                    'vec2 st0 = dFdx( vUv.st );',
+                    'vec2 st1 = dFdy( vUv.st );',
+
+                    'vec3 S = normalize( q0 * st1.t - q1 * st0.t );',
+                    'vec3 T = normalize( -q0 * st1.s + q1 * st0.s );',
+                    'vec3 N = normalize( surf_norm );',
+
+                    'vec3 mapN = texture2D( Nmap, vUv ).xyz * 2.0 - 1.0;',
+                    'mapN.xy = normalScale * mapN.xy;',
+                    'mat3 tsn = mat3( S, T, N );',
+                    'return normalize( tsn * mapN );',
+
+                '}',
+            '#endif',
+        ];
+
         var normal = [
             '#ifdef FLAT_SHADED',
             'vec3 fdx = vec3( dFdx( vViewPosition.x ), dFdx( vViewPosition.y ), dFdx( vViewPosition.z ) );',
@@ -215,9 +257,11 @@ avatar = {
             '    vec3 normal = normalize( vNormal ) * flipNormal;',
             '#endif',
             '#ifdef USE_NORMALMAP',
-            '    normal = perturbNormal2Arb( -vViewPosition, normal );',
-            //'#elif defined( USE_BUMPMAP )',
-            //'    normal = perturbNormalArb( -vViewPosition, normal, dHdxy_fwd() );',
+            '   normal = perturbNormal2Arb( normalMap, -vViewPosition, normal );',
+                /*'#ifdef USE_ALPHAMAP',
+                    'vec3 normalPlus = perturbNormal2Arb( alphaMap, -vViewPosition, normal );',
+                    'normal = mix( normal, normalPlus, 0.5 );',
+                '#endif',*/
             '#endif',
         ];
 
@@ -366,8 +410,10 @@ avatar = {
 
         view.shaderRemplace('physical', 'fragment', '#include <bumpmap_pars_fragment>', [ 'uniform sampler2D bumpMap;', 'uniform float bumpScale;' ].join("\n") );
         view.shaderRemplace('physical', 'fragment', '#include <emissivemap_pars_fragment>', "uniform sampler2D emissiveMap;" );
+        view.shaderRemplace('physical', 'fragment', '#include <normalmap_pars_fragment>', normalPart.join("\n") );
         view.shaderRemplace('physical', 'fragment', '#include <bumpmap_pars_fragment>', '' );
         view.shaderRemplace('physical', 'fragment', '#include <map_fragment>', map.join("\n") );
+        view.shaderRemplace('physical', 'fragment', '#include <alphamap_fragment>', '' );
         view.shaderRemplace('physical', 'fragment', '#include <normal_fragment>', normal.join("\n") );
         //view.shaderRemplace('physical', 'fragment', '#include <lights_template>', light.join("\n") );
         //view.shaderRemplace('physical', 'fragment', '#include <aomap_fragment>', aoFrag.join("\n") );

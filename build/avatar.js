@@ -10746,6 +10746,8 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 				}
 
+				return this;
+
 			}
 
 			var index = this.children.indexOf( object );
@@ -10760,6 +10762,8 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 			}
 
+			return this;
+			
 		},
 
 		getObjectById: function ( id ) {
@@ -65316,10 +65320,19 @@ V.Model = function ( type, meshs, morph ) {
     if(this.isWithMorph) this.mesh.morphTargetInfluences[0] = 1;
 
     //console.log( this.hipPos )
+    this.headBoneRef = this.b.head.rotation;
+
+    this.eyeTarget = new THREE.Group();//AxisHelper(1);
+    this.eyeTarget.position.set(-3.54, 0, -10);
 
     this.eyes = new THREE.Group();
-    this.eyes.add( meshs.eye_left.clone() );
-    this.eyes.add( meshs.eye_right.clone() );
+
+    this.eye_l = meshs.eye_left.clone();
+    this.eye_r = meshs.eye_right.clone();
+
+    this.eyes.add( this.eye_l );
+    this.eyes.add( this.eye_r );
+    this.eyes.add( this.eyeTarget );
 
     this.eyes.matrix = this.b.head.matrixWorld;
     this.eyes.matrixAutoUpdate = false;
@@ -65365,6 +65378,7 @@ V.Model.prototype = {
 
         if( m.map !== undefined ) m.map = this.txt.avatar_c;
         if( m.envMap !== undefined ) m.envMap = this.txt.env;
+        if( m.alphaMap !== undefined ) m.alphaMap = this.type === 'man' ? this.txt.avatar_skin_n_m : this.txt.avatar_skin_n_w;
         if( m.normalMap !== undefined ) m.normalMap = this.type === 'man' ? this.txt.avatar_n_m : this.txt.avatar_n_w;
         if( m.lightMap !== undefined ) m.lightMap = this.type === 'man' ? this.txt.avatar_l_m : this.txt.avatar_l_w;
         if( m.aoMap !== undefined ) m.aoMap = this.txt.avatar_ao;
@@ -65372,7 +65386,7 @@ V.Model.prototype = {
 
         m = this.mats[1];
 
-        if( m.map !== undefined ) m.map = this.txt.eye;
+        if( m.map !== undefined ) m.map = this.type === 'man' ? this.txt.eye_m : this.txt.eye_w;
         if( m.envMap !== undefined ) m.envMap = this.txt.env;
         if( m.normalMap !== undefined ) m.normalMap = this.txt.eye_n;
 
@@ -65493,14 +65507,6 @@ V.Model.prototype = {
 
         m = this.mats[0];
 
-        /*if( m.map !== undefined ) m.map = this.txt.avatar_c;
-        if( m.envMap !== undefined ) m.envMap = this.txt.env;
-        if( m.normalMap !== undefined ) m.normalMap = this.type === 'man' ? this.txt.avatar_n_m : this.txt.avatar_n_w;
-        if( m.lightMap !== undefined ) m.lightMap = this.type === 'man' ? this.txt.avatar_l_m : this.txt.avatar_l_w;
-        if( m.aoMap !== undefined ) m.aoMap = this.txt.avatar_ao;
-        if( m.bumpMap !== undefined ) m.bumpMap = this.txt.muscular;
-        //if( m.emissiveMap !== undefined ) m.emissiveMap = this.txt.transition;;*/
-
         if( m.normalScale !== undefined ) m.normalScale = new THREE.Vector2( set.muscles, set.muscles );
         if( m.lightMapIntensity !== undefined ) m.lightMapIntensity = set.lightmap;
         if( m.aoMapIntensity !== undefined ) m.aoMapIntensity = set.oamap;
@@ -65519,11 +65525,7 @@ V.Model.prototype = {
 
         m = this.mats[1];
 
-        /*if( m.map !== undefined ) m.map = this.txt.eye;
-        if( m.envMap !== undefined ) m.envMap = this.txt.env;
-        if( m.normalMap !== undefined ) m.normalMap = this.txt.eye_n;*/
-
-        if( m.normalScale !== undefined ) m.normalScale = new THREE.Vector2( 1, 1 );
+        if( m.normalScale !== undefined ) m.normalScale = new THREE.Vector2( 0.5, 0.5 );
         if( m.metalness !== undefined ) m.metalness = 0.9;
         if( m.roughness !== undefined ) m.roughness = 0.3;
 
@@ -65603,9 +65605,22 @@ V.Model.prototype = {
 
     },
 
+    look: function () {
+
+        var v = view.getMouse();
+
+        this.b.head.rotation.set(this.headBoneRef.x-(((v.x*6))*Math.torad), this.headBoneRef.y+(((v.y*6)+10)*Math.torad), this.headBoneRef.z);
+        
+        this.eyeTarget.position.set(-3.54+(-v.y*3), (-v.x*3), -10);
+        this.eye_l.lookAt( this.eyeTarget.position.clone().add(new THREE.Vector3(0,-1.4,0)) );
+        this.eye_r.lookAt( this.eyeTarget.position.clone().add(new THREE.Vector3(0,1.4,0)) );
+
+    },
+
     update: function (){
 
         this.breathing();
+        this.look();
 
         //this.headMap.update( x, y );
         //if( this.isSkeleton ) this.helper.update();
@@ -65950,6 +65965,7 @@ view = {
     getCamera: function () { return camera; },
     getScene: function () { return scene; },
     getContent: function () { return content; },
+    getMouse: function () { return mouse; },
 
     getSetting: function () { return setting; },
 
@@ -67078,6 +67094,8 @@ var texturesAssets = [
     '/textures/avatar_c.png', 
     '/textures/avatar_n_m.png',
     '/textures/avatar_n_w.png', 
+    '/textures/avatar_skin_n_m.png',
+    '/textures/avatar_skin_n_w.png', 
     '/textures/avatar_l_m.png',
     '/textures/avatar_l_w.png', 
     '/textures/avatar_ao.png',
@@ -67086,7 +67104,8 @@ var texturesAssets = [
     '/textures/transition/t5.png',
     '/textures/avatar_id.png',
 
-    '/textures/eye.png',
+    '/textures/eye_m.png',
+    '/textures/eye_w.png',
     '/textures/eye_n.png',
 
 ];
@@ -67168,6 +67187,16 @@ avatar = {
         txt['avatar_n_w'].flipY = false;
         txt['avatar_n_w'].needsUpdate = true;
 
+        txt['avatar_skin_n_m'] = new THREE.Texture( p.avatar_skin_n_m );
+        txt['avatar_skin_n_m'].wrapS = THREE.RepeatWrapping;
+        txt['avatar_skin_n_m'].flipY = false;
+        txt['avatar_skin_n_m'].needsUpdate = true;
+
+        txt['avatar_skin_n_w'] = new THREE.Texture( p.avatar_skin_n_w );
+        txt['avatar_skin_n_w'].wrapS = THREE.RepeatWrapping;
+        txt['avatar_skin_n_w'].flipY = false;
+        txt['avatar_skin_n_w'].needsUpdate = true;
+
         txt['avatar_l_m'] = new THREE.Texture( p.avatar_l_m );
         txt['avatar_l_m'].wrapS = THREE.RepeatWrapping;
         txt['avatar_l_m'].flipY = false;
@@ -67196,9 +67225,13 @@ avatar = {
 
         //
 
-        txt['eye'] = new THREE.Texture( p.eye );
-        txt['eye'].flipY = false;
-        txt['eye'].needsUpdate = true;
+        txt['eye_m'] = new THREE.Texture( p.eye_m );
+        txt['eye_m'].flipY = false;
+        txt['eye_m'].needsUpdate = true;
+
+        txt['eye_w'] = new THREE.Texture( p.eye_w );
+        txt['eye_w'].flipY = false;
+        txt['eye_w'].needsUpdate = true;
 
         txt['eye_n'] = new THREE.Texture( p.eye_n );
         txt['eye_n'].flipY = false;
@@ -67266,6 +67299,31 @@ avatar = {
 
         ];
 
+        var normalPart = [
+            '#ifdef USE_NORMALMAP',
+                'uniform sampler2D normalMap;',
+                'uniform vec2 normalScale;',
+
+                'vec3 perturbNormal2Arb( sampler2D Nmap, vec3 eye_pos, vec3 surf_norm ) {',
+
+                    'vec3 q0 = vec3( dFdx( eye_pos.x ), dFdx( eye_pos.y ), dFdx( eye_pos.z ) );',
+                    'vec3 q1 = vec3( dFdy( eye_pos.x ), dFdy( eye_pos.y ), dFdy( eye_pos.z ) );',
+                    'vec2 st0 = dFdx( vUv.st );',
+                    'vec2 st1 = dFdy( vUv.st );',
+
+                    'vec3 S = normalize( q0 * st1.t - q1 * st0.t );',
+                    'vec3 T = normalize( -q0 * st1.s + q1 * st0.s );',
+                    'vec3 N = normalize( surf_norm );',
+
+                    'vec3 mapN = texture2D( Nmap, vUv ).xyz * 2.0 - 1.0;',
+                    'mapN.xy = normalScale * mapN.xy;',
+                    'mat3 tsn = mat3( S, T, N );',
+                    'return normalize( tsn * mapN );',
+
+                '}',
+            '#endif',
+        ];
+
         var normal = [
             '#ifdef FLAT_SHADED',
             'vec3 fdx = vec3( dFdx( vViewPosition.x ), dFdx( vViewPosition.y ), dFdx( vViewPosition.z ) );',
@@ -67275,9 +67333,11 @@ avatar = {
             '    vec3 normal = normalize( vNormal ) * flipNormal;',
             '#endif',
             '#ifdef USE_NORMALMAP',
-            '    normal = perturbNormal2Arb( -vViewPosition, normal );',
-            //'#elif defined( USE_BUMPMAP )',
-            //'    normal = perturbNormalArb( -vViewPosition, normal, dHdxy_fwd() );',
+            '   normal = perturbNormal2Arb( normalMap, -vViewPosition, normal );',
+                /*'#ifdef USE_ALPHAMAP',
+                    'vec3 normalPlus = perturbNormal2Arb( alphaMap, -vViewPosition, normal );',
+                    'normal = mix( normal, normalPlus, 0.5 );',
+                '#endif',*/
             '#endif',
         ];
 
@@ -67426,8 +67486,10 @@ avatar = {
 
         view.shaderRemplace('physical', 'fragment', '#include <bumpmap_pars_fragment>', [ 'uniform sampler2D bumpMap;', 'uniform float bumpScale;' ].join("\n") );
         view.shaderRemplace('physical', 'fragment', '#include <emissivemap_pars_fragment>', "uniform sampler2D emissiveMap;" );
+        view.shaderRemplace('physical', 'fragment', '#include <normalmap_pars_fragment>', normalPart.join("\n") );
         view.shaderRemplace('physical', 'fragment', '#include <bumpmap_pars_fragment>', '' );
         view.shaderRemplace('physical', 'fragment', '#include <map_fragment>', map.join("\n") );
+        view.shaderRemplace('physical', 'fragment', '#include <alphamap_fragment>', '' );
         view.shaderRemplace('physical', 'fragment', '#include <normal_fragment>', normal.join("\n") );
         //view.shaderRemplace('physical', 'fragment', '#include <lights_template>', light.join("\n") );
         //view.shaderRemplace('physical', 'fragment', '#include <aomap_fragment>', aoFrag.join("\n") );

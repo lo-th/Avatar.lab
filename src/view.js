@@ -230,6 +230,7 @@ view = {
     getCamera: function () { return camera; },
     getScene: function () { return scene; },
     getContent: function () { return content; },
+    getMouse: function () { return mouse; },
 
     getSetting: function () { return setting; },
 
