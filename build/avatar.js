@@ -63879,6 +63879,7 @@ THREE.ShaderShadow = {
 
     lights: true,
     transparent:true,
+    depthWrite:false
 
 }
 /**
@@ -65163,8 +65164,8 @@ V.Model = function ( type, meshs, morph ) {
 
         type:'Standard',
         muscles: 0.1,
-        metalness: 0.5,
-        roughness: 0.6,
+        metalness: 0.1,
+        roughness: 0.4,
         skinAlpha:0.1,
         oamap: 1,
         lightmap:1,
@@ -65334,6 +65335,8 @@ V.Model = function ( type, meshs, morph ) {
     this.eyes.add( this.eye_r );
     this.eyes.add( this.eyeTarget );
 
+    //this.b.head.add( this.eyes );
+
     this.eyes.matrix = this.b.head.matrixWorld;
     this.eyes.matrixAutoUpdate = false;
 
@@ -65370,6 +65373,13 @@ V.Model.prototype = {
 
     },
 
+    setEnvmap: function () {
+
+        this.mats[0].envMap = view.getEnvmap();
+        this.mats[1].envMap = view.getEnvmap();
+
+    },
+
     setTextures: function ( txt ) {
 
         this.txt = txt;
@@ -65377,7 +65387,7 @@ V.Model.prototype = {
         var m = this.mats[0];
 
         if( m.map !== undefined ) m.map = this.txt.avatar_c;
-        if( m.envMap !== undefined ) m.envMap = this.txt.env;
+        if( m.envMap !== undefined ) m.envMap = view.getEnvmap();
         if( m.alphaMap !== undefined ) m.alphaMap = this.type === 'man' ? this.txt.avatar_skin_n_m : this.txt.avatar_skin_n_w;
         if( m.normalMap !== undefined ) m.normalMap = this.type === 'man' ? this.txt.avatar_n_m : this.txt.avatar_n_w;
         if( m.lightMap !== undefined ) m.lightMap = this.type === 'man' ? this.txt.avatar_l_m : this.txt.avatar_l_w;
@@ -65387,8 +65397,9 @@ V.Model.prototype = {
         m = this.mats[1];
 
         if( m.map !== undefined ) m.map = this.type === 'man' ? this.txt.eye_m : this.txt.eye_w;
-        if( m.envMap !== undefined ) m.envMap = this.txt.env;
+        if( m.envMap !== undefined ) m.envMap = view.getEnvmap();
         if( m.normalMap !== undefined ) m.normalMap = this.txt.eye_n;
+        if( m.lightMap !== undefined ) m.lightMap = this.txt.eye_l;
 
         m = this.mats[2];
         m.map = this.txt.avatar_id;
@@ -65526,8 +65537,8 @@ V.Model.prototype = {
         m = this.mats[1];
 
         if( m.normalScale !== undefined ) m.normalScale = new THREE.Vector2( 0.5, 0.5 );
-        if( m.metalness !== undefined ) m.metalness = 0.9;
-        if( m.roughness !== undefined ) m.roughness = 0.3;
+        if( m.metalness !== undefined ) m.metalness = 0.5;
+        if( m.roughness !== undefined ) m.roughness = 0.1;
 
         // apply material
         this.mesh.material = this.mats[0];
@@ -65609,7 +65620,7 @@ V.Model.prototype = {
 
         var v = view.getMouse();
 
-        this.b.head.rotation.set(this.headBoneRef.x-(((v.x*6))*Math.torad), this.headBoneRef.y+(((v.y*6)+10)*Math.torad), this.headBoneRef.z);
+        this.b.head.rotation.set(this.headBoneRef.x-(((v.x*6))*Math.torad), this.headBoneRef.y+(((v.y*6)+4)*Math.torad), this.headBoneRef.z);
         
         this.eyeTarget.position.set(-3.54+(-v.y*3), (-v.x*3), -10);
         this.eye_l.lookAt( this.eyeTarget.position.clone().add(new THREE.Vector3(0,-1.4,0)) );
@@ -65682,7 +65693,7 @@ V.Model.prototype = {
         if(id === -1) return;
 
         if( id === 0 ){
-            this.hideBones()
+            this.hideBones();
             return;
         } else {
             this.boneSelect = this.bones[id];
@@ -65747,6 +65758,10 @@ var isDown = false;
 var pixels, pixelsLength;
 var pickingTexture = null, mouseBase;
 var endPos, startPos;
+
+// extra envmap
+var ballScene, ballCamera, ballTexture, ball, skymin;
+var envmap, sky;
 
 var mode = 'normal';
 
@@ -65858,7 +65873,9 @@ view = {
         if( ax < 5 && ay < 5 ){
 
         	view.findMouse( e );
-        	view.pickTest();
+        	//view.pickTest();
+        	var color = view.pick();
+        	console.log(color)
 
         }
 
@@ -65907,14 +65924,6 @@ view = {
 
     },
 
-    pickTest: function () {
-
-    	var color = view.pick();
-
-    	//console.log(color)
-
-    },
-
     rayTest: function () {
 
         raycaster.setFromCamera( mouse, camera );
@@ -65951,24 +65960,6 @@ view = {
     
     },
 
-    // 
-
-    setMode: function ( Mode ) { 
-    	if(mode ==='bones' && mode !== Mode ) avatar.getModel().hideBones();
-    	mode = Mode
-    },
-
-    //
-    getMode: function () { return mode; },
-    getRenderer: function () { return renderer; },
-    getControler: function () { return controler; },
-    getCamera: function () { return camera; },
-    getScene: function () { return scene; },
-    getContent: function () { return content; },
-    getMouse: function () { return mouse; },
-
-    getSetting: function () { return setting; },
-
     initPickScene: function () {
 
     	//pickingScene = new THREE.Scene();
@@ -66002,6 +65993,26 @@ view = {
     	return color;
 
     },
+
+    // SET
+
+    setMode: function ( Mode ) { 
+    	if( mode === 'bones' && mode !== Mode ) avatar.getModel().hideBones();
+    	mode = Mode;
+    },
+
+    // GET
+    getMode: function () { return mode; },
+    getRenderer: function () { return renderer; },
+    getControler: function () { return controler; },
+    getCamera: function () { return camera; },
+    getScene: function () { return scene; },
+    getContent: function () { return content; },
+    getMouse: function () { return mouse; },
+
+    getSetting: function () { return setting; },
+
+    
 
     init: function ( container ) {
 
@@ -66045,7 +66056,7 @@ view = {
 
         scene = new THREE.Scene();
 
-        camera = new THREE.PerspectiveCamera( 50, vs.w / vs.h , 1, 1000 );
+        camera = new THREE.PerspectiveCamera( 50, vs.w / vs.h , 1, 2000 );
         camera.position.set( 0, 50, 400 );
         controler = new THREE.OrbitControls( camera, renderer.domElement );
         controler.target.set( 0, 40, 0 );
@@ -66206,6 +66217,7 @@ view = {
             materialShadow = new THREE.ShaderMaterial( THREE.ShaderShadow );
             plane = new THREE.Mesh( new THREE.PlaneBufferGeometry( 200, 200, 1, 1 ), materialShadow );
             plane.geometry.applyMatrix( new THREE.Matrix4().makeRotationX( -Math.PI*0.5 ) );
+            plane.position.y = 0.5;
             //plane.position.y = -62;
             plane.castShadow = false;
             plane.receiveShadow = true;
@@ -66533,6 +66545,68 @@ view = {
 
 
 
+
+    // ENVMAP
+
+    getEnvmap: function () { return envmap; },
+
+    initSphereEnvmap: function ( map ){
+
+    	envmap = new THREE.Texture( map );
+        envmap.mapping = THREE.SphericalReflectionMapping;
+        envmap.needsUpdate = true;
+
+    },
+
+    showSky: function (b) {
+
+    	sky.visible = b;
+
+    },
+
+    initEnvScene: function ( map ) {
+
+    	var s = 1;
+	    ballScene = new THREE.Scene();
+		ballCamera = new THREE.CubeCamera( s*0.5, s*1.2, 512 );
+		ballCamera.position.set(0,0,0);
+		ballCamera.lookAt( new THREE.Vector3(0,0,5));
+		ballScene.add( ballCamera );
+	    
+	    ballTexture = new THREE.Texture( map );
+	    ballTexture.wrapS = ballTexture.wrapT = THREE.ClampToEdgeWrapping;
+		ball = new THREE.Mesh( new THREE.SphereGeometry( 1, 20, 12  ),  new THREE.MeshBasicMaterial({ map:ballTexture, depthWrite:false }) );
+
+		sky = new THREE.Mesh( new THREE.SphereGeometry( 1, 20, 12  ),  ball.material );
+	    sky.scale.set(-1000,1000,1000);
+	    scene.add( sky );
+	    sky.visible = false;
+
+	    /*skymin = new THREE.Mesh( new THREE.SphereGeometry( 1, 20, 12  ),  new THREE.MeshBasicMaterial() );
+	    skymin.scale.set(3,3,3);
+	    scene.add( skymin );*/
+	    
+	    ball.scale.set(-s,s,s);
+		ballScene.add( ball );
+
+		view.renderEnvmap();
+
+    },
+
+    renderEnvmap: function () {
+
+    	ballTexture.needsUpdate = true;
+    	ballCamera.updateCubeMap( renderer, ballScene );
+        envmap = ballCamera.renderTarget.texture;
+
+        //skymin.material.envMap = envmap;
+
+    },
+
+
+
+
+
 }
 
 
@@ -66729,6 +66803,7 @@ gui = {
         ui.add('Bool', { name:'GRID', value:view.isGrid, p:60 } ).onChange( view.addGrid );
         ui.add('Bool', { name:'SHADOW', value:view.isShadow, p:60 } ).onChange( view.addShadow );
         ui.add('Bool', { name:'SKELETON', value:avatar.getModel().isSkeleton, p:60 } ).onChange( avatar.addSkeleton );
+        ui.add('Bool', { name:'SKY', value:false, p:60 } ).onChange( view.showSky );
 
         ui.add('title',  { name:' ', h:30});
 
@@ -66759,7 +66834,7 @@ gui = {
 
         ui.add('list', { name:'type', width:100, list:mats, value:settings.type, full:true }).onChange( function( name ){ model.setMaterial( name ); } );
 
-        ui.add( settings, 'muscles', { min:0, max:2, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
+        ui.add( settings, 'muscles', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
         ui.add( settings, 'oamap', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
         ui.add( settings, 'lightmap', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
         ui.add( settings, 'metalness', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
@@ -67078,8 +67153,11 @@ var avatar = ( function () {
 
 'use strict';
 
+
 var modelName = 'avatar.tjs';
 var path = './assets'
+
+var envmame = 'studio';
 
 var assets = [
 
@@ -67090,7 +67168,7 @@ var assets = [
 
 var texturesAssets = [
     
-    '/textures/medium.jpg',
+    '/textures/envmap/'+envmame+'.jpg',
     '/textures/avatar_c.png', 
     '/textures/avatar_n_m.png',
     '/textures/avatar_n_w.png', 
@@ -67107,6 +67185,7 @@ var texturesAssets = [
     '/textures/eye_m.png',
     '/textures/eye_w.png',
     '/textures/eye_n.png',
+    '/textures/eye_l.png',
 
 ];
 
@@ -67163,9 +67242,12 @@ avatar = {
 
         var txt = {};
 
-        txt['env'] = new THREE.Texture( p.medium );
-        txt['env'].mapping = THREE.SphericalReflectionMapping;
-        txt['env'].needsUpdate = true;
+        //view.initSphereEnvmap( p[envmame] );
+        view.initEnvScene( p[envmame] );
+
+        //txt['env'] = new THREE.Texture( p.medium );
+        //txt['env'].mapping = THREE.SphericalReflectionMapping;
+        //txt['env'].needsUpdate = true;
 
         txt['transition'] = new THREE.Texture( p.t5 );
         txt['transition'].wrapS = THREE.RepeatWrapping;
@@ -67233,6 +67315,11 @@ avatar = {
         txt['eye_w'].flipY = false;
         txt['eye_w'].needsUpdate = true;
 
+        txt['eye_l'] = new THREE.Texture( p.eye_l );
+        txt['eye_l'].flipY = false;
+        txt['eye_l'].needsUpdate = true;
+
+
         txt['eye_n'] = new THREE.Texture( p.eye_n );
         txt['eye_n'].flipY = false;
         txt['eye_n'].needsUpdate = true;
@@ -67253,15 +67340,15 @@ avatar = {
         //view.uniformPush('physical', 'muscle', {  value: txt['muscular']  });
         //view.uniformPush('physical', 'skinAlpha', {  value: 0.0  });
 
+
+
         var mapBasic = [
+
             '#ifdef USE_MAP',
-
                 'vec4 texelColor = texture2D( map, vUv );',
-
-                //'texelColor = mapTexelToLinear( texelColor );',
                 'diffuseColor *= texelColor;',
-
             '#endif',
+
         ];
 
         var map = [
@@ -67504,6 +67591,7 @@ avatar = {
         view.shaderRemplace('phong', 'fragment', '#include <emissivemap_fragment>', '' );
 
         view.shaderRemplace('basic', 'fragment', '#include <map_fragment>', mapBasic.join("\n") );
+        //view.shaderRemplace('basic', 'fragment', '#include <tonemapping_fragment>', '' );
         
         // sea meshs
 

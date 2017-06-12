@@ -128,6 +128,7 @@ gui = {
         ui.add('Bool', { name:'GRID', value:view.isGrid, p:60 } ).onChange( view.addGrid );
         ui.add('Bool', { name:'SHADOW', value:view.isShadow, p:60 } ).onChange( view.addShadow );
         ui.add('Bool', { name:'SKELETON', value:avatar.getModel().isSkeleton, p:60 } ).onChange( avatar.addSkeleton );
+        ui.add('Bool', { name:'SKY', value:false, p:60 } ).onChange( view.showSky );
 
         ui.add('title',  { name:' ', h:30});
 
@@ -158,7 +159,7 @@ gui = {
 
         ui.add('list', { name:'type', width:100, list:mats, value:settings.type, full:true }).onChange( function( name ){ model.setMaterial( name ); } );
 
-        ui.add( settings, 'muscles', { min:0, max:2, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
+        ui.add( settings, 'muscles', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
         ui.add( settings, 'oamap', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
         ui.add( settings, 'lightmap', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
         ui.add( settings, 'metalness', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );

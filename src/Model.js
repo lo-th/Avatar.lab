@@ -11,8 +11,8 @@ V.Model = function ( type, meshs, morph ) {
 
         type:'Standard',
         muscles: 0.1,
-        metalness: 0.5,
-        roughness: 0.6,
+        metalness: 0.1,
+        roughness: 0.4,
         skinAlpha:0.1,
         oamap: 1,
         lightmap:1,
@@ -182,6 +182,8 @@ V.Model = function ( type, meshs, morph ) {
     this.eyes.add( this.eye_r );
     this.eyes.add( this.eyeTarget );
 
+    //this.b.head.add( this.eyes );
+
     this.eyes.matrix = this.b.head.matrixWorld;
     this.eyes.matrixAutoUpdate = false;
 
@@ -218,6 +220,13 @@ V.Model.prototype = {
 
     },
 
+    setEnvmap: function () {
+
+        this.mats[0].envMap = view.getEnvmap();
+        this.mats[1].envMap = view.getEnvmap();
+
+    },
+
     setTextures: function ( txt ) {
 
         this.txt = txt;
@@ -225,7 +234,7 @@ V.Model.prototype = {
         var m = this.mats[0];
 
         if( m.map !== undefined ) m.map = this.txt.avatar_c;
-        if( m.envMap !== undefined ) m.envMap = this.txt.env;
+        if( m.envMap !== undefined ) m.envMap = view.getEnvmap();
         if( m.alphaMap !== undefined ) m.alphaMap = this.type === 'man' ? this.txt.avatar_skin_n_m : this.txt.avatar_skin_n_w;
         if( m.normalMap !== undefined ) m.normalMap = this.type === 'man' ? this.txt.avatar_n_m : this.txt.avatar_n_w;
         if( m.lightMap !== undefined ) m.lightMap = this.type === 'man' ? this.txt.avatar_l_m : this.txt.avatar_l_w;
@@ -235,8 +244,9 @@ V.Model.prototype = {
         m = this.mats[1];
 
         if( m.map !== undefined ) m.map = this.type === 'man' ? this.txt.eye_m : this.txt.eye_w;
-        if( m.envMap !== undefined ) m.envMap = this.txt.env;
+        if( m.envMap !== undefined ) m.envMap = view.getEnvmap();
         if( m.normalMap !== undefined ) m.normalMap = this.txt.eye_n;
+        if( m.lightMap !== undefined ) m.lightMap = this.txt.eye_l;
 
         m = this.mats[2];
         m.map = this.txt.avatar_id;
@@ -374,8 +384,8 @@ V.Model.prototype = {
         m = this.mats[1];
 
         if( m.normalScale !== undefined ) m.normalScale = new THREE.Vector2( 0.5, 0.5 );
-        if( m.metalness !== undefined ) m.metalness = 0.9;
-        if( m.roughness !== undefined ) m.roughness = 0.3;
+        if( m.metalness !== undefined ) m.metalness = 0.5;
+        if( m.roughness !== undefined ) m.roughness = 0.1;
 
         // apply material
         this.mesh.material = this.mats[0];
@@ -457,7 +467,7 @@ V.Model.prototype = {
 
         var v = view.getMouse();
 
-        this.b.head.rotation.set(this.headBoneRef.x-(((v.x*6))*Math.torad), this.headBoneRef.y+(((v.y*6)+10)*Math.torad), this.headBoneRef.z);
+        this.b.head.rotation.set(this.headBoneRef.x-(((v.x*6))*Math.torad), this.headBoneRef.y+(((v.y*6)+4)*Math.torad), this.headBoneRef.z);
         
         this.eyeTarget.position.set(-3.54+(-v.y*3), (-v.x*3), -10);
         this.eye_l.lookAt( this.eyeTarget.position.clone().add(new THREE.Vector3(0,-1.4,0)) );
@@ -530,7 +540,7 @@ V.Model.prototype = {
         if(id === -1) return;
 
         if( id === 0 ){
-            this.hideBones()
+            this.hideBones();
             return;
         } else {
             this.boneSelect = this.bones[id];

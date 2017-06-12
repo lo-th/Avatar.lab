@@ -2,8 +2,11 @@ var avatar = ( function () {
 
 'use strict';
 
+
 var modelName = 'avatar.tjs';
 var path = './assets'
+
+var envmame = 'studio';
 
 var assets = [
 
@@ -14,7 +17,7 @@ var assets = [
 
 var texturesAssets = [
     
-    '/textures/medium.jpg',
+    '/textures/envmap/'+envmame+'.jpg',
     '/textures/avatar_c.png', 
     '/textures/avatar_n_m.png',
     '/textures/avatar_n_w.png', 
@@ -31,6 +34,7 @@ var texturesAssets = [
     '/textures/eye_m.png',
     '/textures/eye_w.png',
     '/textures/eye_n.png',
+    '/textures/eye_l.png',
 
 ];
 
@@ -87,9 +91,12 @@ avatar = {
 
         var txt = {};
 
-        txt['env'] = new THREE.Texture( p.medium );
-        txt['env'].mapping = THREE.SphericalReflectionMapping;
-        txt['env'].needsUpdate = true;
+        //view.initSphereEnvmap( p[envmame] );
+        view.initEnvScene( p[envmame] );
+
+        //txt['env'] = new THREE.Texture( p.medium );
+        //txt['env'].mapping = THREE.SphericalReflectionMapping;
+        //txt['env'].needsUpdate = true;
 
         txt['transition'] = new THREE.Texture( p.t5 );
         txt['transition'].wrapS = THREE.RepeatWrapping;
@@ -157,6 +164,11 @@ avatar = {
         txt['eye_w'].flipY = false;
         txt['eye_w'].needsUpdate = true;
 
+        txt['eye_l'] = new THREE.Texture( p.eye_l );
+        txt['eye_l'].flipY = false;
+        txt['eye_l'].needsUpdate = true;
+
+
         txt['eye_n'] = new THREE.Texture( p.eye_n );
         txt['eye_n'].flipY = false;
         txt['eye_n'].needsUpdate = true;
@@ -177,15 +189,15 @@ avatar = {
         //view.uniformPush('physical', 'muscle', {  value: txt['muscular']  });
         //view.uniformPush('physical', 'skinAlpha', {  value: 0.0  });
 
+
+
         var mapBasic = [
+
             '#ifdef USE_MAP',
-
                 'vec4 texelColor = texture2D( map, vUv );',
-
-                //'texelColor = mapTexelToLinear( texelColor );',
                 'diffuseColor *= texelColor;',
-
             '#endif',
+
         ];
 
         var map = [
@@ -428,6 +440,7 @@ avatar = {
         view.shaderRemplace('phong', 'fragment', '#include <emissivemap_fragment>', '' );
 
         view.shaderRemplace('basic', 'fragment', '#include <map_fragment>', mapBasic.join("\n") );
+        //view.shaderRemplace('basic', 'fragment', '#include <tonemapping_fragment>', '' );
         
         // sea meshs
 

@@ -13,6 +13,10 @@ var pixels, pixelsLength;
 var pickingTexture = null, mouseBase;
 var endPos, startPos;
 
+// extra envmap
+var ballScene, ballCamera, ballTexture, ball, skymin;
+var envmap, sky;
+
 var mode = 'normal';
 
 var setting = {
@@ -123,7 +127,9 @@ view = {
         if( ax < 5 && ay < 5 ){
 
         	view.findMouse( e );
-        	view.pickTest();
+        	//view.pickTest();
+        	var color = view.pick();
+        	console.log(color)
 
         }
 
@@ -172,14 +178,6 @@ view = {
 
     },
 
-    pickTest: function () {
-
-    	var color = view.pick();
-
-    	//console.log(color)
-
-    },
-
     rayTest: function () {
 
         raycaster.setFromCamera( mouse, camera );
@@ -216,24 +214,6 @@ view = {
     
     },
 
-    // 
-
-    setMode: function ( Mode ) { 
-    	if(mode ==='bones' && mode !== Mode ) avatar.getModel().hideBones();
-    	mode = Mode
-    },
-
-    //
-    getMode: function () { return mode; },
-    getRenderer: function () { return renderer; },
-    getControler: function () { return controler; },
-    getCamera: function () { return camera; },
-    getScene: function () { return scene; },
-    getContent: function () { return content; },
-    getMouse: function () { return mouse; },
-
-    getSetting: function () { return setting; },
-
     initPickScene: function () {
 
     	//pickingScene = new THREE.Scene();
@@ -267,6 +247,26 @@ view = {
     	return color;
 
     },
+
+    // SET
+
+    setMode: function ( Mode ) { 
+    	if( mode === 'bones' && mode !== Mode ) avatar.getModel().hideBones();
+    	mode = Mode;
+    },
+
+    // GET
+    getMode: function () { return mode; },
+    getRenderer: function () { return renderer; },
+    getControler: function () { return controler; },
+    getCamera: function () { return camera; },
+    getScene: function () { return scene; },
+    getContent: function () { return content; },
+    getMouse: function () { return mouse; },
+
+    getSetting: function () { return setting; },
+
+    
 
     init: function ( container ) {
 
@@ -310,7 +310,7 @@ view = {
 
         scene = new THREE.Scene();
 
-        camera = new THREE.PerspectiveCamera( 50, vs.w / vs.h , 1, 1000 );
+        camera = new THREE.PerspectiveCamera( 50, vs.w / vs.h , 1, 2000 );
         camera.position.set( 0, 50, 400 );
         controler = new THREE.OrbitControls( camera, renderer.domElement );
         controler.target.set( 0, 40, 0 );
@@ -471,6 +471,7 @@ view = {
             materialShadow = new THREE.ShaderMaterial( THREE.ShaderShadow );
             plane = new THREE.Mesh( new THREE.PlaneBufferGeometry( 200, 200, 1, 1 ), materialShadow );
             plane.geometry.applyMatrix( new THREE.Matrix4().makeRotationX( -Math.PI*0.5 ) );
+            plane.position.y = 0.5;
             //plane.position.y = -62;
             plane.castShadow = false;
             plane.receiveShadow = true;
@@ -795,6 +796,68 @@ view = {
 
         
     },
+
+
+
+
+    // ENVMAP
+
+    getEnvmap: function () { return envmap; },
+
+    initSphereEnvmap: function ( map ){
+
+    	envmap = new THREE.Texture( map );
+        envmap.mapping = THREE.SphericalReflectionMapping;
+        envmap.needsUpdate = true;
+
+    },
+
+    showSky: function (b) {
+
+    	sky.visible = b;
+
+    },
+
+    initEnvScene: function ( map ) {
+
+    	var s = 1;
+	    ballScene = new THREE.Scene();
+		ballCamera = new THREE.CubeCamera( s*0.5, s*1.2, 512 );
+		ballCamera.position.set(0,0,0);
+		ballCamera.lookAt( new THREE.Vector3(0,0,5));
+		ballScene.add( ballCamera );
+	    
+	    ballTexture = new THREE.Texture( map );
+	    ballTexture.wrapS = ballTexture.wrapT = THREE.ClampToEdgeWrapping;
+		ball = new THREE.Mesh( new THREE.SphereGeometry( 1, 20, 12  ),  new THREE.MeshBasicMaterial({ map:ballTexture, depthWrite:false }) );
+
+		sky = new THREE.Mesh( new THREE.SphereGeometry( 1, 20, 12  ),  ball.material );
+	    sky.scale.set(-1000,1000,1000);
+	    scene.add( sky );
+	    sky.visible = false;
+
+	    /*skymin = new THREE.Mesh( new THREE.SphereGeometry( 1, 20, 12  ),  new THREE.MeshBasicMaterial() );
+	    skymin.scale.set(3,3,3);
+	    scene.add( skymin );*/
+	    
+	    ball.scale.set(-s,s,s);
+		ballScene.add( ball );
+
+		view.renderEnvmap();
+
+    },
+
+    renderEnvmap: function () {
+
+    	ballTexture.needsUpdate = true;
+    	ballCamera.updateCubeMap( renderer, ballScene );
+        envmap = ballCamera.renderTarget.texture;
+
+        //skymin.material.envMap = envmap;
+
+    },
+
+
 
 
 
