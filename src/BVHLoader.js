@@ -572,7 +572,7 @@ THREE.BVHLoader.prototype = {
 
         var sequences = [[ clip.name, 0, clip.frames ]];
 
-        if(seq) sequences = seq;
+        if(seq.length) sequences = seq;
 
         lngS = sequences.length;
 

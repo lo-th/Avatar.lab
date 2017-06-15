@@ -741,7 +741,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 		clamp: function ( min, max ) {
 
-			// This function assumes min < max, if this assumption isn't true it will not operate correctly
+			// assumes min < max, componentwise
 
 			this.x = Math.max( min.x, Math.min( max.x, this.x ) );
 			this.y = Math.max( min.y, Math.min( max.y, this.y ) );
@@ -770,7 +770,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 			var length = this.length();
 
-			return this.multiplyScalar( Math.max( min, Math.min( max, length ) ) / length );
+			return this.divideScalar( length || 1 ).multiplyScalar( Math.max( min, Math.min( max, length ) ) );
 
 		},
 
@@ -845,7 +845,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 		normalize: function () {
 
-			return this.divideScalar( this.length() );
+			return this.divideScalar( this.length() || 1 );
 
 		},
 
@@ -882,7 +882,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 		setLength: function ( length ) {
 
-			return this.multiplyScalar( length / this.length() );
+			return this.normalize().multiplyScalar( length );
 
 		},
 
@@ -1673,7 +1673,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 		clamp: function ( min, max ) {
 
-			// This function assumes min < max, if this assumption isn't true it will not operate correctly
+			// assumes min < max, componentwise
 
 			this.x = Math.max( min.x, Math.min( max.x, this.x ) );
 			this.y = Math.max( min.y, Math.min( max.y, this.y ) );
@@ -1686,10 +1686,16 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 		clampScalar: function () {
 
-			var min = new Vector4();
-			var max = new Vector4();
+			var min, max;
 
 			return function clampScalar( minVal, maxVal ) {
+
+				if ( min === undefined ) {
+
+					min = new Vector4();
+					max = new Vector4();
+
+				}
 
 				min.set( minVal, minVal, minVal, minVal );
 				max.set( maxVal, maxVal, maxVal, maxVal );
@@ -1699,6 +1705,14 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 			};
 
 		}(),
+
+		clampLength: function ( min, max ) {
+
+			var length = this.length();
+
+			return this.divideScalar( length || 1 ).multiplyScalar( Math.max( min, Math.min( max, length ) ) );
+
+		},
 
 		floor: function () {
 
@@ -1781,13 +1795,13 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 		normalize: function () {
 
-			return this.divideScalar( this.length() );
+			return this.divideScalar( this.length() || 1 );
 
 		},
 
 		setLength: function ( length ) {
 
-			return this.multiplyScalar( length / this.length() );
+			return this.normalize().multiplyScalar( length );
 
 		},
 
@@ -2572,7 +2586,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 	/**
 	 * @author mrdoob / http://mrdoob.com/
-	 * @author *kile / http://kile.stravaganza.org/
+	 * @author kile / http://kile.stravaganza.org/
 	 * @author philogb / http://blog.thejit.org/
 	 * @author mikael emtinger / http://gomo.se/
 	 * @author egraether / http://egraether.com/
@@ -2959,7 +2973,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 		clamp: function ( min, max ) {
 
-			// This function assumes min < max, if this assumption isn't true it will not operate correctly
+			// assumes min < max, componentwise
 
 			this.x = Math.max( min.x, Math.min( max.x, this.x ) );
 			this.y = Math.max( min.y, Math.min( max.y, this.y ) );
@@ -2989,7 +3003,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 			var length = this.length();
 
-			return this.multiplyScalar( Math.max( min, Math.min( max, length ) ) / length );
+			return this.divideScalar( length || 1 ).multiplyScalar( Math.max( min, Math.min( max, length ) ) );
 
 		},
 
@@ -3071,13 +3085,13 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 		normalize: function () {
 
-			return this.divideScalar( this.length() );
+			return this.divideScalar( this.length() || 1 );
 
 		},
 
 		setLength: function ( length ) {
 
-			return this.multiplyScalar( length / this.length() );
+			return this.normalize().multiplyScalar( length );
 
 		},
 
@@ -5627,7 +5641,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 	var encodings_pars_fragment = "\nvec4 LinearToLinear( in vec4 value ) {\n\treturn value;\n}\nvec4 GammaToLinear( in vec4 value, in float gammaFactor ) {\n\treturn vec4( pow( value.xyz, vec3( gammaFactor ) ), value.w );\n}\nvec4 LinearToGamma( in vec4 value, in float gammaFactor ) {\n\treturn vec4( pow( value.xyz, vec3( 1.0 / gammaFactor ) ), value.w );\n}\nvec4 sRGBToLinear( in vec4 value ) {\n\treturn vec4( mix( pow( value.rgb * 0.9478672986 + vec3( 0.0521327014 ), vec3( 2.4 ) ), value.rgb * 0.0773993808, vec3( lessThanEqual( value.rgb, vec3( 0.04045 ) ) ) ), value.w );\n}\nvec4 LinearTosRGB( in vec4 value ) {\n\treturn vec4( mix( pow( value.rgb, vec3( 0.41666 ) ) * 1.055 - vec3( 0.055 ), value.rgb * 12.92, vec3( lessThanEqual( value.rgb, vec3( 0.0031308 ) ) ) ), value.w );\n}\nvec4 RGBEToLinear( in vec4 value ) {\n\treturn vec4( value.rgb * exp2( value.a * 255.0 - 128.0 ), 1.0 );\n}\nvec4 LinearToRGBE( in vec4 value ) {\n\tfloat maxComponent = max( max( value.r, value.g ), value.b );\n\tfloat fExp = clamp( ceil( log2( maxComponent ) ), -128.0, 127.0 );\n\treturn vec4( value.rgb / exp2( fExp ), ( fExp + 128.0 ) / 255.0 );\n}\nvec4 RGBMToLinear( in vec4 value, in float maxRange ) {\n\treturn vec4( value.xyz * value.w * maxRange, 1.0 );\n}\nvec4 LinearToRGBM( in vec4 value, in float maxRange ) {\n\tfloat maxRGB = max( value.x, max( value.g, value.b ) );\n\tfloat M      = clamp( maxRGB / maxRange, 0.0, 1.0 );\n\tM            = ceil( M * 255.0 ) / 255.0;\n\treturn vec4( value.rgb / ( M * maxRange ), M );\n}\nvec4 RGBDToLinear( in vec4 value, in float maxRange ) {\n\treturn vec4( value.rgb * ( ( maxRange / 255.0 ) / value.a ), 1.0 );\n}\nvec4 LinearToRGBD( in vec4 value, in float maxRange ) {\n\tfloat maxRGB = max( value.x, max( value.g, value.b ) );\n\tfloat D      = max( maxRange / maxRGB, 1.0 );\n\tD            = min( floor( D ) / 255.0, 1.0 );\n\treturn vec4( value.rgb * ( D * ( 255.0 / maxRange ) ), D );\n}\nconst mat3 cLogLuvM = mat3( 0.2209, 0.3390, 0.4184, 0.1138, 0.6780, 0.7319, 0.0102, 0.1130, 0.2969 );\nvec4 LinearToLogLuv( in vec4 value )  {\n\tvec3 Xp_Y_XYZp = value.rgb * cLogLuvM;\n\tXp_Y_XYZp = max(Xp_Y_XYZp, vec3(1e-6, 1e-6, 1e-6));\n\tvec4 vResult;\n\tvResult.xy = Xp_Y_XYZp.xy / Xp_Y_XYZp.z;\n\tfloat Le = 2.0 * log2(Xp_Y_XYZp.y) + 127.0;\n\tvResult.w = fract(Le);\n\tvResult.z = (Le - (floor(vResult.w*255.0))/255.0)/255.0;\n\treturn vResult;\n}\nconst mat3 cLogLuvInverseM = mat3( 6.0014, -2.7008, -1.7996, -1.3320, 3.1029, -5.7721, 0.3008, -1.0882, 5.6268 );\nvec4 LogLuvToLinear( in vec4 value ) {\n\tfloat Le = value.z * 255.0 + value.w;\n\tvec3 Xp_Y_XYZp;\n\tXp_Y_XYZp.y = exp2((Le - 127.0) / 2.0);\n\tXp_Y_XYZp.z = Xp_Y_XYZp.y / value.y;\n\tXp_Y_XYZp.x = value.x * Xp_Y_XYZp.z;\n\tvec3 vRGB = Xp_Y_XYZp.rgb * cLogLuvInverseM;\n\treturn vec4( max(vRGB, 0.0), 1.0 );\n}\n";
 
-	var envmap_fragment = "#ifdef USE_ENVMAP\n\t#if defined( USE_BUMPMAP ) || defined( USE_NORMALMAP ) || defined( PHONG )\n\t\tvec3 cameraToVertex = normalize( vWorldPosition - cameraPosition );\n\t\tvec3 worldNormal = inverseTransformDirection( normal, viewMatrix );\n\t\t#ifdef ENVMAP_MODE_REFLECTION\n\t\t\tvec3 reflectVec = reflect( cameraToVertex, worldNormal );\n\t\t#else\n\t\t\tvec3 reflectVec = refract( cameraToVertex, worldNormal, refractionRatio );\n\t\t#endif\n\t#else\n\t\tvec3 reflectVec = vReflect;\n\t#endif\n\t#ifdef ENVMAP_TYPE_CUBE\n\t\tvec4 envColor = textureCube( envMap, flipNormal * vec3( flipEnvMap * reflectVec.x, reflectVec.yz ) );\n\t#elif defined( ENVMAP_TYPE_EQUIREC )\n\t\tvec2 sampleUV;\n\t\tsampleUV.y = saturate( flipNormal * reflectVec.y * 0.5 + 0.5 );\n\t\tsampleUV.x = atan( flipNormal * reflectVec.z, flipNormal * reflectVec.x ) * RECIPROCAL_PI2 + 0.5;\n\t\tvec4 envColor = texture2D( envMap, sampleUV );\n\t#elif defined( ENVMAP_TYPE_SPHERE )\n\t\tvec3 reflectView = flipNormal * normalize( ( viewMatrix * vec4( reflectVec, 0.0 ) ).xyz + vec3( 0.0, 0.0, 1.0 ) );\n\t\tvec4 envColor = texture2D( envMap, reflectView.xy * 0.5 + 0.5 );\n\t#else\n\t\tvec4 envColor = vec4( 0.0 );\n\t#endif\n\tenvColor = envMapTexelToLinear( envColor );\n\t#ifdef ENVMAP_BLENDING_MULTIPLY\n\t\toutgoingLight = mix( outgoingLight, outgoingLight * envColor.xyz, specularStrength * reflectivity );\n\t#elif defined( ENVMAP_BLENDING_MIX )\n\t\toutgoingLight = mix( outgoingLight, envColor.xyz, specularStrength * reflectivity );\n\t#elif defined( ENVMAP_BLENDING_ADD )\n\t\toutgoingLight += envColor.xyz * specularStrength * reflectivity;\n\t#endif\n#endif\n";
+	var envmap_fragment = "#ifdef USE_ENVMAP\n\t#if defined( USE_BUMPMAP ) || defined( USE_NORMALMAP ) || defined( PHONG )\n\t\tvec3 cameraToVertex = normalize( vWorldPosition - cameraPosition );\n\t\tvec3 worldNormal = inverseTransformDirection( normal, viewMatrix );\n\t\t#ifdef ENVMAP_MODE_REFLECTION\n\t\t\tvec3 reflectVec = reflect( cameraToVertex, worldNormal );\n\t\t#else\n\t\t\tvec3 reflectVec = refract( cameraToVertex, worldNormal, refractionRatio );\n\t\t#endif\n\t#else\n\t\tvec3 reflectVec = vReflect;\n\t#endif\n\t#ifdef ENVMAP_TYPE_CUBE\n\t\tvec4 envColor = textureCube( envMap, flipNormal * vec3( flipEnvMap * reflectVec.x, reflectVec.yz ) );\n\t#elif defined( ENVMAP_TYPE_EQUIREC )\n\t\tvec2 sampleUV;\n\t\tsampleUV.y = asin( flipNormal * reflectVec.y ) * RECIPROCAL_PI + 0.5;\n\t\tsampleUV.x = atan( flipNormal * reflectVec.z, flipNormal * reflectVec.x ) * RECIPROCAL_PI2 + 0.5;\n\t\tvec4 envColor = texture2D( envMap, sampleUV );\n\t#elif defined( ENVMAP_TYPE_SPHERE )\n\t\tvec3 reflectView = flipNormal * normalize( ( viewMatrix * vec4( reflectVec, 0.0 ) ).xyz + vec3( 0.0, 0.0, 1.0 ) );\n\t\tvec4 envColor = texture2D( envMap, reflectView.xy * 0.5 + 0.5 );\n\t#else\n\t\tvec4 envColor = vec4( 0.0 );\n\t#endif\n\tenvColor = envMapTexelToLinear( envColor );\n\t#ifdef ENVMAP_BLENDING_MULTIPLY\n\t\toutgoingLight = mix( outgoingLight, outgoingLight * envColor.xyz, specularStrength * reflectivity );\n\t#elif defined( ENVMAP_BLENDING_MIX )\n\t\toutgoingLight = mix( outgoingLight, envColor.xyz, specularStrength * reflectivity );\n\t#elif defined( ENVMAP_BLENDING_ADD )\n\t\toutgoingLight += envColor.xyz * specularStrength * reflectivity;\n\t#endif\n#endif\n";
 
 	var envmap_pars_fragment = "#if defined( USE_ENVMAP ) || defined( PHYSICAL )\n\tuniform float reflectivity;\n\tuniform float envMapIntensity;\n#endif\n#ifdef USE_ENVMAP\n\t#if ! defined( PHYSICAL ) && ( defined( USE_BUMPMAP ) || defined( USE_NORMALMAP ) || defined( PHONG ) )\n\t\tvarying vec3 vWorldPosition;\n\t#endif\n\t#ifdef ENVMAP_TYPE_CUBE\n\t\tuniform samplerCube envMap;\n\t#else\n\t\tuniform sampler2D envMap;\n\t#endif\n\tuniform float flipEnvMap;\n\t#if defined( USE_BUMPMAP ) || defined( USE_NORMALMAP ) || defined( PHONG ) || defined( PHYSICAL )\n\t\tuniform float refractionRatio;\n\t#else\n\t\tvarying vec3 vReflect;\n\t#endif\n#endif\n";
 
@@ -19691,6 +19705,164 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 	 * @author mrdoob / http://mrdoob.com/
 	 */
 
+	function WebVRManager( renderer ) {
+
+		var scope = this;
+
+		var device = null;
+		var frameData = null;
+
+		if ( 'VRFrameData' in window ) {
+
+			frameData = new window.VRFrameData();
+
+		}
+
+		var cameraL = new THREE.PerspectiveCamera();
+		cameraL.bounds = new THREE.Vector4( 0.0, 0.0, 0.5, 1.0 );
+		cameraL.layers.enable( 1 );
+
+		var cameraR = new THREE.PerspectiveCamera();
+		cameraR.bounds = new THREE.Vector4( 0.5, 0.0, 0.5, 1.0 );
+		cameraR.layers.enable( 2 );
+
+		var cameraVR = new THREE.ArrayCamera( [ cameraL, cameraR ] );
+
+		//
+
+		var currentSize, currentPixelRatio;
+
+		function onVRDisplayPresentChange() {
+
+			if ( device.isPresenting ) {
+
+				var eyeParameters = device.getEyeParameters( 'left' );
+				var renderWidth = eyeParameters.renderWidth;
+				var renderHeight = eyeParameters.renderHeight;
+
+				currentPixelRatio = renderer.getPixelRatio();
+				currentSize = renderer.getSize();
+
+				renderer.setPixelRatio( 1 );
+				renderer.setSize( renderWidth * 2, renderHeight, false );
+
+			} else if ( scope.enabled ) {
+
+				renderer.setPixelRatio( currentPixelRatio );
+				renderer.setSize( currentSize.width, currentSize.height, true );
+
+			}
+
+		}
+
+		window.addEventListener( 'vrdisplaypresentchange', onVRDisplayPresentChange, false );
+
+		//
+
+		this.enabled = false;
+
+		this.getDevice = function () {
+
+			return device;
+
+		};
+
+		this.setDevice = function ( value ) {
+
+			if ( value !== undefined ) device = value;
+
+		};
+
+		this.getCamera = function ( camera ) {
+
+			if ( device === null ) return camera;
+
+			device.depthNear = camera.near;
+			device.depthFar = camera.far;
+
+			device.getFrameData( frameData );
+
+			//
+
+			var pose = frameData.pose;
+
+			if ( pose.position !== null ) {
+
+				camera.position.fromArray( pose.position );
+
+			} else {
+
+				camera.position.set( 0, 0, 0 );
+
+			}
+
+			if ( pose.orientation !== null ) {
+
+				camera.quaternion.fromArray( pose.orientation );
+
+			}
+
+			camera.updateMatrixWorld();
+
+			if ( device.isPresenting === false ) return camera;
+
+			//
+
+			cameraVR.matrixWorld.copy( camera.matrixWorld );
+			cameraVR.matrixWorldInverse.copy( camera.matrixWorldInverse );
+
+			cameraL.matrixWorldInverse.fromArray( frameData.leftViewMatrix );
+			cameraR.matrixWorldInverse.fromArray( frameData.rightViewMatrix );
+
+			var parent = camera.parent;
+
+			if ( parent !== null ) {
+
+				cameraL.matrixWorldInverse.multiply( parent.matrixWorldInverse );
+				cameraR.matrixWorldInverse.multiply( parent.matrixWorldInverse );
+
+			}
+
+			cameraL.projectionMatrix.fromArray( frameData.leftProjectionMatrix );
+			cameraR.projectionMatrix.fromArray( frameData.rightProjectionMatrix );
+
+			// HACK @mrdoob
+			// https://github.com/w3c/webvr/issues/203
+
+			cameraVR.projectionMatrix.copy( cameraL.projectionMatrix );
+
+			//
+
+			var layers = device.getLayers();
+
+			if ( layers.length ) {
+
+				var layer = layers[ 0 ];
+
+				if ( layer.leftBounds !== null && layer.leftBounds.length === 4 ) {
+
+					cameraL.bounds.fromArray( layer.leftBounds );
+
+				}
+
+				if ( layer.rightBounds !== null && layer.rightBounds.length === 4 ) {
+
+					cameraR.bounds.fromArray( layer.rightBounds );
+
+				}
+
+			}
+
+			return cameraVR;
+
+		};
+
+	}
+
+	/**
+	 * @author mrdoob / http://mrdoob.com/
+	 */
+
 	function WebGLExtensions( gl ) {
 
 		var extensions = {};
@@ -20169,6 +20341,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 		var programCache = new WebGLPrograms( this, capabilities );
 		var lightCache = new WebGLLights();
 		var renderLists = new WebGLRenderLists();
+		var vr = new WebVRManager( this );
 
 		this.info.programs = programCache.programs;
 
@@ -20217,7 +20390,9 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 		this.capabilities = capabilities;
 		this.extensions = extensions;
 		this.properties = properties;
+		this.renderLists = renderLists;
 		this.state = state;
+		this.vr = vr;
 
 		// shadow map
 
@@ -20955,6 +21130,20 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 		// Rendering
 
+		this.animate = function ( callback ) {
+
+			function onFrame() {
+
+				callback();
+
+				( vr.getDevice() || window ).requestAnimationFrame( onFrame );
+
+			}
+
+			( vr.getDevice() || window ).requestAnimationFrame( onFrame );
+
+		};
+
 		this.render = function ( scene, camera, renderTarget, forceClear ) {
 
 			if ( ! ( camera && camera.isCamera ) ) {
@@ -20979,6 +21168,12 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 			camera.onBeforeRender( _this );
 
 			if ( camera.parent === null ) camera.updateMatrixWorld();
+
+			if ( vr.enabled ) {
+
+				camera = vr.getCamera( camera );
+
+			}
 
 			_projScreenMatrix.multiplyMatrices( camera.projectionMatrix, camera.matrixWorldInverse );
 			_frustum.setFromMatrix( _projScreenMatrix );
@@ -36876,6 +37071,19 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 		},
 
+		/**
+		 * Replaces spaces with underscores and removes unsupported characters from
+		 * node names, to ensure compatibility with parseTrackName().
+		 *
+		 * @param  {string} name Node name to be sanitized.
+		 * @return {string}
+		 */
+		sanitizeNodeName: function ( name ) {
+
+			return name.replace( /\s/g, '_' ).replace( /[^\w-]/g, '' );
+
+		},
+
 		parseTrackName: function () {
 
 			// Parent directories, delimited by '/' or ':'. Currently unused, but must
@@ -39797,6 +40005,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 			this.getElapsedTime();
 			this.running = false;
+			this.autoStart = false;
 
 		},
 
@@ -64503,7 +64712,7 @@ THREE.BVHLoader.prototype = {
 
         var sequences = [[ clip.name, 0, clip.frames ]];
 
-        if(seq) sequences = seq;
+        if(seq.length) sequences = seq;
 
         lngS = sequences.length;
 
@@ -65151,2196 +65360,19 @@ var pool = ( function () {
     return pool;
 
 })();
-var V = {};
-
-V.Model = function ( type, meshs, morph ) {
-
-    this.geoms = {
-        man: meshs.man.geometry.clone(),
-        woman: meshs.woman.geometry.clone(),
-    }
-
-    this.settings = {
-
-        type:'Standard',
-        muscles: 0.1,
-        metalness: 0.1,
-        roughness: 0.4,
-        skinAlpha:0.1,
-        oamap: 1,
-        lightmap:1,
-        shininess:60,
-        opacity:1,
-
-    };
-
-    this.colorBones = [
-        "0x000000",//root
-        "0x1600e3",// hip
-        "0x2600d8",// abdomen
-        "0x0018ff",//rThigh
-        "0x1818e7",//lThigh
-        "0x86005e",//chest
-        "0x1414eb",//lShin
-        "0x0014ff",//rShin
-        "0x0015ff",//rFoot
-        "0x0022ff",//rCollar
-        "0x1515ec",//lFoot
-        "0x880053",//neck
-        "0x2222dd",//lCollar
-        "0x1313ee",//lToe
-        "0x2020df",//lShldr
-        "0x0020ff",//rShldr
-        "0xcb001d",// head
-        "0x0013ff",//rToe
-        "0x001eff",//rForeArm
-        "0x1e1ee1",//lForeArm
-        "0x5d5da4",//lHand
-        "0x005dff",//rHand
-        "0x004eff",//rfinger20
-        "0x5454ab",//lfinger10
-        "0x003eff",//rfinger00
-        "0x0054ff",//rfinger10
-        "0x3e3ec1",//lfinger00
-        "0x4e4eb1",//lfinger20
-        "0x0048ff",//rfinger30
-        "0x0042ff",//rfinger40
-        "0x4848b7",//lfinger30
-        "0x4242bd",//lfinger40
-        "0x004aff",//rfinger31
-        "0x4a4ab5",//lfinger31
-        "0x4444bb",//lfinger41
-        "0x5050af",//lfinger21
-        "0x5656a9",//lfinger11
-        "0x0043ff",//rfinger01
-        "0x0050ff",//rfinger21
-        "0x4343be",//lfinger01
-        "0x0056ff",//rfinger11
-        "0x0044ff",//rfinger41
-        "0x0058ff",//rfinger12
-        "0x0041ff",//rfinger02
-        "0x0052ff",//rfinger22
-        "0x4646b9",//lfinger42
-        "0x4c4cb3",//lfinger32
-        "0x004cff",//rfinger32
-        "0x5252ad",//lfinger22
-        "0x4141c0",//lfinger02
-        "0x0046ff",//rfinger42
-        "0x5858a7"//lfinger12
-    ]
-
-    this.ref = meshs;
-
-    this.isFirst = true;
-
-    this.isSkin = false;
-    //this.isHelper = false;
-    this.debug = false;
-    this.isLockHip = true;
-    this.isSkeleton = false;
-
-    this.preTime = 0;
-
-    this.f = 0;
-
-    this.breath = 0;
-    this.breathSide = -1;
-
-    this.txt = null;
-    this.type = type;
-
-    this.mats = [];
-
-    this.position = new THREE.Vector3();
-
-    var tSize = 1.4;
-
-    var torad = 0.0174532925199432957;
-
-    this.hipPos = new THREE.Vector3();
-
-    this.mesh = type === 'man' ? meshs.man.clone() : meshs.woman.clone();
-    this.mesh.name = type;
-
-    this.mtx = new THREE.Matrix4();
-    this.matrixWorldInv = new THREE.Matrix4().getInverse( this.mesh.matrixWorld );
-
-    this.bones = this.mesh.skeleton.bones;
-
-    var i, name, bone, lng = this.bones.length, v;
-
-    this.poseMatrix = [];
-    this.bonesNames = [];
-    this.b = {};
-
-    for( i=0; i<lng; i++){
-
-        v = new THREE.Vector3( 1, 1, 1 );
-        bone = this.bones[i];
-        name = bone.name;
-        bone.name = name;
-
-        if( this.type !== 'man' ){
-
-            if(name === 'lCollar' || name === 'rCollar') v = new THREE.Vector3( 0.9, 1, 1 );
-            if(name === 'lShldr'  || name === 'rShldr' ) v = new THREE.Vector3( 0.96, 1, 1 );
-            if(name === 'lForeArm' || name === 'rForeArm') v = new THREE.Vector3( 0.96, 1, 1 );
-            if(name === 'lHand' || name === 'rHand') v = new THREE.Vector3( 0.95, 0.95, 0.95 );
-            if(name.substring(0,2) === 'lf' || name.substring(0,2) === 'rf') v = new THREE.Vector3( 0.95, 1, 1 );
-
-            
-        // hand
-
-        }
-
-        if(name === 'abdomen' || name === 'chest') v = new THREE.Vector3( 1, 1, 1 );
-
-        if(v!==null) bone.scalling = v;
-
-
-        this.b[ name ] = bone;
-        this.bonesNames.push( name );
-        this.poseMatrix[i] = bone.matrixWorld.clone();
-
-
-
-        if(name === 'hip') this.hipPos.setFromMatrixPosition( this.poseMatrix[i] );
-
-    }
-
-    this.mesh.userData.posY = this.hipPos.y;
-
-    this.geometry = this.mesh.geometry;
-
-    //console.log(this.mesh)
-
-    //this.mesh.setWeight("big", 0.5 );
-
-    this.isWithMorph = morph || false;
-
-    if(this.isWithMorph) this.mesh.morphTargetInfluences[0] = 1;
-
-    //console.log( this.hipPos )
-    this.headBoneRef = this.b.head.rotation;
-
-    this.eyeTarget = new THREE.Group();//AxisHelper(1);
-    this.eyeTarget.position.set(-3.54, 0, -10);
-
-    this.eyes = new THREE.Group();
-
-    this.eye_l = meshs.eye_left.clone();
-    this.eye_r = meshs.eye_right.clone();
-
-    this.eyes.add( this.eye_l );
-    this.eyes.add( this.eye_r );
-    this.eyes.add( this.eyeTarget );
-
-    //this.b.head.add( this.eyes );
-
-    this.eyes.matrix = this.b.head.matrixWorld;
-    this.eyes.matrixAutoUpdate = false;
-
-    this.root = new THREE.Group();
-
-    this.root.add( this.eyes );
-
-    this.setMaterial();
-
-    this.mesh.position.copy( this.position );
-
-}
-
-
-V.Model.prototype = {
-
-    swapMaterial: function ( b ){
-
-        if(b){ 
-            this.mesh.material = this.mats[2];
-            this.mats[1].visible = false;
-        } else {
-            this.mesh.material = this.mats[0];
-            this.mats[1].visible = true;
-        }
-
-    },
-
-    upTexture: function (){
-
-        this.mats[0].needsUpdate = true;
-        this.mats[1].needsUpdate = true;
-        this.mats[2].needsUpdate = true;
-
-    },
-
-    setEnvmap: function () {
-
-        this.mats[0].envMap = view.getEnvmap();
-        this.mats[1].envMap = view.getEnvmap();
-
-    },
-
-    setTextures: function ( txt ) {
-
-        this.txt = txt;
-
-        var m = this.mats[0];
-
-        if( m.map !== undefined ) m.map = this.txt.avatar_c;
-        if( m.envMap !== undefined ) m.envMap = view.getEnvmap();
-        if( m.alphaMap !== undefined ) m.alphaMap = this.type === 'man' ? this.txt.avatar_skin_n_m : this.txt.avatar_skin_n_w;
-        if( m.normalMap !== undefined ) m.normalMap = this.type === 'man' ? this.txt.avatar_n_m : this.txt.avatar_n_w;
-        if( m.lightMap !== undefined ) m.lightMap = this.type === 'man' ? this.txt.avatar_l_m : this.txt.avatar_l_w;
-        if( m.aoMap !== undefined ) m.aoMap = this.txt.avatar_ao;
-        if( m.bumpMap !== undefined ) m.bumpMap = this.txt.muscular;
-
-        m = this.mats[1];
-
-        if( m.map !== undefined ) m.map = this.type === 'man' ? this.txt.eye_m : this.txt.eye_w;
-        if( m.envMap !== undefined ) m.envMap = view.getEnvmap();
-        if( m.normalMap !== undefined ) m.normalMap = this.txt.eye_n;
-        if( m.lightMap !== undefined ) m.lightMap = this.txt.eye_l;
-
-        m = this.mats[2];
-        m.map = this.txt.avatar_id;
-
-        this.upTexture();
-
-    },
-
-    switchGender: function () {
-
-        if(this.type==='man'){
-
-            this.mesh.geometry.dispose();
-
-            this.mesh.geometry.copy( this.geoms.woman )
-
-        }
-
-
-
-    },
-
-    addSkeleton: function ( b ) {
-
-        if( b ){
-            this.isSkeleton = true;
-            this.helper = new THREE.SkeletonHelper( this.b.hip );
-            this.helper.skeleton = this.mesh.skeleton;
-            this.root.add( this.helper );
-        } else {
-            if(this.isSkeleton){
-                this.root.remove( this.helper );
-                this.isSkeleton = false;
-            }
-        }
-
-    },
-
-    lockHip: function ( b ) {
-
-        this.isLockHip = b;
-
-    },
-
-    reset:function(){
-
-        this.mesh.stopAll();
-
-        var i, name, bone, lng = this.bones.length;
-
-
-        for( i=0; i<lng; i++){
-
-            bone = this.bones[i];
-            bone.matrixWorld.copy( this.poseMatrix[i] );
-
-        }
-
-    },
-
-    setTimescale: function ( v ) {
-
-        this.mesh.setTimeScale( v );
-
-    },
-
-    removeFromScene: function( Scene ){
-
-        Scene.remove( this.mesh );
-        Scene.remove( this.root );
-
-        this.isFull = false;
-
-    },
-
-    addToScene: function ( Scene ){
-
-        Scene.add( this.mesh );
-        Scene.add( this.root );
-
-        this.isFull = true;
-
-    },
-
-    stop: function (){
-
-        this.mesh.stopAll();
-
-    },
-
-    play: function ( name, crossfade, offset, weight ){
-
-        this.mesh.play( name, crossfade, offset, weight );
-
-    },
-
-    getTime: function () {
-
-        return this.mesh.currentAnimationAction ? this.mesh.currentAnimationAction.time : false;
-
-    },
-
-    setMaterial: function( name ){
-
-        var set = this.settings, m, i;
-
-        if( name !== undefined ) set.type = name;
-        var mtype = 'Mesh' + set.type + 'Material';
-
-        i = this.mats.length;
-        while(i--) this.mats[i].dispose();
-        
-
-        // define new material type
-        this.mats = [ new THREE[ mtype ](), new THREE[ mtype ](), new THREE.MeshBasicMaterial() ];
-
-        m = this.mats[0];
-
-        if( m.normalScale !== undefined ) m.normalScale = new THREE.Vector2( set.muscles, set.muscles );
-        if( m.lightMapIntensity !== undefined ) m.lightMapIntensity = set.lightmap;
-        if( m.aoMapIntensity !== undefined ) m.aoMapIntensity = set.oamap;
-        if( m.metalness !== undefined ) m.metalness = set.metalness;
-        if( m.roughness !== undefined ) m.roughness = set.roughness;
-        if( m.shininess !== undefined ) m.shininess = set.shininess;
-        if( m.bumpScale !== undefined ) m.bumpScale = set.skinAlpha;
-        if( m.opacity !== undefined ) m.opacity = set.opacity;
-        if( m.transparent !== undefined ) m.transparent = true;
-        
-        //if( m.alphaTest !== undefined ) m.alphaTest = 0.9;
-        
-    
-        if( m.skinning !== undefined ) m.skinning = true;
-        if( ( m.morphTargets !== undefined) && this.isWithMorph ) m.morphTargets = true;
-
-        m = this.mats[1];
-
-        if( m.normalScale !== undefined ) m.normalScale = new THREE.Vector2( 0.5, 0.5 );
-        if( m.metalness !== undefined ) m.metalness = 0.5;
-        if( m.roughness !== undefined ) m.roughness = 0.1;
-
-        // apply material
-        this.mesh.material = this.mats[0];
-        this.eyes.children[0].material = this.mats[1];
-        this.eyes.children[1].material = this.mats[1];
-
-        m = this.mats[2];
-        m.skinning = true;
-
-
-
-
-        //this.showBones('lShin')
-
-        
-
-    },
-
-    updateMaterial: function(){
-
-        var set = this.settings;
-        var m = this.mats[0];
-
-        if( m.normalScale !== undefined ) m.normalScale.set( set.muscles, set.muscles );
-        if( m.aoMapIntensity !== undefined ) m.aoMapIntensity = set.oamap;
-        if( m.lightMapIntensity !== undefined ) m.lightMapIntensity = set.lightmap;
-        if( m.metalness !== undefined ) m.metalness = set.metalness;
-        if( m.roughness !== undefined ) m.roughness = set.roughness;
-        if( m.bumpScale !== undefined ) m.bumpScale = set.skinAlpha;
-        if( m.shininess !== undefined ) m.shininess = set.shininess;
-        if( m.opacity !== undefined ) m.opacity = set.opacity;
-
-    },
-
-    getHipPos: function () {
-
-        return this.b.hip.getWorldPosition();
-
-    },
-
-    setPosition: function ( pos ) {
-
-        this.mesh.position.copy( this.position );
-
-    },
-
-    setDebug: function ( b ) {
-
-        this.debug = b;
-        this.addHelper( this.debug );
-
-        var i = this.mats.length;
-        while( i-- ) this.mats[i].wireframe = this.debug;
-        
-    },
-
-    breathing: function () {
-
-        if( this.b.chest && this.b.abdomen ){
-
-            if(this.breathSide > 0){
-                this.b.chest.scalling.z = Math.lerp (1,1.04, this.breath*0.05);
-                this.b.chest.scalling.y = Math.lerp (1,1.02, this.breath*0.05);
-                this.b.abdomen.scalling.z = Math.lerp (1,0.92, this.breath*0.05);
-            }else{
-                this.b.chest.scalling.z = Math.lerp (1.04,1, this.breath*0.05);
-                this.b.chest.scalling.y = Math.lerp (1.02,1, this.breath*0.05);
-                this.b.abdomen.scalling.z = Math.lerp (0.92,1, this.breath*0.05);
-            }
-
-            this.breath ++;
-
-            if( this.breath === 20 ){ this.breath = 0; this.breathSide = this.breathSide > 0 ? -1:1; }
-        }
-
-    },
-
-    look: function () {
-
-        var v = view.getMouse();
-
-        this.b.head.rotation.set(this.headBoneRef.x-(((v.x*6))*Math.torad), this.headBoneRef.y+(((v.y*6)+4)*Math.torad), this.headBoneRef.z);
-        
-        this.eyeTarget.position.set(-3.54+(-v.y*3), (-v.x*3), -10);
-        this.eye_l.lookAt( this.eyeTarget.position.clone().add(new THREE.Vector3(0,-1.4,0)) );
-        this.eye_r.lookAt( this.eyeTarget.position.clone().add(new THREE.Vector3(0,1.4,0)) );
-
-    },
-
-    update: function (){
-
-        this.breathing();
-        this.look();
-
-        //this.headMap.update( x, y );
-        //if( this.isSkeleton ) this.helper.update();
-        if( this.isLockHip ){ 
-            //this.b.hip.position.x = 0;
-            this.b.hip.position.z = 0;
-            this.b.hip.position.y = 0;
-        }
-
-    },
-
-    getAnimInfo: function (){
-
-        var anim = this.mesh.currentAnimation;
-        if(!anim) return { name: 'none', frame:0 }
-        var t = this.mesh.currentAnimationAction.time;
-        var f = anim.clip.frameTime;
-        var d = anim.clip.duration;
-        return { name:anim.name, frame: Math.round(t/f), total:Math.round( d/f ) }
-
-    },
-
-    /*findID: function ( name ){
-
-        return this.bonesNames.indexOf(name);
-
-    },*/
-
-    setScalling: function ( axe, v ){
-
-        if(this.boneSelect===null) return;
-        this.boneSelect.scalling[ axe ] = v;
-
-    },
-
-    hideBones: function () {
-
-        this.boneSelect = null;
-        this.mats[0].vertexColors = THREE.NoColors;
-        this.mats[0].needsUpdate = true
-
-    },
-
-    showBones: function ( name ) {
-
-        var i, lng, n, n4, w0, w1, w2, w3, x;
-
-        var id = id = this.colorBones.indexOf(name);
-
-        if( name === '0x1100e5' ){
-            if(this.type === 'man' ) id = 1;
-            else id = 5; 
-        }
-
-        if(id === -1) this.bonesNames.indexOf( name );
-
-     
-
-        if(id === -1) return;
-
-        if( id === 0 ){
-            this.hideBones();
-            return;
-        } else {
-            this.boneSelect = this.bones[id];
-            this.mats[0].vertexColors = THREE.VertexColors;
-            this.mats[0].needsUpdate = true;
-        }
-
-        
-
-
-        if(gui){
-
-            gui.setBones( this.bonesNames[id], id, this.boneSelect.scalling );
-
-        }
-
-        
-
-        
-
-        var colors = this.geometry.attributes.color.array;
-        var index = this.geometry.attributes.skinIndex.array;
-        var weight = this.geometry.attributes.skinWeight.array;
-
-        lng = colors.length;
-
-        for( i = 0; i<lng; i++){
-
-            n = i*3
-            n4 = i*4;
-
-            w0 = index[n4] === id ? weight[n4] : 0;
-            w1 = index[n4+1] === id ? weight[n4+1] : 0;
-            w2 = index[n4+2] === id ? weight[n4+2] : 0;
-            w3 = index[n4+3] === id ? weight[n4+3] : 0;
-
-            x = w0+w1+w2+w3;
-
-            colors[n] = 1;
-            colors[n+1] =  1-x;
-            colors[n+2] =  1-x;
-
-        }
-
-        this.geometry.attributes.color.needsUpdate = true;
-        //this.mats[0].vertexColors = THREE.VertexColors;
-
-    },
-
-}
-var view = ( function () {
+var shader = ( function () {
 
 'use strict';
 
-var renderer, scene, camera, controler, transformer, clock, plane, materialShadow, ambient, light, debug, follow, mouse, pixel, raycaster, content;
-var grid = null, capturer = null;
-var vs = { w:1, h:1, mx:0, my:0 };
-var t = { now:0, delta:0, then:0, inter:0, tmp:0, n:0 };
-var isCaptureMode = false;
-var isCapture = false;
-var isDown = false;
-var pixels, pixelsLength;
-var pickingTexture = null, mouseBase;
-var endPos, startPos;
+shader = {
 
-// extra envmap
-var ballScene, ballCamera, ballTexture, ball, skymin;
-var envmap, sky;
+    // --------------------------
+    //  INIT
+    // --------------------------
 
-var mode = 'normal';
-
-var setting = {
-
-    gammaInput: true,
-    gammaOutput: true,
-
-    // toneMapping
-    exposure: 2.2,
-    whitePoint: 2.2,
-    tone: "Uncharted2",
-
-};
-
-var toneMappings;
-
-view = {
-
-    framerate: 60,
-
-    pixelRatio : 1,
-
-    isMobile: false,
-    isShadow: false,
-    isGrid: false,
-    videoSize: [1920/3,1080/3],
-
- 
-
-    
-
-    update: function (  ) {
-
-        var delta = clock.getDelta();
-        if( avatar ) avatar.update( delta );
-        
-    },
-
-    render: function () {
-
-        requestAnimationFrame( view.render );
-
-        TWEEN.update();
-
-        t.now = ( typeof performance === 'undefined' ? Date : performance ).now();
-        t.delta = t.now - t.then;
-
-        if ( t.delta > t.inter ) {
-
-            t.then = t.now - ( t.delta % t.inter );
-
-            view.update( t.delta );
-
-            renderer.render( scene, camera );
-
-            if( isCapture ) capturer.capture( renderer.domElement );
-
-            if ( t.now - 1000 > t.tmp ){ 
-                t.tmp = t.now; 
-                debug.innerHTML = t.n;
-                t.n = 0;
-            }
-
-            t.n++;
-
-        }
-
-    },
-
-    resize: function ( e, w, h ) {
-
-        vs.w = window.innerWidth;
-        vs.h = window.innerHeight;
-
-        w = w || vs.w;
-        h = h || vs.h;
-
-        renderer.setSize( w, h );
-
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
-
-        if( pickingTexture !== null ) pickingTexture.setSize( Math.floor(w*0.5),  Math.floor(h*0.5) );
-
-        if( gui ) gui.resize();
-
-    },
-
-    setFramerate: function ( n ) {
-
-        view.framerate = n; 
-        t.inter = 1000 / view.framerate;
-
-    },
-
-    // MOUSE EVENT
-
-    up: function ( e ) {
-
-        e.preventDefault();
-        isDown = false;
-
-        endPos = view.getCurrentPosition();
-
-        var ax = Math.abs( startPos.polar - endPos.polar );
-        var ay = Math.abs( startPos.azim - endPos.azim );
-
-        if( ax < 5 && ay < 5 ){
-
-        	view.findMouse( e );
-        	//view.pickTest();
-        	var color = view.pick();
-        	console.log(color)
-
-        }
-
-        
-        //view.rayTest();
-
-
-    },
-
-    down: function ( e ) {
-
-        e.preventDefault();
-        isDown = true;
-        startPos = view.getCurrentPosition();
-
-
-        view.findMouse( e );
-
-        //view.rayTest();
-
-    },
-
-    move: function ( e ) {
-
-        e.preventDefault();
-        view.findMouse( e );
-        //view.rayTest();
-
-    },
-
-    findMouse: function ( e ) {
-
-        if ( e.changedTouches ) {
-
-            mouseBase.x = e.changedTouches[ 0 ].pageX;
-            mouseBase.y = e.changedTouches[ 0 ].pageY;
-
-        } else {
-
-            mouseBase.x = e.clientX;
-            mouseBase.y = e.clientY;
-
-        }
-
-        mouse.set( ( mouseBase.x / vs.w ) * 2 - 1, - ( mouseBase.y / vs.h ) * 2 + 1 );
-
-    },
-
-    rayTest: function () {
-
-        raycaster.setFromCamera( mouse, camera );
-        var hits = raycaster.intersectObjects( content.children, true ), name, uv, x;
-
-        if( hits.length > 0 ){
-
-            name = hits[0].object.name;
-
-            if(name === 'man' || name ==='wom' ){
-
-                uv = hits[ 0 ].uv;
-                x =  Math.round(512*uv.x);
-                if(x<0) x = x+512;
-                pixel.set( x, Math.round(512*uv.y) );
-
-                var color = view.getPixelValue( pixel );
-
-                avatar.getModel().showBones( color );
-
-                console.log(pixel, color)
-
-            }
-
-            //console.log(name)
-
-            /*rayControl.position.copy( hits[0].point );
-            var n = hits[ 0 ].face.normal.clone();
-            n.multiplyScalar( 10 );
-            n.add( hits[ 0 ].point );
-            rayControl.lookAt( n );*/
-
-        }
-    
-    },
-
-    initPickScene: function () {
-
-    	//pickingScene = new THREE.Scene();
-		pickingTexture = new THREE.WebGLRenderTarget( Math.floor(vs.w*0.5),  Math.floor(vs.h*0.5) );
-		pickingTexture.texture.minFilter = THREE.LinearFilter;
-
-    },
-
-    pick: function () {
-
-    	if(mode!=='bones') return;
-
-    	if( pickingTexture === null ) view.initPickScene();
-
-    	var model = avatar.getModel();
-
-
-
-    	model.swapMaterial(true);
-    	plane.visible = false;
-    	renderer.render( scene, camera, pickingTexture );
-    	plane.visible = true;
-    	model.swapMaterial(false);
-
-    	var pixelBuffer = new Uint8Array( 4 );
-    	renderer.readRenderTargetPixels( pickingTexture,  Math.floor(mouseBase.x*0.5), Math.floor(vs.h*0.5) -  Math.floor(mouseBase.y*0.5), 1, 1, pixelBuffer );
-    	var color = Math.rgbToHex( pixelBuffer );
-
-    	model.showBones( color );
-
-    	return color;
-
-    },
-
-    // SET
-
-    setMode: function ( Mode ) { 
-    	if( mode === 'bones' && mode !== Mode ) avatar.getModel().hideBones();
-    	mode = Mode;
-    },
-
-    // GET
-    getMode: function () { return mode; },
-    getRenderer: function () { return renderer; },
-    getControler: function () { return controler; },
-    getCamera: function () { return camera; },
-    getScene: function () { return scene; },
-    getContent: function () { return content; },
-    getMouse: function () { return mouse; },
-
-    getSetting: function () { return setting; },
-
-    
-
-    init: function ( container ) {
-
-        mouse = new THREE.Vector2();
-        mouseBase = new THREE.Vector2();
-        pixel = new THREE.Vector2();
-        raycaster = new THREE.Raycaster();
-
-        toneMappings = {
-            None: THREE.NoToneMapping,
-            Linear: THREE.LinearToneMapping,
-            Reinhard: THREE.ReinhardToneMapping,
-            Uncharted2: THREE.Uncharted2ToneMapping,
-            Cineon: THREE.CineonToneMapping
-        };
-
-        clock = new THREE.Clock();
-
-        t.then = ( typeof performance === 'undefined' ? Date : performance ).now();
-        t.inter = 1000 / this.framerate;
-
-        this.testMobile();
-
-        vs.w = window.innerWidth;
-        vs.h = window.innerHeight;
-
-        //renderer = new THREE.WebGLRenderer({ precision: "mediump", antialias:false, alpha: this.isMobile ? false : true });
-
-        renderer = new THREE.WebGLRenderer({ precision: "highp", antialias: this.isMobile ? false : true, alpha: this.isMobile ? false : true });
-
-        view.pixelRatio = 1;//window.devicePixelRatio;//this.isMobile ? 0.5 : window.devicePixelRatio;
-        renderer.setPixelRatio( view.pixelRatio );
-        renderer.setSize( vs.w, vs.h );
-        container.appendChild( renderer.domElement );
-
-        view.setTone();
-
-        debug = document.createElement('div');
-        debug.className = 'debug';
-        container.appendChild( debug );
-
-        scene = new THREE.Scene();
-
-        camera = new THREE.PerspectiveCamera( 50, vs.w / vs.h , 1, 2000 );
-        camera.position.set( 0, 50, 400 );
-        controler = new THREE.OrbitControls( camera, renderer.domElement );
-        controler.target.set( 0, 40, 0 );
-        controler.enableKeys = false;
-        controler.update();
-
-        content = new THREE.Group();
-        scene.add( content );
-
-        follow = new THREE.Group();
-        scene.add( follow );
-
-        //transformer = new THREE.TransformControls( camera, renderer.domElement );
-        //scene.add( transformer );
-
-        if( this.isMobile ) renderer.setClearColor( 0x333333, 1 );
-        else renderer.setClearColor( 0x000000, 0 );
-
-        window.addEventListener( 'resize', this.resize, false );
-
-        var dom = renderer.domElement;
-
-        dom.addEventListener( 'mousedown', view.down, false );
-        dom.addEventListener( 'mouseup', view.up, false );
-        dom.addEventListener( 'mousemove', view.move, false );
-
-        dom.addEventListener( 'touchstart', view.down, false );
-        dom.addEventListener( 'touchend', view.up, false );
-        dom.addEventListener( 'touchmove', view.move, false );
-
-        //this.addGrid();
-        this.addLight();
-        this.addShadow( this.isMobile ? false : true );
-
-        requestAnimationFrame( this.render );
-
-        this.autoRotate( { distance:100, polar:75, azim:15 } );
-
-    },
-
-    setPixelRatio: function (b) {
-
-        if(b){
-            view.pixelRatio = 0.5;
-        } else {
-            view.pixelRatio = 1;
-        }
-
-        renderer.setPixelRatio( view.pixelRatio );
-
-    },
-
-    // GRID
-
-    addGrid: function ( b ) {
-
-        if(b){
-
-            if( view.isGrid ) return;
-
-            grid = new THREE.GridHelper( 50, 20, 0xFFFFFF, 0xAAAAAA );
-            grid.material = new THREE.LineBasicMaterial( { vertexColors: THREE.VertexColors, transparent:true, opacity:0.25 } );
-            scene.add( grid );
-            view.isGrid = true;
-
-        } else {
-
-            if( !view.isGrid ) return;
-
-            scene.remove( grid );
-            grid.material.dispose();
-            grid = null;
-            view.isGrid = false;
-
-        }
-
-    },
-
-    // TONE
-
-    setTone : function( v ) {
-
-        var tonesTypes = ['None', 'Linear', 'Reinhard', 'Uncharted2', 'Cineon'];
-
-        renderer.gammaInput = setting.gammaInput;
-        renderer.gammaOutput = setting.gammaOutput;
-
-        var nup = false;
-
-        if(v!==undefined){
-            if( tonesTypes.indexOf(v) !== -1 ) setting.tone = v;
-            nup = true;
-        }
-
-        renderer.toneMapping = toneMappings[ setting.tone ];
-        renderer.toneMappingExposure = setting.exposure;
-        renderer.toneMappingWhitePoint = setting.whitePoint;
-
-        if(nup){
-
-            avatar.upTexture();
-
-        }
-
-        //view.setLightIntensity();
-
-        //if( materials[0] && nup ) materials[0].needsUpdate = true;
-
-
-    },
-
-    // LIGHT
-
-    addLight: function () {
-
-        //ambient = new THREE.AmbientLight( 0x333333 );
-        //scene.add( ambient );
-
-        light = new THREE.DirectionalLight( 0xffffff, 0.5 );
-        light.position.set(50,300,100);
-        light.lookAt( new THREE.Vector3( 0,0,0) );
-        follow.add( light );
-
-        var pl1 = new THREE.PointLight( 0xfdfdfd, 0.4 );
-        pl1.position.set( 75, 25, 58 );
-        pl1.position.multiplyScalar( 10 );
-        follow.add( pl1 );
-
-        var pl2 = new THREE.PointLight( 0xbab8ba, 0.2 );
-        pl2.position.set( -12, 37, -79 );
-        pl2.position.multiplyScalar( 10 );
-        follow.add( pl2 );
-
-        var pl3 = new THREE.PointLight( 0xcaae7c, 0.1 );
-        pl3.position.set( 30, 78, 52 );
-        pl3.position.multiplyScalar( 10 );
-        follow.add( pl3 );
-
-    },
-
-    // SHADOW
-
-    addShadow: function ( b ) {
-
-        if( b ){
-
-            if( view.isShadow ) return;
-
-            view.isShadow = true;
-
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.soft = view.isMobile ? false : true;
-            renderer.shadowMap.type = view.isMobile ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
-            renderer.shadowMap.renderReverseSided = false;
-
-            //materialShadow = new THREE.MeshLambertMaterial(  );
-
-            materialShadow = new THREE.ShaderMaterial( THREE.ShaderShadow );
-            plane = new THREE.Mesh( new THREE.PlaneBufferGeometry( 200, 200, 1, 1 ), materialShadow );
-            plane.geometry.applyMatrix( new THREE.Matrix4().makeRotationX( -Math.PI*0.5 ) );
-            plane.position.y = 0.5;
-            //plane.position.y = -62;
-            plane.castShadow = false;
-            plane.receiveShadow = true;
-            follow.add( plane );
-
-            var d = 100;
-            var camShadow = new THREE.OrthographicCamera( d, -d, d, -d,  100, 500 );
-            light.shadow = new THREE.LightShadow( camShadow );
-            light.shadow.mapSize.width = view.isMobile ? 512 : 1024;
-            light.shadow.mapSize.height = view.isMobile ? 512 : 1024;
-            light.castShadow = true;
-
-        } else {
-
-            if( !view.isShadow ) return;
-
-            view.isShadow = false;
-
-            renderer.shadowMap.enabled = false;
-            light.castShadow = false;
-
-            follow.remove( plane );
-            materialShadow.dispose();
-            plane.geometry.dispose();
-
-        }
-
-    },
-
-    // CAPTURE
-
-    getCaptueMode: function () { return isCaptureMode },
-
-    captureMode: function ( b ) {
-
-        isCaptureMode = b;
-
-        if( isCaptureMode ){
-
-            window.removeEventListener( 'resize', view.resize );
-
-            renderer.domElement.style.position = "absolute";
-            renderer.domElement.style.left = "50%";
-            renderer.domElement.style.top = "50%";
-            renderer.domElement.style.border = '1px solid #F00';
-
-            view.setVideoSize();
-            view.initCapture();
-
-        } else {
-
-            renderer.domElement.style.position = "absolute";
-            renderer.domElement.style.left = "0px";
-            renderer.domElement.style.top = "0px";
-            renderer.domElement.style.margin = '0px 0px';
-            renderer.domElement.style.border = 'none';
-
-            window.addEventListener( 'resize', view.resize );
-            view.resize();
-
-        }
-
-    },
-
-    setVideoSize: function ( v ) {
-
-        if( !isCaptureMode ) return;
-
-        if( v !== undefined ) view.videoSize = v;
-
-        var w = view.videoSize[0];
-        var h = view.videoSize[1];
-        renderer.domElement.style.margin = (-h*0.5)+'px '+ (-w*0.5)+'px';
-        view.resize( null, w, h );
-
-    },
-
-    initCapture: function () {
-
-        if( capturer !== null ) return;
-
-        capturer = new CCapture( {
-
-            verbose: false,
-            display: false,
-            framerate: view.framerate,
-            //motionBlurFrames: 1,//( 960 / framerate ) * 0 ,
-            quality: 80,
-            format:"webm-mediarecorder",
-            //format:"webm",
-            currentTime:0,
-            timeLimit: 4,
-            frameLimit: 0,
-            autoSaveTime: 0,
-            //autoSaveTime:10,
-            //workersPath:'./js/',
-            //timeLimit: 60,//second
-            //frameLimit: 0,
-            //autoSaveTime: 0,
-            //onProgress: function( p ) { progress.style.width = ( p * 100 ) + '%' }
-        });
-
-        console.log(capturer)
-
-    },
-
-    startCapture: function () {
-
-        if( !isCaptureMode ) return;
-        if( isCapture ) return;
-
-        renderer.setClearColor( 0x00FF00, 1 );
-        capturer.start();
-        isCapture = true;
-
-    },
-
-    saveCapture: function () {
-
-        if( !isCaptureMode ) return;
-        if( !isCapture ) return;
-
-        
-        capturer.stop();
-        capturer.save();
-        
-        if( view.isMobile ) renderer.setClearColor( 0xffd400, 1 );
-        else renderer.setClearColor( 0x000000, 0 );
-        isCapture = false;
-
-    },
-
-    // MOBILE SUPPORT
-
-    testMobile: function () {
-
-        var n = navigator.userAgent;
-        if (n.match(/Android/i) || n.match(/webOS/i) || n.match(/iPhone/i) || n.match(/iPad/i) || n.match(/iPod/i) || n.match(/BlackBerry/i) || n.match(/Windows Phone/i)) view.isMobile = true;
-        else view.isMobile = false;  
-
-    },
-
-
-    // MODEL ADD
-
-    addVertexColor: function( geometry ){
-
-        var color = new THREE.Float32BufferAttribute( geometry.attributes.position.count*3, 3 );
-        var i = color.count, n;
-        //console.log('count', i)
-        while(i--){ 
-            n = i*3
-            color[n] = 1;
-            color[n+1] = 1;
-            color[n+2] = 1;
-        }
-        geometry.addAttribute( 'color', color );
-        geometry.attributes.color.needsUpdate = true;
-
-    },
-
-    addUV2: function( geometry ){
-
-        if( geometry ) geometry.addAttribute( 'uv2', geometry.attributes.uv );
-
-    },
-
-    correctMorph: function ( name, meshs ){
-
-        //var morph = ['_open', '_close', '_sad', '_happy' ];
-        var morph = ['big' ];
-
-        for( var i=0; i < morph.length; i++ ) {
-
-            meshs[name].geometry.morphAttributes.position[i].array = meshs[name+'_'+morph[i]].geometry.attributes.position.array;
-            meshs[name].geometry.morphAttributes.normal[i].array = meshs[name+'_'+morph[i]].geometry.attributes.normal.array;
-
-        }
-
-    },
-
-    reversUV: function ( geometry ){
-
-        // correct inversion of normal map in symetrics mesh
-
-        var uv = geometry.attributes.uv.array;
-        var i = Math.floor(uv.length * 0.25);
-        while( i-- ) uv[ i * 2 ] *= -1;
-        geometry.attributes.uv.needsUpdate = true;
-
-        // for ao map
-        view.addUV2( geometry );
-
-    },
-
-
-    // SHADER HACK
-
-    uniformPush : function( type, name, value ){
-
-        type = type || 'physical';
-        THREE.ShaderLib[type].uniforms[name] = value;
-        THREE['Mesh' + 'Standard' + 'Material'][name] = value;
-
-    },
-
-    shaderRemplace : function( type, shad, word, re ){
-
-        type = type || 'physical';
-        shad = shad || 'fragment';
-
-        THREE.ShaderLib[type][shad+'Shader'] = THREE.ShaderLib[type][shad+'Shader'].replace(word, re);
-
-    },
-
-    shaderPush : function( type, shad, add ){
-
-        type = type || 'physical';
-        shad = shad || 'fragment';
-
-        add.push(" ");
-        THREE.ShaderLib[type][shad+'Shader'] = add.join("\n") + THREE.ShaderLib[type][shad+'Shader'];
-
-    },
-
-    shaderMain : function( type, shad, add ){
-
-        type = type || 'physical';
-        shad = shad || 'fragment';
-
-        add.push("} ");
-
-        THREE.ShaderLib[type][shad+'Shader'] = THREE.ShaderLib[type][shad+'Shader'].substring( 0, THREE.ShaderLib[type][shad+'Shader'].length-2 );
-        THREE.ShaderLib[type][shad+'Shader'] += add.join("\n");
-
-    },
-
-    // CAMERA AUTO CONTROL
-
-    autoRotate: function ( obj, time, delay, callback ) {
-
-        callback = callback || function(){};
-
-        var c = view.getCurrentPosition();
-        controler.enabled = false;
-
-        new TWEEN.Tween( c ).to( obj, time || 2000 )
-        .delay( delay || 0 )
-        .easing( TWEEN.Easing.Quadratic.Out )
-        .onUpdate( function() { view.orbit( c ); } )
-        .onComplete( function() { controler.enabled = true;  callback(); } )
-        .start();
-
-    },
-
-    orbit: function ( c ) {
-
-        var phi = c.polar * Math.torad;
-        var theta = c.azim * Math.torad;
-
-        controler.target.fromArray( c.target );
-        camera.position.copy( controler.target );
-        camera.position.x += c.distance * Math.sin(phi) * Math.sin(theta);
-        camera.position.y += c.distance * Math.cos(phi);
-        camera.position.z += c.distance * Math.sin(phi) * Math.cos(theta);
-        controler.update();
-
-    },
-
-    getCurrentPosition: function ( log ) {
-
-    	var p = {};
-        var t = controler.target;
-        var c = camera.position;
-        p.target = t.toArray();
-        p.distance = Math.floor( c.distanceTo( t ) );
-        p.polar = Math.floor( controler.getPolarAngle() * Math.todeg );
-        p.azim = Math.floor( controler.getAzimuthalAngle() * Math.todeg );
-        if( log ) console.log( JSON.stringify( p ) );
-        return p;
-
-    },
-
-    initCanvasId: function ( img ){
-
-        var canvas = document.createElement( "canvas" ); 
-        canvas.width = canvas.height = 512;
-        var ctx = canvas.getContext( "2d" );
-        ctx.drawImage( img, 0, 0 );
-        
-        pixels = ctx.getImageData( 0, 0, 512, 512 ).data;
-        pixelsLength = pixels.length * 0.25;
-
-    },
-
-    getPixelValue: function ( v ) {
-
-
-        var cc = [0,0,0,0];
-        var color = 0x000000;
-
-        /*if( pix !== undefined ) {
-            pix.style.left = (x*0.5) + 'px';
-            pix.style.top =  (y*0.5) + 'px';
-        }*/
-
-        if( pixels !== undefined ){
-
-            var id = (v.y*512) + v.x;
-            var n = id * 4;
-
-            cc[0] = pixels[n];
-            cc[1] = pixels[n+1];
-            cc[2] = pixels[n+2];
-            cc[3] = pixels[n+3];
- 
-            color = Math.rgbToHex( cc );
-
-        }
-
-        return color;
-
-        
-    },
-
-
-
-
-    // ENVMAP
-
-    getEnvmap: function () { return envmap; },
-
-    initSphereEnvmap: function ( map ){
-
-    	envmap = new THREE.Texture( map );
-        envmap.mapping = THREE.SphericalReflectionMapping;
-        envmap.needsUpdate = true;
-
-    },
-
-    showSky: function (b) {
-
-    	sky.visible = b;
-
-    },
-
-    initEnvScene: function ( map ) {
-
-    	var s = 1;
-	    ballScene = new THREE.Scene();
-		ballCamera = new THREE.CubeCamera( s*0.5, s*1.2, 512 );
-		ballCamera.position.set(0,0,0);
-		ballCamera.lookAt( new THREE.Vector3(0,0,5));
-		ballScene.add( ballCamera );
-	    
-	    ballTexture = new THREE.Texture( map );
-	    ballTexture.wrapS = ballTexture.wrapT = THREE.ClampToEdgeWrapping;
-		ball = new THREE.Mesh( new THREE.SphereGeometry( 1, 20, 12  ),  new THREE.MeshBasicMaterial({ map:ballTexture, depthWrite:false }) );
-
-		sky = new THREE.Mesh( new THREE.SphereGeometry( 1, 20, 12  ),  ball.material );
-	    sky.scale.set(-1000,1000,1000);
-	    scene.add( sky );
-	    sky.visible = false;
-
-	    /*skymin = new THREE.Mesh( new THREE.SphereGeometry( 1, 20, 12  ),  new THREE.MeshBasicMaterial() );
-	    skymin.scale.set(3,3,3);
-	    scene.add( skymin );*/
-	    
-	    ball.scale.set(-s,s,s);
-		ballScene.add( ball );
-
-		view.renderEnvmap();
-
-    },
-
-    renderEnvmap: function () {
-
-    	ballTexture.needsUpdate = true;
-    	ballCamera.updateCubeMap( renderer, ballScene );
-        envmap = ballCamera.renderTarget.texture;
-
-        //skymin.material.envMap = envmap;
-
-    },
-
-
-
-
-
-}
-
-
-
-return view;
-
-})();
-
-
-//-----------------------
-// force local scalling
-//-----------------------
-
-THREE.Skeleton.prototype.update = ( function () {
-
-    var offsetMatrix = new THREE.Matrix4();
-    var identityMatrix = new THREE.Matrix4();
-    var scaleMatrix = new THREE.Matrix4();
-    var decal = new THREE.Vector3();
-
-    return function update() {
-
-        var bones = this.bones;
-        var boneInverses = this.boneInverses;
-        var boneMatrices = this.boneMatrices;
-        var boneTexture = this.boneTexture;
-
-        // flatten bone matrices to array
-
-        for ( var i = 0, il = bones.length; i < il; i ++ ) {
-
-            // compute the offset between the current and the original transform
-
-            var matrix = bones[ i ] ? bones[ i ].matrixWorld : identityMatrix;
-
-            if( bones[ i ].scalling !== undefined ){
-
-                matrix.scale( bones[ i ].scalling );
-
-                for ( var j = 0, l = bones[ i ].children.length; j < l; j ++ ) {
-
-                    scaleMatrix = matrix.clone();
-                    scaleMatrix.multiply( bones[ i ].children[ j ].matrix.clone() )
-
-                    //scaleMatrix.multiplyMatrices( matrix, bones[ i ].children[ j ].matrix );
-                    bones[ i ].children[ j ].matrixWorld.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );
-
-                }
-
-            } 
-
-            offsetMatrix.multiplyMatrices( matrix, boneInverses[ i ] );
-            offsetMatrix.toArray( boneMatrices, i * 16 );
-
-        }
-
-        if ( boneTexture !== undefined ) {
-
-            boneTexture.needsUpdate = true;
-
-        }
-
-    };
-
-})();
-
-var gui = ( function () {
-
-'use strict';
-
-var ui;
-var content, main, menu, timebarre;
-var gender, genderIM
-var isOpen = false;
-
-var selectColor = '#db0bfa'
-
-var BB = [ 'X', 'VIEW', 'VIDEO', 'ANIMATION', 'MATERIAL', 'BONES' ];
-
-var current = 'none';
-
-var isMan = true;
-
-var bone, sx, sy, sz;
-
-
-gui = {
-
-    init: function ( container ) {
-
-        content = document.createElement( 'div' );
-        content.style.cssText = 'position: absolute; top:0; left:0; pointer-events:none; width:100%; height:100%;';
-        container.appendChild( content );
-
-        gender = document.createElement( 'div' );
-        gender.style.cssText = 'position: absolute; bottom:50px; left:10px; pointer-events:auto; width:60px; height:90px; cursor:pointer;';
-
-        genderIM = new Image();
-        genderIM.src = 'assets/textures/m.png';
-
-        gender.addEventListener( 'click', function(e){ 
-            if(isMan) {
-                isMan = false;
-                genderIM.src = 'assets/textures/w.png';
-            } else {
-                isMan = true;
-                genderIM.src = 'assets/textures/m.png';
-            }
-
-            avatar.switchModel();
-
-        }, false );
-
-        gender.appendChild( genderIM );
-        content.appendChild( gender );
-
-        main = document.createElement( 'div' );
-        main.style.cssText = 'position: absolute; top:50px; right:0; pointer-events:none; width:200px; height:100%; display:none;';
-        content.appendChild( main );
-
-        menu = document.createElement( 'div' );
-        menu.style.cssText = 'position: absolute; top:0px; left:0px; height:50px; width:100%; pointer-events:none; ';
-        content.appendChild( menu );
-
-        timebarre = new Timebarre( content, selectColor );
-
-        for(var i=0; i<BB.length; i++ ) this.addButton(i);
-
-        ui = new UIL.Gui( { w:200, bg:'rgba(23,23,23,0)', close:false, parent:main, top:50, css:'right:0; transition:none;' } );
-
-    },
-
-    addButton: function ( i ) {
-
-        var b = document.createElement('div');
-        b.style.cssText =  'color:#CCC;  font-size: 15px;  margin:0px 0px; padding: 0px 15px; line-height:50px; position:relative; pointer-events:auto; height:50px; display:inline-block; text-align:center; cursor:pointer; transition:all 0.3s ease;';
-        b.textContent = BB[i];
-        b.id = i;
-
-        b.addEventListener( 'mouseover', function(e){ this.style.color = '#FFF'; this.style.background = 'rgba(153,153,153,0.5)'; }, false );
-        b.addEventListener( 'mouseout', function(e){ this.style.color = '#CCC';this.style.background = 'none';}, false );
-        b.addEventListener( 'mousedown', function(e){ gui.select( this.id ); }, false );
-
-        menu.appendChild(b);
-
-    },
-
-    close: function () {
-
-        if(!isOpen) return;
-
-        main.style.display = 'none';
-        isOpen = false;
-
-    },
-
-    open: function () {
-
-        if( isOpen ) return;
-
-        main.style.display = 'block';
-        isOpen = true;
-
-    },
-
-    select: function ( id ) {
-
-        view.setMode('normal');
-
-        id = Number(id);
-        ui.clear();
-        timebarre.hide();
-        gui.open();
-
-        switch( id ){
-            case 0: gui.close(); break;
-            case 1: gui.view(); break;
-            case 2: gui.video(); break;
-            case 3: gui.anim(); break;
-            case 4: gui.material(); break;
-            case 5: gui.bones(); break;
-           // case 5: gui.morph(); break;
-        }
-
-    },
-
-
-    view: function () {
-
-        var params = view.getSetting();
-
-        ui.add('Bool', { name:'MID RESOLUTION', value:view.pixelRatio === 1 ? false : true, p:60 } ).onChange( view.setPixelRatio );
-
-        ui.add('Bool', { name:'GRID', value:view.isGrid, p:60 } ).onChange( view.addGrid );
-        ui.add('Bool', { name:'SHADOW', value:view.isShadow, p:60 } ).onChange( view.addShadow );
-        ui.add('Bool', { name:'SKELETON', value:avatar.getModel().isSkeleton, p:60 } ).onChange( avatar.addSkeleton );
-        ui.add('Bool', { name:'SKY', value:false, p:60 } ).onChange( view.showSky );
-
-        ui.add('title',  { name:' ', h:30});
-
-        ui.add( params, 'gammaInput', { type:'Bool', fontColor:'#EEE', bColor:'#b2b2b2', p:60  } ).onChange( function(){ view.setTone( 'up' ); } );
-        ui.add( params, 'gammaOutput', { type:'Bool', fontColor:'#EEE', bColor:'#b2b2b2', p:60  } ).onChange( function(){ view.setTone( 'up' ); } );
-
-        ui.add( params, 'exposure', { min:0, max:10, precision:2, fontColor:'#fc4100' } ).onChange( function(){ view.setTone(); } );
-        ui.add( params, 'whitePoint', { min:0, max:10, precision:1, fontColor:'#fc4100' } ).onChange( function(){ view.setTone(); } );
-        ui.add('list', { name:'type',  bColor:'#b2b2b2', list:['None', 'Linear', 'Reinhard', 'Uncharted2', 'Cineon'], fontColor:'#333', value:params.tone, h:30 }).onChange( function(v){ view.setTone(v); } );
-
-    },
-
-    video: function () {
-
-        ui.add('Bool', { name:'CAPTURE MODE', value:view.getCaptueMode(), p:60 } ).onChange( function( b ){ view.captureMode( b ) } );
-        ui.add('number', { name:'resolution', value:view.videoSize, precision:0, step:10 }).onChange( view.setVideoSize );
-        ui.add('button', { name:'START', h:20, p:0 }).onChange( function( ){view.startCapture()} );
-        ui.add('button', { name:'STOP', h:20, p:0 }).onChange( function( ){view.saveCapture()}  );
-
-    },
-
-    material: function () {
-
-        var model = avatar.getModel();
-        var settings = model.settings;
-
-        var mats = ['Basic', 'Normal', 'Depth', 'Toon', 'Lambert', 'Phong','Standard'];
-
-        ui.add('list', { name:'type', width:100, list:mats, value:settings.type, full:true }).onChange( function( name ){ model.setMaterial( name ); } );
-
-        ui.add( settings, 'muscles', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
-        ui.add( settings, 'oamap', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
-        ui.add( settings, 'lightmap', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
-        ui.add( settings, 'metalness', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
-        ui.add( settings, 'roughness', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
-        ui.add( settings, 'skinAlpha', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
-        ui.add( settings, 'shininess', { min:0, max:200, fontColor:'#D4B87B', precision:0 } ).onChange( gui.applyMaterial );
-        ui.add( settings, 'opacity', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
-
-    },
-
-    applyMaterial: function(){
-
-        avatar.getModel().updateMaterial();
-
-    },
-
-    bones: function () {
-
-        view.setMode('bones');
-
-        bone = ui.add('title', { name:'none', h:30, r:10 } );
-
-        var model = avatar.getModel();
-
-        sx = ui.add('slide',  { name:'scale X',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ model.setScalling('x', v); } );
-        sy = ui.add('slide',  { name:'scale Y',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ model.setScalling('y', v); } );
-        sz = ui.add('slide',  { name:'scale Z',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ model.setScalling('z', v); } );
-
-    },
-
-    setBones: function( name, id, v ){
-
-        bone.text( name );
-        bone.text2( id );
-        sx.setValue(v.x);
-        sy.setValue(v.y);
-        sz.setValue(v.z);
-
-    },
-
-    anim: function () {
-
-        ui.add('slide', { name:'framerate', min:24, max:60, value:60, precision:0, step:1, stype:1 }).onChange( view.setFramerate );
-
-        current = 'anim';
-        ui.add('slide',  { name:'animation', min:-1, max:1, value:avatar.getTimescale(), precision:2, stype:1 }).onChange( avatar.setTimescale );
-        ui.add('Bool', { name:'LOCK HIP', value:avatar.getModel().isLockHip, p:60 } ).onChange( avatar.lockHip );
-        ui.add('button', { name:'LOAD BVH', fontColor:'#D4B87B', h:40, drag:true, p:0 }).onChange( avatar.loadSingle );
-
-        var an = avatar.getAnimations(), name;
-
-        for(var i=0; i<an.length; i++){
-
-            name = an[i];
-            ui.add( 'button', { name:name, p:0 }).onChange( avatar.play );
-
-        }
-
-        timebarre.show();
-
-    },
-
-    addAnim: function( name ){
-
-        if( current !== 'anim' ) return;
-        ui.add( 'button', { name:name, p:0 }).onChange( avatar.play );
-
-    },
-
-    morph: function () {
-
-        var mo = avatar.getMorph(), name;
-
-        for(var i=0; i<mo.length; i++){
-
-            name = mo[i];
-            ui.add('slide',  { name:'eye '+name, min:0, max:1, value:0, precision:2 }).onChange( avatar.morphEye );
-
-        }
-
-        ui.add('slide',  { name:'eye size', min:0.5, max:2, value:1, precision:2 }).onChange( avatar.sizeEye );
-
-        for(var i=0; i<mo.length; i++){
-
-            name = mo[i];
-            ui.add('slide',  { name:name, min:0, max:1, value:0, precision:2 }).onChange( avatar.morphMouth  );
-        }
-
-        ui.add('slide',  { name:'mouth size', min:0.5, max:2, value:1, precision:2 }).onChange( avatar.sizeMouth );
-        
-
-    },
-
-    // PLAY BARRE
-
-    resize: function () {
-
-        if( timebarre ) timebarre.resize();
-
-    },
-
-    setTotalFrame: function ( v, ft ) {
-
-        if( timebarre ) timebarre.setTotalFrame( v, ft );
-
-    },
-
-    updateTime: function ( f ) {
-
-        if( timebarre ) timebarre.update( f );
-
-    },
-
-    inPlay:function(){
-        if( timebarre ) timebarre.inPlay();
-    }
-
-
-
-
-}
-
-
-
-return gui;
-
-})();
-
-
-var Timebarre = function( p, sel ){
-
-    this.select = sel;
-
-    this.playIcon = "<svg width='18px' height='17px'><path fill='#CCC' d='M 14 8 L 5 3 4 4 4 13 5 14 14 9 14 8 Z'/></svg>";
-    this.pauseIcon = "<svg width='18px' height='17px'><path fill='#CCC' d='M 14 4 L 13 3 11 3 10 4 10 13 11 14 13 14 14 13 14 4 M 8 4 L 7 3 5 3 4 4 4 13 5 14 7 14 8 13 8 4 Z'/></svg>";
-
-    this.playing = true;
-
-    this.parent = p;
-
-    this.down = false;
-    this.isHide = true;
-
-    this.width = window.innerWidth - 80;
-    this.totalFrame = 0;
-    this.frame = 0;
-    this.ratio = 0;
-
-    this.content = document.createElement('div');
-    this.content.style.cssText = "position:absolute; bottom:0; left:0px; width:100%; height:50px; pointer-events:none; display:none; ";
-    this.parent.appendChild( this.content );
-
-    this.timeInfo = document.createElement('div');
-    this.timeInfo.style.cssText = "position:absolute; bottom:36px; left:60px; width:200px; height:10px; pointer-events:none; color:#CCC; ";
-    this.content.appendChild(this.timeInfo);
-
-    this.timeline = document.createElement('div');
-    this.timeline.style.cssText = "position:absolute; bottom:20px; left:60px; width:"+this.width+"px; height:5px; border:3px solid rgba(255,255,255,0.2); pointer-events:auto; cursor:pointer;";
-    this.content.appendChild(this.timeline);
-
-    this.framer = document.createElement('div');
-    this.framer.style.cssText = "position:absolute; top:0px; left:0px; width:1px; height:5px; background:#CCC; pointer-events:none;";
-    this.timeline.appendChild(this.framer);
-
-    this.playButton = document.createElement('div');
-    this.playButton.style.cssText = "position:absolute; top:5px; left:10px; width:18px; height:18px; pointer-events:auto; cursor:pointer; border:3px solid rgba(255,255,255,0.2); padding: 5px 5px;";
-    this.content.appendChild( this.playButton );
-
-    this.playButton.innerHTML = this.playing ? this.playIcon : this.pauseIcon;
-    this.playButton.childNodes[0].childNodes[0].setAttribute('fill', '#CCC');
-
-
-
-        //this.playButton.addEventListener('mouseover', editor.play_over, false );
-        //this.playButton.addEventListener('mouseout', editor.play_out, false );
-        
-
-    var _this = this;
-    //window.addEventListener( 'resize', function(e){ _this.resize(e); }, false );
-    this.timeline.addEventListener( 'mouseover', function ( e ) { _this.tOver(e); }, false );
-    this.timeline.addEventListener( 'mouseout', function ( e ) { _this.tOut(e); }, false );
-
-    this.timeline.addEventListener( 'mousedown', function ( e ) { _this.tDown(e); }, false );
-    document.body.addEventListener( 'mouseup', function ( e ) { _this.tUp(e); }, false );
-    document.body.addEventListener( 'mousemove', function ( e ) { _this.tMove(e); }, false );
-
-    this.playButton.addEventListener('mousedown',  function ( e ) { _this.play_down(e); }, false );
-    this.playButton.addEventListener('mouseover',  function ( e ) { _this.play_over(e); }, false );
-    this.playButton.addEventListener('mouseout',  function ( e ) { _this.play_out(e); }, false );
-}
-
-
-
-Timebarre.prototype = {
-
-    inPlay: function ( e ) {
-        this.playing = true;
-        this.playButton.innerHTML = this.playIcon;
-    },
-
-    play_down: function ( e ) {
-
-        if( this.playing ){ 
-            this.playing = false;
-            avatar.pause();
-        } else {
-            this.playing = true;
-            avatar.unPause();
-        }
-
-        this.playButton.innerHTML = this.playing ? this.playIcon : this.pauseIcon;
-
-    },
-
-    play_over: function ( e ) { 
-
-        //this.playButton.style.border = "1px solid " + selectColor;
-        //this.playButton.style.background = selectColor;
-        this.playButton.childNodes[0].childNodes[0].setAttribute('fill', this.select );
-
-    },
-
-    play_out: function ( e ) { 
-
-        //this.playButton.style.border = "1px solid #3f3f3f";
-        //this.playButton.style.background = 'none';
-        this.playButton.childNodes[0].childNodes[0].setAttribute('fill', '#CCC');
-
-    },
-
-    show: function () {
-
-        if(!this.isHide) return;
-        this.content.style.display = 'block';
-        this.isHide = false;
-    },
-
-    hide:function () {
-
-        if(this.isHide) return;
-        this.content.style.display = 'none';
-        this.isHide = true;
-
-    },
-    
-    setTotalFrame:function( t, ft ){
-
-        this.totalFrame = t;
-        this.frameTime = ft;
-        this.ratio = this.totalFrame / this.width;
-        this.timeInfo.innerHTML = this.totalFrame + ' frames';
-
-    },
-
-    resize:function(e){
-
-        this.width = window.innerWidth - 80;
-        this.timeline.style.width = this.width+'px';
-        this.ratio = this.totalFrame / this.width;
-
-    },
-
-    update:function( t ){
-
-        if( this.isHide ) return;
-
-        this.frame = Math.round( t / this.frameTime );
-        this.timeInfo.innerHTML = this.frame + ' / ' + this.totalFrame;
-        this.framer.style.width = this.frame / this.ratio + 'px';
-
-    },
-
-    tOut:function(e){
-
-        if(!this.down) this.framer.style.background = "#CCC";
-
-    },
-
-    tOver:function(e){
-
-        this.framer.style.background = this.select;
-
-    },
-
-    tUp:function(e){
-
-        this.down = false;
-        this.framer.style.background = "#CCC";
-
-    },
-
-    tDown:function(e){
-
-        this.down = true;
-        this.tMove(e);
-        this.playing = false;
-        this.playButton.innerHTML = this.playing ? this.playIcon : this.pauseIcon;
-        this.framer.style.background = this.select;
-
-    },
-
-    tMove:function(e){
-
-        if(this.down){
-            var f = Math.floor((e.clientX-20)*this.ratio);
-            if(f<0) f = 0;
-            if(f>this.totalFrame) f = this.totalFrame; 
-            this.frame = f;
-            avatar.playOne( this.frame );
-            //this.parent.gotoFrame(this.frame);
-        }
-    }
-
-}
-var avatar = ( function () {
-
-'use strict';
-
-
-var modelName = 'avatar.tjs';
-var path = './assets'
-
-var envmame = 'studio';
-
-var assets = [
-
-    '/bvh/base.z',
-    '/models/' + modelName + '.sea',
-
-];
-
-var texturesAssets = [
-    
-    '/textures/envmap/'+envmame+'.jpg',
-    '/textures/avatar_c.png', 
-    '/textures/avatar_n_m.png',
-    '/textures/avatar_n_w.png', 
-    '/textures/avatar_skin_n_m.png',
-    '/textures/avatar_skin_n_w.png', 
-    '/textures/avatar_l_m.png',
-    '/textures/avatar_l_w.png', 
-    '/textures/avatar_ao.png',
-    '/textures/muscular.png',
-    '/textures/metalmuscl.png',
-    '/textures/transition/t5.png',
-    '/textures/avatar_id.png',
-
-    '/textures/eye_m.png',
-    '/textures/eye_w.png',
-    '/textures/eye_n.png',
-    '/textures/eye_l.png',
-
-];
-
-var timescale = 0.5;
-
-var man = null, woman = null, scene, bvhLoader, center = null;
-var model = null;
-var isMan = false;
-var isHelper = false;
-var currentPlay = '';
-var isloaded = false;
-var tmpname = '';
-
-var animator = null;
-
-var frameTime = 0;
-
-var animations = [];
-var morphs = ['close', 'happy', 'sad', 'open' ];
-
-var isWithMorph = false;
-
-avatar = {
-
-    init: function ( Path ) {
-
-        if( Path !== undefined ) path = Path;
-
-        scene = view.getContent();
-        bvhLoader = new THREE.BVHLoader();
-
-        var i = assets.length;
-        while(i--) {
-            assets[i] = path + assets[i];
-        }
-
-     
-        pool.load( assets, avatar.onLoad );
-
-    },
-
-    loadTexture: function () {
-
-        var i = texturesAssets.length;
-        while(i--) {
-            texturesAssets[i] = path + texturesAssets[i];
-        }
-     
-        pool.load( texturesAssets, avatar.onLoadTextures );
-
-    },
-
-    onLoadTextures: function ( p ) {
-
-        var txt = {};
-
-        //view.initSphereEnvmap( p[envmame] );
-        view.initEnvScene( p[envmame] );
-
-        //txt['env'] = new THREE.Texture( p.medium );
-        //txt['env'].mapping = THREE.SphericalReflectionMapping;
-        //txt['env'].needsUpdate = true;
-
-        txt['transition'] = new THREE.Texture( p.t5 );
-        txt['transition'].wrapS = THREE.RepeatWrapping;
-        txt['transition'].flipY = false;
-        txt['transition'].needsUpdate = true;
-
-        txt['avatar_c'] = new THREE.Texture( p.avatar_c );
-        txt['avatar_c'].wrapS = THREE.MirroredRepeatWrapping;
-        txt['avatar_c'].flipY = false;
-        txt['avatar_c'].needsUpdate = true;
-
-        txt['avatar_n_m'] = new THREE.Texture( p.avatar_n_m );
-        txt['avatar_n_m'].wrapS = THREE.RepeatWrapping;
-        txt['avatar_n_m'].flipY = false;
-        txt['avatar_n_m'].needsUpdate = true;
-
-        txt['avatar_n_w'] = new THREE.Texture( p.avatar_n_w );
-        txt['avatar_n_w'].wrapS = THREE.RepeatWrapping;
-        txt['avatar_n_w'].flipY = false;
-        txt['avatar_n_w'].needsUpdate = true;
-
-        txt['avatar_skin_n_m'] = new THREE.Texture( p.avatar_skin_n_m );
-        txt['avatar_skin_n_m'].wrapS = THREE.RepeatWrapping;
-        txt['avatar_skin_n_m'].flipY = false;
-        txt['avatar_skin_n_m'].needsUpdate = true;
-
-        txt['avatar_skin_n_w'] = new THREE.Texture( p.avatar_skin_n_w );
-        txt['avatar_skin_n_w'].wrapS = THREE.RepeatWrapping;
-        txt['avatar_skin_n_w'].flipY = false;
-        txt['avatar_skin_n_w'].needsUpdate = true;
-
-        txt['avatar_l_m'] = new THREE.Texture( p.avatar_l_m );
-        txt['avatar_l_m'].wrapS = THREE.RepeatWrapping;
-        txt['avatar_l_m'].flipY = false;
-        txt['avatar_l_m'].needsUpdate = true;
-
-        txt['avatar_l_w'] = new THREE.Texture( p.avatar_l_w );
-        txt['avatar_l_w'].wrapS = THREE.RepeatWrapping;
-        txt['avatar_l_w'].flipY = false;
-        txt['avatar_l_w'].needsUpdate = true;
-
-        txt['avatar_ao'] = new THREE.Texture( p.avatar_ao );
-        txt['avatar_ao'].wrapS = THREE.MirroredRepeatWrapping;
-        txt['avatar_ao'].flipY = false;
-        txt['avatar_ao'].needsUpdate = true;
-
-        txt['muscular'] = new THREE.Texture( p.muscular );
-        //txt['muscular'].wrapS = THREE.RepeatWrapping;
-        txt['muscular'].wrapS = THREE.MirroredRepeatWrapping;
-        txt['muscular'].flipY = false;
-        txt['muscular'].needsUpdate = true;
-
-        txt['avatar_id'] = new THREE.Texture( p.avatar_id );
-        txt['avatar_id'].wrapS = THREE.RepeatWrapping;
-        txt['avatar_id'].flipY = false;
-        txt['avatar_id'].needsUpdate = true;
-
-        //
-
-        txt['eye_m'] = new THREE.Texture( p.eye_m );
-        txt['eye_m'].flipY = false;
-        txt['eye_m'].needsUpdate = true;
-
-        txt['eye_w'] = new THREE.Texture( p.eye_w );
-        txt['eye_w'].flipY = false;
-        txt['eye_w'].needsUpdate = true;
-
-        txt['eye_l'] = new THREE.Texture( p.eye_l );
-        txt['eye_l'].flipY = false;
-        txt['eye_l'].needsUpdate = true;
-
-
-        txt['eye_n'] = new THREE.Texture( p.eye_n );
-        txt['eye_n'].flipY = false;
-        txt['eye_n'].needsUpdate = true;
-
-        man.setTextures( txt );
-        woman.setTextures( txt );
-
-        //view.initCanvasId( p.avatar_id );
-
-    },
-
-    onLoad: function ( p ) {
+    init: function () {
 
         // shader hack
-
-        //view.shaderPush('physical', 'fragment', [ "uniform sampler2D bumpMap;", "uniform float bumpScale;" ] );
-
-        //view.uniformPush('physical', 'muscle', {  value: txt['muscular']  });
-        //view.uniformPush('physical', 'skinAlpha', {  value: 0.0  });
-
-
 
         var mapBasic = [
 
@@ -67593,398 +65625,374 @@ avatar = {
         view.shaderRemplace('basic', 'fragment', '#include <map_fragment>', mapBasic.join("\n") );
         //view.shaderRemplace('basic', 'fragment', '#include <tonemapping_fragment>', '' );
         
-        // sea meshs
-
-        var meshs = pool.meshByName ( modelName );
-
-        
-
-        /*
-        var uv = meshs.man.geometry.attributes.uv.array.length * 0.25;
-        var uv2 = meshs.woman.geometry.attributes.uv.array.length * 0.25;
-        console.log(uv, uv2)
-        */
-
-        //
-        view.reversUV( meshs.man.geometry );
-        view.reversUV( meshs.woman.geometry );
-
-        view.addVertexColor( meshs.man.geometry );
-        view.addVertexColor( meshs.woman.geometry );
-
-
-        if(isWithMorph){
-
-        	view.reversUV( meshs.man_big.geometry );
-            view.reversUV( meshs.woman_big.geometry );
-
-            view.correctMorph( 'man', meshs );
-            view.correctMorph( 'woman', meshs );
-
-        }
-        
-        // UV HACK
-   /*  
-        view.reversUV( meshs.man.geometry );
-  
-        view.reversUV( meshs.woman_big.geometry );
-        view.reversUV( meshs.man_big.geometry );
-
-        
-        //view.correctMorph( 'woman', meshs );
-        // morph hack*/
-
-        /*avatar.correctMorph('mouth_w', meshs );
-        avatar.correctMorph('mouth_m', meshs );
-        avatar.correctMorph('eye_m', meshs );
-        avatar.correctMorph('eye_w', meshs );*/
-
-        // init Model
-
-        animator = new Animator( meshs.man );
-
-        man = new V.Model( 'man', meshs, isWithMorph );
-        woman = new V.Model( 'wom', meshs, isWithMorph );
-
-
-        avatar.switchModel();
-
-        avatar.addAnimation( 'base', p.base );
-
-        isloaded = true;
-
-        avatar.loadTexture();
 
     },
-
-    loadSingle: function ( data, name, type ) {
-
-        var d = bvhLoader.parse( data );
-        name = name.substring(0, name.lastIndexOf('.') );
-        avatar.parseBvhAnimation( name, d );
-
-    },
-
-    upTexture: function () {
-
-        if( man !== null ) man.upTexture();
-        if( woman !== null ) woman.upTexture();
-
-    },
-
-    /*loadAnimation: function ( file ) {
-
-        pool.reset();
-        tmpname = file.substring( file.lastIndexOf('/')+1, file.lastIndexOf('.') );
-        pool.load( file, avatar.getCompressAnimation );
-
-    },
-
-    getCompressAnimation: function ( p ) {
-
-        //avatar.parseBvhAnimation( tmpname, bvhLoader.parse( SEA3D.File.LZMAUncompress( p[tmpname] ) ) );
-
-        avatar.parseBvhAnimation( tmpname, bvhLoader.parse(  p[tmpname]  ) );
-
-    },*/
-
-    addAnimation: function ( name, buffer ) {
-
-        avatar.parseBvhAnimation( name, bvhLoader.parse( buffer ) );
-
-    },
-
-    parseBvhAnimation: function ( name, result ){
-
-        if( animations.indexOf( name ) !== -1 ) return;
-
-        //console.log( name, result.clip.frameTime, result.clip.frames );
-
-        var leg = result.leg || 0;
-        //var manRatio = man.hipPos.y / Math.abs(leg);
-        ///var womRatio = woman.hipPos.y / Math.abs(leg);
-
-        result.clip.name = name;
-        var bvhClip = result.clip;
-        var seq = null;
-        var decale = man.hipPos.y;
-
-        if( name === 'base' ) seq = [
-
-                ['idle', 5, 25],
-
-                ['walk', 325, 355],
-                ['walk_side_r', 360, 390],
-                ['walk_diag_r', 395, 425],
-                ['walk_side_l', 430, 460],
-                ['walk_diag_l', 465, 495],
-
-                ['run', 500, 530 ],
-                ['run_side_r', 535, 565 ],
-                ['run_diag_r', 570, 600 ],
-                ['run_side_l', 605, 635 ],
-                ['run_diag_l', 640, 670 ],
-
-                ['crouch', 675, 705],
-                ['crouch_side_r', 710, 740 ],
-                ['crouch_diag_r', 745, 775 ],
-                ['crouch_side_l', 780, 810 ],
-                ['crouch_diag_l', 815, 845 ],
-
-            ]
-
-        animator.reset();
-        bvhLoader.applyToModel( animator.mesh, bvhClip, animator.poseMatrix, seq, leg );
-
-
-
-        man.reset();
-        woman.reset();
-
-        //man.stop();
-        //woman.stop();
-
-        bvhLoader.applyToModel( man.mesh, bvhClip, man.poseMatrix, seq, leg );
-        bvhLoader.applyToModel( woman.mesh, bvhClip, woman.poseMatrix, seq, leg );
-
-        if( seq !== null ){  
-            avatar.play( seq[0][0] )
-            for( var i=0; i<seq.length; i++ ){ 
-                animations.push( seq[i][0] );
-                gui.addAnim( seq[i][0] );
-            }
-        } else { 
-            avatar.play( name );
-            animations.push( name );
-            gui.addAnim( name );
-        }
-
-    },
-
-    lockHip: function ( b ) {
-
-        model.lockHip( b );
-
-    },
-
-    addSkeleton: function ( b ) {
-
-        model.addSkeleton( b );
-
-    },
-
-    getModel: function (){
-
-        return model;
-
-    },
-
-    addHelper: function ( b ) {
-
-        isHelper = true;
-
-        center = new THREE.Mesh( new THREE.CircleGeometry(25), new THREE.MeshBasicMaterial({ color:0x00FF00, wireframe:true }) );
-        center.geometry.applyMatrix( new THREE.Matrix4().makeRotationX( -Math.PI*0.5 ) );
-        view.getScene().add( center );
-
-    },
-
-    switchModel: function () {
-
-        //model.switchGender();
-
-        if( model !== null ) model.removeFromScene( scene );
-
-        if( isMan ){
-
-            isMan = false;
-            model = woman;
-            model.addToScene( scene );
-
-        } else {
-
-            isMan = true;
-            model = man;
-            model.addToScene( scene );
-
-        }
-
-        avatar.setTimescale();
-
-        if( view.getMode() === 'bones' ) gui.bones();
-
-        if( currentPlay ) avatar.play( currentPlay );
-
-    },
-
-    correctMorph: function (  name, meshs  ) {
-        
-        for( var i=0; i < morphs.length; i++ ) {
-
-            meshs[name].geometry.morphAttributes.position[i].array = meshs[name+'_'+morphs[i]].geometry.attributes.position.array;
-            meshs[name].geometry.morphAttributes.normal[i].array = meshs[name+'_'+morphs[i]].geometry.attributes.normal.array;
-
-        }
-
-
-    },
-
-    getTimescale: function () {
-
-        return timescale;
-
-    },
-
-    setTimescale: function ( v ) {
-
-        if( v !== undefined ) timescale = v;
-        model.setTimescale( timescale );
-
-    },
-
-    getAnimations: function () {
-
-        return animations;
-
-    },
-
-    pause: function () {
-        
-        model.mesh.pauseAll();
-
-    },
-
-    unPause: function () {
-
-        model.mesh.unPauseAll();
-
-    },
-
-    playOne: function ( f ) {
-
-        var offset = f * frameTime;
-
-        model.mesh.play( currentPlay, 0, offset, 1 );
-        model.mesh.pauseAll();
-
-
-    },
-
-    play: function ( name, crossfade, offset, weight ) {
-
-        if(!model) return;
-
-        //animator.stop();
-        //animator.mesh.unPauseAll();
-        //animator.mesh.play( name, crossfade, offset, weight );
-
-        model.stop();
-        model.mesh.unPauseAll();
-        model.mesh.play( name, crossfade, offset, weight );
-
-        gui.inPlay();
-
-        //var anim = model.mesh.animations
-        //console.log(anim)
-        currentPlay = name;
-
-        avatar.getAnimationInfo( name );
-
-    },
-
-    update: function ( delta ) {
-
-        if( !isloaded ) return;
-
-        //THREE.SEA3D.AnimationHandler.update( 0.007 );
-        THREE.SEA3D.AnimationHandler.update( delta );
-
-        model.update();
-
-        if( isHelper ){ 
-            center.position.copy( model.getHipPos() );
-            center.position.y = 0;
-        }
-
-        gui.updateTime( model.getTime() );
-
-    },
-
-    getAnimationInfo: function ( name ) {
-
-        var i = model.mesh.animations.length, n, anim;
-        while(i--){
-
-            n = model.mesh.animations[i];
-            if( n.name === name ) anim = n;
-
-        }
-
-        if( anim ){ 
-
-            frameTime = anim.clip.frameTime;
-            
-            var duration = anim.clip.duration;
-            var frame = Math.round( duration / frameTime );
-             //console.log( duration, frame );
-
-            gui.setTotalFrame( frame, frameTime );
-            
-        }
-
-
-
-    },
-
 
 
 }
 
-return avatar;
+return shader;
 
 })();
+var Model = function ( type, meshs, morph ) {
 
-var Animator = function ( mesh ){
+    if( morph === undefined ) morph = false;
 
-    //this.skeleton = mesh.skeleton;
-    //this.bones = this.skeleton.bones;
+    this.geoms = {
+        man: meshs.man.geometry.clone(),
+        woman: meshs.woman.geometry.clone(),
+    }
 
-    this.mesh = mesh.clone();///new THREE.SEA3D.SkinnedMesh( new THREE.PlaneBufferGeometry() );
-    //this.mesh.skeleton = mesh.skeleton;
+    this.settings = {
+
+        type:'Standard',
+        muscles: 0.1,
+        metalness: 0.1,
+        roughness: 0.4,
+        skinAlpha:0.1,
+        oamap: 1,
+        lightmap:1,
+        shininess:60,
+        opacity:1,
+
+    };
+
+    this.colorBonesName = {
+
+        '0x000000': 'root', '0x1600e3': 'hip', '0x2600d8': 'abdomen', '0x86005e': 'chest', '0x880053': 'neck', '0xcb001d': 'head',
+        '0x0018ff': 'rThigh', '0x0014ff': 'rShin', '0x0015ff': 'rFoot', '0x0013ff': 'rToe',
+        '0x1818e7': 'lThigh', '0x1414eb': 'lShin', '0x1515ec': 'lFoot', '0x1313ee': 'lToe',
+        '0x0022ff': 'rCollar', '0x0020ff': 'rShldr', '0x001eff': 'rForeArm', '0x005dff': 'rHand',
+        '0x2222dd': 'lCollar', '0x2020df': 'lShldr', '0x1e1ee1': 'lForeArm', '0x5d5da4': 'lHand',
+        
+        '0x3e3ec1': 'lfinger00', '0x4343be': 'lfinger01', '0x4141c0': 'lfinger02',
+        '0x003eff': 'rfinger00', '0x0043ff': 'rfinger01', '0x0041ff': 'rfinger02',
+        '0x5454ab': 'lfinger10', '0x0056ff': 'rfinger11', '0x0058ff': 'rfinger12',
+        '0x0054ff': 'rfinger10', '0x5656a9': 'lfinger11', '0x5858a7': 'lfinger12',
+        '0x4e4eb1': 'lfinger20', '0x5050af': 'lfinger21', '0x0052ff': 'rfinger22',
+        '0x004eff': 'rfinger20', '0x0050ff': 'rfinger21', '0x5252ad': 'lfinger22',
+        '0x4848b7': 'lfinger30', '0x4a4ab5': 'lfinger31', '0x4c4cb3': 'lfinger32',
+        '0x0048ff': 'rfinger30', '0x004aff': 'rfinger31', '0x004cff': 'rfinger32',
+        '0x4242bd': 'lfinger40', '0x4444bb': 'lfinger41', '0x4646b9': 'lfinger42',
+        '0x0042ff': 'rfinger40', '0x0044ff': 'rfinger41', '0x0046ff': 'rfinger42',
+        
+    };
+
+    this.ref = meshs;
+
+    this.isFirst = true;
+
+    this.isSkin = false;
+    //this.isHelper = false;
+    this.debug = false;
+    this.isLockHip = true;
+    this.isSkeleton = false;
+
+    this.center = null;
+
+    this.preTime = 0;
+
+    this.f = 0;
+
+    this.breath = 0;
+    this.breathSide = -1;
+
+    this.frame = 0;
+    this.frameMax = 0;
+    this.frameTime = 0;
+    this.currentPlay = '';
+
+    this.isPlay = false;
+
+    this.txt = null;
+    this.type = type;
+
+    this.mats = [];
+
+    this.position = new THREE.Vector3();
+
+    this.skell = null;
+
+    var tSize = 1.4;
+
+    var torad = 0.0174532925199432957;
+
+    this.hipPos = new THREE.Vector3();
+
+    this.mesh = type === 'man' ? meshs.man.clone() : meshs.woman.clone();
+    this.mesh.name = type;
+
+    this.mtx = new THREE.Matrix4();
+    this.matrixWorldInv = new THREE.Matrix4().getInverse( this.mesh.matrixWorld );
 
     this.bones = this.mesh.skeleton.bones;
 
-    this.poseMatrix = [];
-    this.b = {};
+    var i, name, bone, lng = this.bones.length, v;
 
-    var lng = this.bones.length;
-    var bone, name, i;
-    var p = new THREE.Vector3();
+    this.poseMatrix = [];
+    this.bonesNames = [];
+    this.b = {};
 
     for( i=0; i<lng; i++){
 
+        v = new THREE.Vector3( 1, 1, 1 );
         bone = this.bones[i];
         name = bone.name;
-        //bone.name = name;
+        bone.name = name;
+
+        if( this.type !== 'man' ){
+
+            if(name === 'lCollar' || name === 'rCollar') v = new THREE.Vector3( 0.9, 1, 1 );
+            if(name === 'lShldr'  || name === 'rShldr' ) v = new THREE.Vector3( 0.96, 1, 1 );
+            if(name === 'lForeArm' || name === 'rForeArm') v = new THREE.Vector3( 0.96, 1, 1 );
+            if(name === 'lHand' || name === 'rHand') v = new THREE.Vector3( 0.95, 0.95, 0.95 );
+            if(name.substring(0,2) === 'lf' || name.substring(0,2) === 'rf') v = new THREE.Vector3( 0.95, 1, 1 );
+
+            
+        // hand
+
+        }
+
+        if(name === 'abdomen' || name === 'chest') v = new THREE.Vector3( 1, 1, 1 );
+
+        if(v!==null) bone.scalling = v;
+
 
         this.b[ name ] = bone;
+        this.bonesNames.push( name );
         this.poseMatrix[i] = bone.matrixWorld.clone();
 
-        if( name === 'hip' ) p.setFromMatrixPosition( this.poseMatrix[i] );
+
+
+        if(name === 'hip') this.hipPos.setFromMatrixPosition( this.poseMatrix[i] );
 
     }
 
-    this.mesh.userData.posY = p.y;
+    this.mesh.userData.posY = this.hipPos.y;
 
-    this.mesh.geometry.dispose();
+    this.geometry = this.mesh.geometry;
 
-    //console.log( this.py );
+    //console.log(this.mesh)
 
-    //this.reset()
+    //this.mesh.setWeight("big", 0.5 );
+
+    this.isWithMorph = morph || false;
+
+    if( this.isWithMorph ) this.mesh.morphTargetInfluences[0] = 1;
+
+    //console.log( this.hipPos )
+    this.headBoneRef = this.b.head.rotation;
+
+    this.eyeTarget = new THREE.Group();//AxisHelper(1);
+    this.eyeTarget.position.set(-3.54, 0, -10);
+
+    this.eyes = new THREE.Group();
+
+    this.eye_l = meshs.eye_left.clone();
+    this.eye_r = meshs.eye_right.clone();
+
+    this.eyes.add( this.eye_l );
+    this.eyes.add( this.eye_r );
+    this.eyes.add( this.eyeTarget );
+
+    //this.b.head.add( this.eyes );
+
+    //this.eyes.matrixWorld = this.b.head.matrixWorld;
+
+    this.eyes.matrix = this.b.head.matrixWorld;
+    this.eyes.matrixAutoUpdate = false;
+
+    this.root = new THREE.Group();
+
+    this.root.add( this.eyes );
+
+    this.setMaterial();
+
+    this.mesh.position.copy( this.position );
 
 }
 
-Animator.prototype = {
+
+Model.prototype = {
+
+    removeTo: function( Scene ){
+
+        this.removeSkeleton();
+
+        Scene.remove( this.mesh );
+        Scene.remove( this.root );
+
+        this.isFull = false;
+
+    },
+
+    addTo: function ( Scene ){
+
+        if( this.isSkeleton ) this.addSkeleton();
+
+        Scene.add( this.mesh );
+        Scene.add( this.root );
+
+        this.isFull = true;
+
+    },
+
+    // --------------------------
+    // HELPER
+    // --------------------------
+
+    addHelper: function ( b ) {
+
+        this.center = new THREE.Mesh( new THREE.CircleGeometry(25), new THREE.MeshBasicMaterial({ color:0x00FF00, wireframe:true }) );
+        this.center.geometry.applyMatrix( new THREE.Matrix4().makeRotationX( -Math.PI*0.5 ) );
+        this.root.add( this.center );
+
+    },
+
+    // --------------------------
+    // SKELETON BOX
+    // --------------------------
+
+    showSkeleton: function ( b ) {
+
+        if( b ) this.addSkeleton();
+        else this.removeSkeleton();
+        //this.isSkeleton = b;
+
+    },
+
+    removeSkeleton: function () {
+
+        if( this.skell === null ) return;
+
+        var i = this.skell.children.length;
+        while(i--) this.skell.remove( this.skell.children[i] );
+        this.root.remove( this.skell );
+        this.skell = null;
+
+    },
+
+    addSkeleton: function () {
+
+        if( this.skell !== null ) return;
+
+        var ignor = [ 
+            'rThigh', 'lThigh', 'hip', 'rCollar', 'lCollar',
+            'rfinger40', 'rfinger30', 'rfinger00', 'rfinger10',
+            'lfinger40', 'lfinger30', 'lfinger00', 'lfinger10',
+        ]
+
+        this.skell = new THREE.Group();
+        this.root.add( this.skell );
+
+        var p1 = new THREE.Vector3();
+        var p2 = new THREE.Vector3();
+
+        var geo = new THREE.BoxBufferGeometry( 1, 1, 1 );
+        var mat = new THREE.MeshBasicMaterial( { color:0xFFFFFF, wireframe:true, depthTest: true, depthWrite: true } );
+
+        this.meshBones = [];
+
+        var bones = this.bones, bone, mesh, lng, name;
+
+        for ( var i = 0; i < bones.length; i ++ ) {
+
+            bone = this.bones[i];
+            name = bone.name;
+
+            if ( bone.parent && bone.parent.isBone ){
+                if ( ignor.indexOf(name) === -1 ){
+
+                    p1.setFromMatrixPosition( bone.parent.matrixWorld );
+                    p2.setFromMatrixPosition( bone.matrixWorld );
+
+                    lng = p1.distanceTo( p2 );
+
+                    mesh = new THREE.Mesh( geo, mat );
+                    mesh.userData.lng = lng;
+                    mesh.name = bone.parent.name;
+
+                    if(name.substring(0,2) !== 'lf' && name.substring(0,2) !== 'rf'){
+
+                        mesh.scale.y = 2;
+                        mesh.scale.z = 2;
+                        
+                    } else {
+                        mesh.scale.y = 0.5;
+                        mesh.scale.z = 0.5;
+                    }
+
+                    if( mesh.name==='rHand' || mesh.name==='lHand' ){
+                        mesh.scale.y = 2;
+                        mesh.scale.y = 3;
+                    }
+
+                    if( mesh.name==='head' ){
+                        mesh.scale.y = 5;
+                        mesh.scale.z = 5;
+                    }
+
+                    if( mesh.name==='hip' || mesh.name==='abdomen' || mesh.name==='chest' ){
+                        mesh.scale.y = 10;
+                        mesh.scale.z = 5;
+                    }
+
+                    if( mesh.name==='rCollar' || mesh.name==='lCollar' || mesh.name==='rShldr' || mesh.name==='lShldr' ){
+                        mesh.scale.y = 3;
+                        mesh.scale.z = 3;
+                    }
+
+                    if( mesh.name==='rThigh' || mesh.name==='lThigh' ){
+                        mesh.scale.y = 4;
+                        mesh.scale.z = 4;
+                    }
+                    if( mesh.name==='rShin' || mesh.name==='lShin' ){
+                        mesh.scale.y = 3;
+                        mesh.scale.z = 3;
+                    }
+                    if( mesh.name==='lFoot' || mesh.name==='rFoot' || mesh.name==='lToe' || mesh.name==='rToe' ){
+                        mesh.scale.y = 3;
+                        mesh.scale.z = 2;
+                    }
+
+                    this.skell.add( mesh );
+                    bone.userData.mesh = mesh;
+
+                }
+
+            }
+
+        }
+
+
+    },
+
+    // --------------------------
+    // ANIMATION
+    // --------------------------
+
+    update: function ( delta ){
+
+        THREE.SEA3D.AnimationHandler.update( delta );
+
+        this.getAnimInfo();
+        this.breathing();
+        this.look();
+
+        if( this.isLockHip ){ 
+            //this.b.hip.position.x = 0;
+            this.b.hip.position.z = 0;
+            this.b.hip.position.y = 0;
+        }
+
+        if( this.center !== null ){ 
+            this.center.position.copy( this.getHipPos() );
+            this.center.position.y = 0;
+        }
+
+        if( gui ) gui.updateTimeBarre( this );
+
+    },
 
     reset:function(){
 
@@ -68001,92 +66009,2153 @@ Animator.prototype = {
 
     },
 
+    setTimescale: function ( v ) {
+
+        this.mesh.setTimeScale( v );
+
+    },
+
     stop: function (){
 
         this.mesh.stopAll();
+        this.isPlay = false;
 
     },
 
     play: function ( name, crossfade, offset, weight ){
 
+        this.unPause();
         this.mesh.play( name, crossfade, offset, weight );
 
     },
 
-}
+    playOne: function ( f ) {
 
+        var offset = f * this.frameTime;
+        this.mesh.play( this.currentPlay, 0, offset, 1 );
+        this.pause();
 
+    },
 
-/*var animator = ( function () {
+    pause: function () {
 
-'use strict';
+        this.mesh.pauseAll();
+        this.isPlay = false;
 
+    },
 
-animator = {
+    unPause: function () {
 
-    skeleton: null,
-    bones: null,
+        this.mesh.unPauseAll();
+        this.isPlay = true;
 
-    poseMatrix: [],
-    b: {},
+    },
 
-    py:0,
+    getTime: function () {
 
+        return this.mesh.currentAnimationAction ? this.mesh.currentAnimationAction.time : false;
 
-    init: function ( mesh ) {
+    },
 
-        this.skeleton = mesh.skeleton;
-        this.bones = skeleton.bones;
+    breathing: function () {
 
-        var lng = this.bones.length;
-        var bone, name, i;
-        var p = new THREE.Vector3();
+        if( this.b.chest && this.b.abdomen ){
 
-        for( i=0; i<lng; i++){
+            if(this.breathSide > 0){
+                this.b.chest.scalling.z = Math.lerp (1,1.04, this.breath*0.05);
+                this.b.chest.scalling.y = Math.lerp (1,1.02, this.breath*0.05);
+                this.b.abdomen.scalling.z = Math.lerp (1,0.92, this.breath*0.05);
+            }else{
+                this.b.chest.scalling.z = Math.lerp (1.04,1, this.breath*0.05);
+                this.b.chest.scalling.y = Math.lerp (1.02,1, this.breath*0.05);
+                this.b.abdomen.scalling.z = Math.lerp (0.92,1, this.breath*0.05);
+            }
 
-            bone = this.bones[i];
-            name = bone.name;
-            //bone.name = name;
+            this.breath ++;
 
-            this.b[ name ] = bone;
-            this.poseMatrix[i] = bone.matrixWorld.clone();
+            if( this.breath === 20 ){ this.breath = 0; this.breathSide = this.breathSide > 0 ? -1:1; }
+        }
 
-            if( name === 'hip' ) this.p.setFromMatrixPosition( this.poseMatrix[i] );
+    },
+
+    look: function () {
+
+        var v = view.getMouse();
+
+        if( this.isPlay ) this.b.head.rotation.set( this.headBoneRef.x-(((v.x*6))*Math.torad), this.headBoneRef.y+(((v.y*6)+4)*Math.torad), this.headBoneRef.z);
+        
+        this.eyeTarget.position.set(-3.54+(-v.y*3), (-v.x*3), -10);
+        this.eye_l.lookAt( this.eyeTarget.position.clone().add(new THREE.Vector3(0,-1.4,0)) );
+        this.eye_r.lookAt( this.eyeTarget.position.clone().add(new THREE.Vector3(0,1.4,0)) );
+
+    },
+
+    
+    getAnimInfo: function (){
+
+        var anim = this.mesh.currentAnimation;
+        //var anim = this.mesh.currentAnimationAction;
+
+        if( !anim ){
+
+            this.frame = 0;
+            this.frameMax = 0;
+            this.currentPlay = '';
+
+        } else {
+
+            this.frameTime = anim.clip.frameTime;
+            var f = 1 / this.frameTime;
+            this.frame = Math.round( this.mesh.currentAnimationAction.time * f );
+            this.frameMax = Math.round( anim.clip.duration * f );
+            this.currentPlay = anim.name;
 
         }
 
-        this.py = p.y;
+    },
 
-        console.log( this.py );
+    getHipPos: function () {
+
+        return this.b.hip.getWorldPosition();
+
+    },
+
+    setPosition: function ( pos ) {
+
+        this.mesh.position.copy( this.position );
+
+    },
+
+    setDebug: function ( b ) {
+
+        this.debug = b;
+        this.addHelper( this.debug );
+
+        var i = this.mats.length;
+        while( i-- ) this.mats[i].wireframe = this.debug;
+        
+    },
+
+    // --------------------------
+    // MATERIAL
+    // --------------------------
+
+    swapMaterial: function ( b ){
+
+        if(b){ 
+            this.mesh.material = this.mats[2];
+            this.mats[1].visible = false;
+        } else {
+            this.mesh.material = this.mats[0];
+            this.mats[1].visible = true;
+        }
+
+    },
+
+    updateMaterial: function (){
+
+        this.mats[0].needsUpdate = true;
+        this.mats[1].needsUpdate = true;
+        this.mats[2].needsUpdate = true;
+
+    },
+
+    setEnvmap: function () {
+
+        this.mats[0].envMap = view.getEnvmap();
+        this.mats[1].envMap = view.getEnvmap();
+
+    },
+
+    setMaterial: function( name ){
+
+        var set = this.settings, m, i;
+
+        if( name !== undefined ) set.type = name;
+        var mtype = 'Mesh' + set.type + 'Material';
+
+        i = this.mats.length;
+        while(i--) this.mats[i].dispose();
+        
+
+        // define new material type
+        this.mats = [ new THREE[ mtype ](), new THREE[ mtype ](), new THREE.MeshBasicMaterial() ];
+
+        m = this.mats[0];
+
+        if( m.normalScale !== undefined ) m.normalScale = new THREE.Vector2( set.muscles, set.muscles );
+        if( m.lightMapIntensity !== undefined ) m.lightMapIntensity = set.lightmap;
+        if( m.aoMapIntensity !== undefined ) m.aoMapIntensity = set.oamap;
+        if( m.metalness !== undefined ) m.metalness = set.metalness;
+        if( m.roughness !== undefined ) m.roughness = set.roughness;
+        if( m.shininess !== undefined ) m.shininess = set.shininess;
+        if( m.bumpScale !== undefined ) m.bumpScale = set.skinAlpha;
+        if( m.opacity !== undefined ) m.opacity = set.opacity;
+        if( m.transparent !== undefined ) m.transparent = true;
+        
+        //if( m.alphaTest !== undefined ) m.alphaTest = 0.9;
+        
+    
+        if( m.skinning !== undefined ) m.skinning = true;
+        if( ( m.morphTargets !== undefined) && this.isWithMorph ) m.morphTargets = true;
+
+        m = this.mats[1];
+
+        if( m.normalScale !== undefined ) m.normalScale = new THREE.Vector2( 0.5, 0.5 );
+        if( m.metalness !== undefined ) m.metalness = 0.5;
+        if( m.roughness !== undefined ) m.roughness = 0.1;
+
+        // apply material
+        this.mesh.material = this.mats[0];
+        this.eyes.children[0].material = this.mats[1];
+        this.eyes.children[1].material = this.mats[1];
+
+        m = this.mats[2];
+        m.skinning = true;
+
+    },
+
+    setTextures: function ( txt ) {
+
+        this.txt = txt;
+
+        var m = this.mats[0];
+
+        if( m.map !== undefined ) m.map = this.txt.avatar_c;
+        if( m.envMap !== undefined ) m.envMap = view.getEnvmap();
+        if( m.alphaMap !== undefined ) m.alphaMap = this.type === 'man' ? this.txt.avatar_skin_n_m : this.txt.avatar_skin_n_w;
+        if( m.normalMap !== undefined ) m.normalMap = this.type === 'man' ? this.txt.avatar_n_m : this.txt.avatar_n_w;
+        if( m.lightMap !== undefined ) m.lightMap = this.type === 'man' ? this.txt.avatar_l_m : this.txt.avatar_l_w;
+        if( m.aoMap !== undefined ) m.aoMap = this.txt.avatar_ao;
+        if( m.bumpMap !== undefined ) m.bumpMap = this.txt.muscular;
+
+        m = this.mats[1];
+
+        if( m.map !== undefined ) m.map = this.type === 'man' ? this.txt.eye_m : this.txt.eye_w;
+        if( m.envMap !== undefined ) m.envMap = view.getEnvmap();
+        if( m.normalMap !== undefined ) m.normalMap = this.txt.eye_n;
+        if( m.lightMap !== undefined ) m.lightMap = this.txt.eye_l;
+
+        m = this.mats[2];
+        m.map = this.txt.avatar_id;
+
+        this.updateMaterial();
+
+    },
+
+    updateSetting: function(){
+
+        var set = this.settings;
+        var m = this.mats[0];
+
+        if( m.normalScale !== undefined ) m.normalScale.set( set.muscles, set.muscles );
+        if( m.aoMapIntensity !== undefined ) m.aoMapIntensity = set.oamap;
+        if( m.lightMapIntensity !== undefined ) m.lightMapIntensity = set.lightmap;
+        if( m.metalness !== undefined ) m.metalness = set.metalness;
+        if( m.roughness !== undefined ) m.roughness = set.roughness;
+        if( m.bumpScale !== undefined ) m.bumpScale = set.skinAlpha;
+        if( m.shininess !== undefined ) m.shininess = set.shininess;
+        if( m.opacity !== undefined ) m.opacity = set.opacity;
+
+    },
+
+
+    // --------------------------
+    // BONES
+    // --------------------------
+
+    setScale: function ( axe, v ){
+
+        if(this.boneSelect===null) return;
+        this.boneSelect.scale[ axe ] = v;
+
+    },
+
+    setScalling: function ( axe, v ){
+
+        if(this.boneSelect===null) return;
+        this.boneSelect.scalling[ axe ] = v;
+
+    },
+
+    hideBones: function () {
+
+        this.boneSelect = null;
+        this.mats[0].vertexColors = THREE.NoColors;
+        this.mats[0].needsUpdate = true
+
+    },
+
+    showBones: function ( color ) {
+
+        var i, lng, n, n4, w0, w1, w2, w3, x, id, existe = false;
+
+        var name = this.colorBonesName[ color ];
+
+        if( color === '0x1100e5' ){
+            if( this.type === 'man' ) name = 'hip';
+            else name = 'chest'; 
+        }
+
+        if( this.b[name] !== undefined ) existe = true;
+        if( name === 'root' ) existe = false
+
+        if( !existe ){
+            this.hideBones();
+            return;}
+    
+        this.boneSelect = this.b[name];
+        id = this.bones.indexOf( this.boneSelect );
+        this.mats[0].vertexColors = THREE.VertexColors;
+        this.mats[0].needsUpdate = true;
+        
+        if(gui) gui.setBones( name, id, this.boneSelect.scalling );
+
+        // update vertex color
+
+        var colors = this.geometry.attributes.color.array;
+        var index = this.geometry.attributes.skinIndex.array;
+        var weight = this.geometry.attributes.skinWeight.array;
+
+        lng = colors.length;
+
+        for( i = 0; i<lng; i++){
+
+            n = i*3
+            n4 = i*4;
+
+            w0 = index[n4] === id ? weight[n4] : 0;
+            w1 = index[n4+1] === id ? weight[n4+1] : 0;
+            w2 = index[n4+2] === id ? weight[n4+2] : 0;
+            w3 = index[n4+3] === id ? weight[n4+3] : 0;
+
+            x = w0+w1+w2+w3;
+
+            colors[n] = 1;
+            colors[n+1] =  1-x;
+            colors[n+2] =  1-x;
+
+        }
+
+        this.geometry.attributes.color.needsUpdate = true;
+
+    },
+
+}
+var view = ( function () {
+
+'use strict';
+
+var renderer, scene, camera, controler, transformer, clock, plane, materialShadow, ambient, light, debug, follow, mouse, pixel, raycaster, content;
+var grid = null, capturer = null;
+var vs = { w:1, h:1, mx:0, my:0 };
+var t = { now:0, delta:0, then:0, inter:0, tmp:0, n:0 };
+var isCaptureMode = false;
+var isCapture = false;
+var isDown = false;
+var pixels, pixelsLength;
+var pickingTexture = null, mouseBase;
+var endPos, startPos;
+
+// extra envmap
+var ballScene, ballCamera, ballTexture, ball, skymin;
+var envmap, sky;
+
+var mode = 'normal';
+
+var setting = {
+
+    gammaInput: true,
+    gammaOutput: true,
+
+    // toneMapping
+    exposure: 2.2,
+    whitePoint: 2.2,
+    tone: "Uncharted2",
+
+};
+
+var toneMappings;
+
+view = {
+
+    framerate: 60,
+
+    pixelRatio : 1,
+
+    isMobile: false,
+    isShadow: false,
+    isGrid: false,
+    videoSize: [1920/3,1080/3],
+
+    update: function (  ) {
+
+        var delta = clock.getDelta();
+        if( main.model ) main.model.update( delta );
+        
+    },
+
+    render: function () {
+
+        requestAnimationFrame( view.render );
+
+        TWEEN.update();
+
+        t.now = ( typeof performance === 'undefined' ? Date : performance ).now();
+        t.delta = t.now - t.then;
+
+        if ( t.delta > t.inter ) {
+
+            t.then = t.now - ( t.delta % t.inter );
+
+            view.update( t.delta );
+
+            renderer.render( scene, camera );
+
+            if( isCapture ) capturer.capture( renderer.domElement );
+
+            if ( t.now - 1000 > t.tmp ){ 
+                t.tmp = t.now; 
+                debug.innerHTML = t.n;
+                t.n = 0;
+            }
+
+            t.n++;
+
+        }
+
+    },
+
+    resize: function ( e, w, h ) {
+
+        vs.w = window.innerWidth;
+        vs.h = window.innerHeight;
+
+        w = w || vs.w;
+        h = h || vs.h;
+
+        renderer.setSize( w, h );
+
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+
+        if( pickingTexture !== null ) pickingTexture.setSize( Math.floor(w*0.5),  Math.floor(h*0.5) );
+
+        if( gui ) gui.resize();
+
+    },
+
+    setFramerate: function ( n ) {
+
+        view.framerate = n; 
+        t.inter = 1000 / view.framerate;
+
+    },
+
+    // MOUSE EVENT
+
+    up: function ( e ) {
+
+        e.preventDefault();
+
+        isDown = false;
+
+        if(startPos===undefined) return;
+
+        endPos = view.getCurrentPosition();
+
+        var ax = Math.abs( startPos.polar - endPos.polar );
+        var ay = Math.abs( startPos.azim - endPos.azim );
+
+        if( ax < 5 && ay < 5 ){
+
+        	view.findMouse( e );
+        	var color = view.pick();
+        
+        }
+
+        
+        //view.rayTest();
+
+
+    },
+
+    down: function ( e ) {
+
+        e.preventDefault();
+        isDown = true;
+        startPos = view.getCurrentPosition();
+
+
+        view.findMouse( e );
+
+        //view.rayTest();
+
+    },
+
+    move: function ( e ) {
+
+        e.preventDefault();
+        view.findMouse( e );
+        //view.rayTest();
+
+    },
+
+    findMouse: function ( e ) {
+
+        if ( e.changedTouches ) {
+
+            mouseBase.x = e.changedTouches[ 0 ].pageX;
+            mouseBase.y = e.changedTouches[ 0 ].pageY;
+
+        } else {
+
+            mouseBase.x = e.clientX;
+            mouseBase.y = e.clientY;
+
+        }
+
+        mouse.set( ( mouseBase.x / vs.w ) * 2 - 1, - ( mouseBase.y / vs.h ) * 2 + 1 );
+
+    },
+
+    rayTest: function () {
+
+        raycaster.setFromCamera( mouse, camera );
+        var hits = raycaster.intersectObjects( content.children, true ), name, uv, x;
+
+        if( hits.length > 0 ){
+
+            name = hits[0].object.name;
+
+            if(name === 'man' || name ==='wom' ){
+
+                uv = hits[ 0 ].uv;
+                x =  Math.round(512*uv.x);
+                if(x<0) x = x+512;
+                pixel.set( x, Math.round(512*uv.y) );
+
+                var color = view.getPixelValue( pixel );
+
+                main.model.showBones( color );
+
+                console.log(pixel, color)
+
+            }
+
+            //console.log(name)
+
+            /*rayControl.position.copy( hits[0].point );
+            var n = hits[ 0 ].face.normal.clone();
+            n.multiplyScalar( 10 );
+            n.add( hits[ 0 ].point );
+            rayControl.lookAt( n );*/
+
+        }
+    
+    },
+
+    initPickScene: function () {
+
+    	//pickingScene = new THREE.Scene();
+		pickingTexture = new THREE.WebGLRenderTarget( Math.floor(vs.w*0.5),  Math.floor(vs.h*0.5) );
+		pickingTexture.texture.minFilter = THREE.LinearFilter;
+
+    },
+
+    pick: function () {
+
+    	if(mode!=='bones') return;
+
+    	if( pickingTexture === null ) view.initPickScene();
+
+    	var model = main.model;
+
+    	model.swapMaterial(true);
+    	plane.visible = false;
+    	renderer.render( scene, camera, pickingTexture );
+    	plane.visible = true;
+    	model.swapMaterial(false);
+
+    	var pixelBuffer = new Uint8Array( 4 );
+    	renderer.readRenderTargetPixels( pickingTexture,  Math.floor(mouseBase.x*0.5), Math.floor(vs.h*0.5) -  Math.floor(mouseBase.y*0.5), 1, 1, pixelBuffer );
+    	var color = Math.rgbToHex( pixelBuffer );
+
+    	model.showBones( color );
+
+    	return color;
+
+    },
+
+    // SET
+
+    setMode: function ( Mode ) { 
+    	if( mode === 'bones' && mode !== Mode ) main.model.hideBones();
+    	mode = Mode;
+    },
+
+    // GET
+    getMode: function () { return mode; },
+    getRenderer: function () { return renderer; },
+    getControler: function () { return controler; },
+    getCamera: function () { return camera; },
+    getScene: function () { return scene; },
+    getContent: function () { return content; },
+    getMouse: function () { return mouse; },
+
+    getSetting: function () { return setting; },
+
+    
+
+    init: function ( container ) {
+
+        mouse = new THREE.Vector2();
+        mouseBase = new THREE.Vector2();
+        pixel = new THREE.Vector2();
+        raycaster = new THREE.Raycaster();
+
+        toneMappings = {
+            None: THREE.NoToneMapping,
+            Linear: THREE.LinearToneMapping,
+            Reinhard: THREE.ReinhardToneMapping,
+            Uncharted2: THREE.Uncharted2ToneMapping,
+            Cineon: THREE.CineonToneMapping
+        };
+
+        clock = new THREE.Clock();
+
+        t.then = ( typeof performance === 'undefined' ? Date : performance ).now();
+        t.inter = 1000 / this.framerate;
+
+        this.testMobile();
+
+        vs.w = window.innerWidth;
+        vs.h = window.innerHeight;
+
+        //renderer = new THREE.WebGLRenderer({ precision: "mediump", antialias:false, alpha: this.isMobile ? false : true });
+
+        renderer = new THREE.WebGLRenderer({ precision: "highp", antialias: this.isMobile ? false : true, alpha: this.isMobile ? false : true });
+
+        view.pixelRatio = 1;//window.devicePixelRatio;//this.isMobile ? 0.5 : window.devicePixelRatio;
+        renderer.setPixelRatio( view.pixelRatio );
+        renderer.setSize( vs.w, vs.h );
+        container.appendChild( renderer.domElement );
+
+        view.setTone();
+
+        debug = document.createElement('div');
+        debug.className = 'debug';
+        container.appendChild( debug );
+
+        scene = new THREE.Scene();
+
+        camera = new THREE.PerspectiveCamera( 50, vs.w / vs.h , 1, 2000 );
+        camera.position.set( 0, 50, 400 );
+        controler = new THREE.OrbitControls( camera, renderer.domElement );
+        controler.target.set( 0, 40, 0 );
+        controler.enableKeys = false;
+        controler.update();
+
+        content = new THREE.Group();
+        scene.add( content );
+
+        follow = new THREE.Group();
+        scene.add( follow );
+
+        //transformer = new THREE.TransformControls( camera, renderer.domElement );
+        //scene.add( transformer );
+
+        if( this.isMobile ) renderer.setClearColor( 0x333333, 1 );
+        else renderer.setClearColor( 0x000000, 0 );
+
+        window.addEventListener( 'resize', this.resize, false );
+
+        var dom = renderer.domElement;
+
+        dom.addEventListener( 'mousedown', view.down, false );
+        dom.addEventListener( 'mouseup', view.up, false );
+        dom.addEventListener( 'mousemove', view.move, false );
+
+        dom.addEventListener( 'touchstart', view.down, false );
+        dom.addEventListener( 'touchend', view.up, false );
+        dom.addEventListener( 'touchmove', view.move, false );
+
+        //this.addGrid();
+        this.addLight();
+        this.addShadow( this.isMobile ? false : true );
+
+        requestAnimationFrame( this.render );
+
+        this.autoRotate( { distance:100, polar:75, azim:15 } );
+
+    },
+
+    setPixelRatio: function (b) {
+
+        if(b){
+            view.pixelRatio = 0.5;
+        } else {
+            view.pixelRatio = 1;
+        }
+
+        renderer.setPixelRatio( view.pixelRatio );
+
+    },
+
+    // GRID
+
+    addGrid: function ( b ) {
+
+        if(b){
+
+            if( view.isGrid ) return;
+
+            grid = new THREE.GridHelper( 50, 20, 0xFFFFFF, 0xAAAAAA );
+            grid.material = new THREE.LineBasicMaterial( { vertexColors: THREE.VertexColors, transparent:true, opacity:0.25 } );
+            scene.add( grid );
+            view.isGrid = true;
+
+        } else {
+
+            if( !view.isGrid ) return;
+
+            scene.remove( grid );
+            grid.material.dispose();
+            grid = null;
+            view.isGrid = false;
+
+        }
+
+    },
+
+    // TONE
+
+    setTone : function( v ) {
+
+        var tonesTypes = ['None', 'Linear', 'Reinhard', 'Uncharted2', 'Cineon'];
+
+        renderer.gammaInput = setting.gammaInput;
+        renderer.gammaOutput = setting.gammaOutput;
+
+        var nup = false;
+
+        if(v!==undefined){
+            if( tonesTypes.indexOf(v) !== -1 ) setting.tone = v;
+            nup = true;
+        }
+
+        renderer.toneMapping = toneMappings[ setting.tone ];
+        renderer.toneMappingExposure = setting.exposure;
+        renderer.toneMappingWhitePoint = setting.whitePoint;
+
+        if(nup){
+
+            main.updateMaterial();
+
+        }
+
+        //view.setLightIntensity();
+
+        //if( materials[0] && nup ) materials[0].needsUpdate = true;
+
+
+    },
+
+    // LIGHT
+
+    addLight: function () {
+
+        //ambient = new THREE.AmbientLight( 0x333333 );
+        //scene.add( ambient );
+
+        light = new THREE.DirectionalLight( 0xffffff, 0.5 );
+        light.position.set(50,300,100);
+        light.lookAt( new THREE.Vector3( 0,0,0) );
+        follow.add( light );
+
+        var pl1 = new THREE.PointLight( 0xfdfdfd, 0.4 );
+        pl1.position.set( 75, 25, 58 );
+        pl1.position.multiplyScalar( 10 );
+        follow.add( pl1 );
+
+        var pl2 = new THREE.PointLight( 0xbab8ba, 0.2 );
+        pl2.position.set( -12, 37, -79 );
+        pl2.position.multiplyScalar( 10 );
+        follow.add( pl2 );
+
+        var pl3 = new THREE.PointLight( 0xcaae7c, 0.1 );
+        pl3.position.set( 30, 78, 52 );
+        pl3.position.multiplyScalar( 10 );
+        follow.add( pl3 );
+
+    },
+
+    // SHADOW
+
+    addShadow: function ( b ) {
+
+        if( b ){
+
+            if( view.isShadow ) return;
+
+            view.isShadow = true;
+
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.soft = view.isMobile ? false : true;
+            renderer.shadowMap.type = view.isMobile ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
+            renderer.shadowMap.renderReverseSided = false;
+
+            //materialShadow = new THREE.MeshLambertMaterial(  );
+
+            materialShadow = new THREE.ShaderMaterial( THREE.ShaderShadow );
+            plane = new THREE.Mesh( new THREE.PlaneBufferGeometry( 200, 200, 1, 1 ), materialShadow );
+            plane.geometry.applyMatrix( new THREE.Matrix4().makeRotationX( -Math.PI*0.5 ) );
+            plane.position.y = 0.5;
+            //plane.position.y = -62;
+            plane.castShadow = false;
+            plane.receiveShadow = true;
+            follow.add( plane );
+
+            var d = 100;
+            var camShadow = new THREE.OrthographicCamera( d, -d, d, -d,  100, 500 );
+            light.shadow = new THREE.LightShadow( camShadow );
+            light.shadow.mapSize.width = view.isMobile ? 512 : 1024;
+            light.shadow.mapSize.height = view.isMobile ? 512 : 1024;
+            light.castShadow = true;
+
+        } else {
+
+            if( !view.isShadow ) return;
+
+            view.isShadow = false;
+
+            renderer.shadowMap.enabled = false;
+            light.castShadow = false;
+
+            follow.remove( plane );
+            materialShadow.dispose();
+            plane.geometry.dispose();
+
+        }
+
+    },
+
+    // CAPTURE
+
+    getCaptueMode: function () { return isCaptureMode },
+
+    captureMode: function ( b ) {
+
+        isCaptureMode = b;
+
+        if( isCaptureMode ){
+
+            window.removeEventListener( 'resize', view.resize );
+
+            renderer.domElement.style.position = "absolute";
+            renderer.domElement.style.left = "50%";
+            renderer.domElement.style.top = "50%";
+            renderer.domElement.style.border = '1px solid #F00';
+
+            view.setVideoSize();
+            view.initCapture();
+
+        } else {
+
+            renderer.domElement.style.position = "absolute";
+            renderer.domElement.style.left = "0px";
+            renderer.domElement.style.top = "0px";
+            renderer.domElement.style.margin = '0px 0px';
+            renderer.domElement.style.border = 'none';
+
+            window.addEventListener( 'resize', view.resize );
+            view.resize();
+
+        }
+
+    },
+
+    setVideoSize: function ( v ) {
+
+        if( !isCaptureMode ) return;
+
+        if( v !== undefined ) view.videoSize = v;
+
+        var w = view.videoSize[0];
+        var h = view.videoSize[1];
+        renderer.domElement.style.margin = (-h*0.5)+'px '+ (-w*0.5)+'px';
+        view.resize( null, w, h );
+
+    },
+
+    initCapture: function () {
+
+        if( capturer !== null ) return;
+
+        capturer = new CCapture( {
+
+            verbose: false,
+            display: false,
+            framerate: view.framerate,
+            //motionBlurFrames: 1,//( 960 / framerate ) * 0 ,
+            quality: 80,
+            format:"webm-mediarecorder",
+            //format:"webm",
+            currentTime:0,
+            timeLimit: 4,
+            frameLimit: 0,
+            autoSaveTime: 0,
+            //autoSaveTime:10,
+            //workersPath:'./js/',
+            //timeLimit: 60,//second
+            //frameLimit: 0,
+            //autoSaveTime: 0,
+            //onProgress: function( p ) { progress.style.width = ( p * 100 ) + '%' }
+        });
+
+        console.log(capturer)
+
+    },
+
+    startCapture: function () {
+
+        if( !isCaptureMode ) return;
+        if( isCapture ) return;
+
+        renderer.setClearColor( 0x00FF00, 1 );
+        capturer.start();
+        isCapture = true;
+
+    },
+
+    saveCapture: function () {
+
+        if( !isCaptureMode ) return;
+        if( !isCapture ) return;
+
+        
+        capturer.stop();
+        capturer.save();
+        
+        if( view.isMobile ) renderer.setClearColor( 0xffd400, 1 );
+        else renderer.setClearColor( 0x000000, 0 );
+        isCapture = false;
+
+    },
+
+    // MOBILE SUPPORT
+
+    testMobile: function () {
+
+        var n = navigator.userAgent;
+        if (n.match(/Android/i) || n.match(/webOS/i) || n.match(/iPhone/i) || n.match(/iPad/i) || n.match(/iPod/i) || n.match(/BlackBerry/i) || n.match(/Windows Phone/i)) view.isMobile = true;
+        else view.isMobile = false;  
+
+    },
+
+
+    // MODEL ADD
+
+    extendGeometry: function( geometry ){
+
+        view.reversUV( geometry );
+        view.addVertexColor( geometry );
+
+    },
+
+    addVertexColor: function( geometry ){
+
+        var color = new THREE.Float32BufferAttribute( geometry.attributes.position.count*3, 3 );
+        var i = color.count, n;
+
+        while(i--){ 
+            n = i*3
+            color[n] = 1;
+            color[n+1] = 1;
+            color[n+2] = 1;
+        }
+
+        geometry.addAttribute( 'color', color );
+        geometry.attributes.color.needsUpdate = true;
+
+    },
+
+    addUV2: function( geometry ){
+
+        geometry.addAttribute( 'uv2', geometry.attributes.uv );
+
+    },
+
+    correctMorph: function ( morphs, name, meshs ){
+
+        for( var i=0; i < morphs.length; i++ ) {
+
+            view.extendGeometry( meshs[ name + '_' + morphs[ i ] ].geometry );
+            meshs[name].geometry.morphAttributes.position[i].array = meshs[ name + '_' + morphs[ i ] ].geometry.attributes.position.array;
+            meshs[name].geometry.morphAttributes.normal[i].array = meshs[ name + '_' + morphs[ i ] ].geometry.attributes.normal.array;
+
+        }
+
+    },
+
+    reversUV: function ( geometry ){
+
+        // correct inversion of normal map in symetrics mesh
+
+        var uv = geometry.attributes.uv.array;
+        var i = Math.floor(uv.length * 0.25);
+        while( i-- ) uv[ i * 2 ] *= -1;
+        geometry.attributes.uv.needsUpdate = true;
+
+        // for ao map
+        view.addUV2( geometry );
+
+    },
+
+
+    // SHADER HACK
+
+    uniformPush : function( type, name, value ){
+
+        type = type || 'physical';
+        THREE.ShaderLib[type].uniforms[name] = value;
+        THREE['Mesh' + 'Standard' + 'Material'][name] = value;
+
+    },
+
+    shaderRemplace : function( type, shad, word, re ){
+
+        type = type || 'physical';
+        shad = shad || 'fragment';
+
+        THREE.ShaderLib[type][shad+'Shader'] = THREE.ShaderLib[type][shad+'Shader'].replace(word, re);
+
+    },
+
+    shaderPush : function( type, shad, add ){
+
+        type = type || 'physical';
+        shad = shad || 'fragment';
+
+        add.push(" ");
+        THREE.ShaderLib[type][shad+'Shader'] = add.join("\n") + THREE.ShaderLib[type][shad+'Shader'];
+
+    },
+
+    shaderMain : function( type, shad, add ){
+
+        type = type || 'physical';
+        shad = shad || 'fragment';
+
+        add.push("} ");
+
+        THREE.ShaderLib[type][shad+'Shader'] = THREE.ShaderLib[type][shad+'Shader'].substring( 0, THREE.ShaderLib[type][shad+'Shader'].length-2 );
+        THREE.ShaderLib[type][shad+'Shader'] += add.join("\n");
+
+    },
+
+    // CAMERA AUTO CONTROL
+
+    autoRotate: function ( obj, time, delay, callback ) {
+
+        callback = callback || function(){};
+
+        var c = view.getCurrentPosition();
+        controler.enabled = false;
+
+        new TWEEN.Tween( c ).to( obj, time || 2000 )
+        .delay( delay || 0 )
+        .easing( TWEEN.Easing.Quadratic.Out )
+        .onUpdate( function() { view.orbit( c ); } )
+        .onComplete( function() { controler.enabled = true;  callback(); } )
+        .start();
+
+    },
+
+    orbit: function ( c ) {
+
+        var phi = c.polar * Math.torad;
+        var theta = c.azim * Math.torad;
+
+        controler.target.fromArray( c.target );
+        camera.position.copy( controler.target );
+        camera.position.x += c.distance * Math.sin(phi) * Math.sin(theta);
+        camera.position.y += c.distance * Math.cos(phi);
+        camera.position.z += c.distance * Math.sin(phi) * Math.cos(theta);
+        controler.update();
+
+    },
+
+    getCurrentPosition: function ( log ) {
+
+    	var p = {};
+        var t = controler.target;
+        var c = camera.position;
+        p.target = t.toArray();
+        p.distance = Math.floor( c.distanceTo( t ) );
+        p.polar = Math.floor( controler.getPolarAngle() * Math.todeg );
+        p.azim = Math.floor( controler.getAzimuthalAngle() * Math.todeg );
+        if( log ) console.log( JSON.stringify( p ) );
+        return p;
+
+    },
+
+    initCanvasId: function ( img ){
+
+        var canvas = document.createElement( "canvas" ); 
+        canvas.width = canvas.height = 512;
+        var ctx = canvas.getContext( "2d" );
+        ctx.drawImage( img, 0, 0 );
+        
+        pixels = ctx.getImageData( 0, 0, 512, 512 ).data;
+        pixelsLength = pixels.length * 0.25;
+
+    },
+
+    getPixelValue: function ( v ) {
+
+
+        var cc = [0,0,0,0];
+        var color = 0x000000;
+
+        /*if( pix !== undefined ) {
+            pix.style.left = (x*0.5) + 'px';
+            pix.style.top =  (y*0.5) + 'px';
+        }*/
+
+        if( pixels !== undefined ){
+
+            var id = (v.y*512) + v.x;
+            var n = id * 4;
+
+            cc[0] = pixels[n];
+            cc[1] = pixels[n+1];
+            cc[2] = pixels[n+2];
+            cc[3] = pixels[n+3];
+ 
+            color = Math.rgbToHex( cc );
+
+        }
+
+        return color;
+
+        
+    },
+
+
+
+
+    // ENVMAP
+
+    getEnvmap: function () { return envmap; },
+
+    initSphereEnvmap: function ( map ){
+
+    	envmap = new THREE.Texture( map );
+        envmap.mapping = THREE.SphericalReflectionMapping;
+        envmap.needsUpdate = true;
+
+    },
+
+    showSky: function (b) {
+
+    	sky.visible = b;
+
+    },
+
+    initEnvScene: function ( map ) {
+
+    	var s = 1;
+	    ballScene = new THREE.Scene();
+		ballCamera = new THREE.CubeCamera( s*0.5, s*1.2, 512 );
+		ballCamera.position.set(0,0,0);
+		ballCamera.lookAt( new THREE.Vector3(0,0,5));
+		ballScene.add( ballCamera );
+	    
+	    ballTexture = new THREE.Texture( map );
+	    ballTexture.wrapS = ballTexture.wrapT = THREE.ClampToEdgeWrapping;
+		ball = new THREE.Mesh( new THREE.SphereGeometry( 1, 20, 12  ),  new THREE.MeshBasicMaterial({ map:ballTexture, depthWrite:false }) );
+
+		sky = new THREE.Mesh( new THREE.SphereGeometry( 1, 20, 12  ),  ball.material );
+	    sky.scale.set(-1000,1000,1000);
+	    scene.add( sky );
+	    sky.visible = false;
+
+	    /*skymin = new THREE.Mesh( new THREE.SphereGeometry( 1, 20, 12  ),  new THREE.MeshBasicMaterial() );
+	    skymin.scale.set(3,3,3);
+	    scene.add( skymin );*/
+	    
+	    ball.scale.set(-s,s,s);
+		ballScene.add( ball );
+
+		view.renderEnvmap();
+
+    },
+
+    renderEnvmap: function () {
+
+    	ballTexture.needsUpdate = true;
+    	ballCamera.updateCubeMap( renderer, ballScene );
+        envmap = ballCamera.renderTarget.texture;
+
+        //skymin.material.envMap = envmap;
+
+    },
+
+
+    clear: function ( mesh ){
+
+        var i = mesh.children.length;
+        while(i--) mesh.remove( mesh.children[i] );
 
     },
 
 
 
-}
-    
-return avatar;
 
-})();*/
+
+}
+
+
+
+return view;
+
+})();
+
+
+//-----------------------
+// force local scalling
+//-----------------------
+
+THREE.Skeleton.prototype.update = ( function () {
+
+    var offsetMatrix = new THREE.Matrix4();
+    var identityMatrix = new THREE.Matrix4();
+    var scaleMatrix = new THREE.Matrix4();
+    var decal = new THREE.Vector3();
+    var invScale = new THREE.Vector3();
+    var baseScale = new THREE.Vector3( 1,1,1 );
+
+    var mtx = new THREE.Matrix4();
+    var tmtx = new THREE.Matrix4();
+
+    var p1 = new THREE.Vector3();
+    var p2 = new THREE.Vector3();
+
+    return function update() {
+
+        var bones = this.bones;
+        var boneInverses = this.boneInverses;
+        var boneMatrices = this.boneMatrices;
+        var boneTexture = this.boneTexture;
+
+        var m, lng, bone;
+
+        // flatten bone matrices to array
+
+        for ( var i = 0, il = bones.length; i < il; i ++ ) {
+
+            bone = bones[ i ];
+
+            // compute the offset between the current and the original transform
+
+            var matrix = bone ? bone.matrixWorld : identityMatrix;
+
+            //var scale = bones[ i ].parent.scale;
+            //invScale.set( 1/scale.x, 1/scale.y, 1/scale.z );
+
+            if ( bone.parent && bones[ i ].parent.isBone ) {
+
+                if( bone.userData.mesh !== undefined ){
+
+                    m = bone.userData.mesh;
+
+                    p1.setFromMatrixPosition( bone.parent.matrixWorld );
+                    p2.setFromMatrixPosition( matrix );
+                    lng = p1.distanceTo( p2 );
+
+                    if( m.name ==='lFoot' || m.name ==='rFoot' || m.name ==='lToe' || m.name ==='rToe' ) tmtx.makeTranslation( -lng*0.5, 0, -1 );
+                    else tmtx.makeTranslation( -lng*0.5, 0, 0 );
+
+                    mtx.multiplyMatrices( bone.parent.matrixWorld, tmtx );
+
+                    
+                    //bones[ i ].userData.mesh.matrix.copy( matrix );
+                    m.position.setFromMatrixPosition( mtx );
+                    m.quaternion.setFromRotationMatrix( mtx );
+                    m.scale.x = lng;
+
+                    m.updateMatrixWorld(true);
+
+                }
+
+            	
+            }
+
+            /*for ( var j = 0, l = bones[ i ].children.length; j < l; j ++ ) {
+
+                scaleMatrix = matrix.clone();
+                scaleMatrix.multiply( bones[ i ].children[ j ].matrix.clone() )
+
+                //scaleMatrix.multiplyMatrices( matrix, bones[ i ].children[ j ].matrix );
+                bones[ i ].children[ j ].matrixWorld.scale( invScale );
+                bones[ i ].children[ j ].matrixWorld.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );
+
+            }*/
+
+            //for ( var j = 0, l = bones[ i ].children.length; j < l; j ++ ) {
+
+            //}
+
+            /*if( bones[ i ].parent ){
+            	var scale = bones[ i ].parent.scale;
+            	invScale.set( 1/scale.x, 1/scale.y, 1/scale.z );
+            	
+
+            	matrix.scale( invScale );
+
+            	for ( var j = 0, l = bones[ i ].children.length; j < l; j ++ ) {
+
+                    scaleMatrix = matrix.clone();
+                    scaleMatrix.multiply( bones[ i ].children[ j ].matrix.clone() )
+
+                    //scaleMatrix.multiplyMatrices( matrix, bones[ i ].children[ j ].matrix );
+                    bones[ i ].children[ j ].matrixWorld.scale(scale)
+                    bones[ i ].children[ j ].matrixWorld.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );
+
+                }
+            	//scaleMatrix = matrix.clone();
+                //scaleMatrix.multiply( bones[ i ].matrix.clone() );
+            	//matrix.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );
+            }*/
+
+            /*var scale = bones[ i ].scale;// : baseScale;
+            invScale.set( 1/scale.x, 1/scale.y, 1/scale.z )
+
+            for ( var j = 0, l = bones[ i ].children.length; j < l; j ++ ) {
+
+            	bones[ i ].children[ j ].scale.copy( invScale )
+
+                /*scaleMatrix = matrix.clone();
+                scaleMatrix.multiply( bones[ i ].children[ j ].matrix.clone() )
+
+                //scaleMatrix.multiplyMatrices( matrix, bones[ i ].children[ j ].matrix );
+                bones[ i ].children[ j ].matrixWorld.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );*/
+
+            //}
+
+            if( bone.scalling !== undefined ){
+
+                matrix.scale( bone.scalling );
+
+                for ( var j = 0, l = bones[ i ].children.length; j < l; j ++ ) {
+
+                    scaleMatrix = matrix.clone();
+                    scaleMatrix.multiply( bone.children[ j ].matrix );
+
+                    //decal.setFromMatrixPosition( scaleMatrix ).sub(bones[ i ].children[ j ].position)
+
+                    //bones[ i ].children[ j ].position.add( decal );
+                    //bones[ i ].children[ j ].matrix.setPosition( decal );
+                    //bones[ i ].children[ j ].matrixWorldNeedsUpdate = true;
+
+                    //bones[ i ].children[ j ].matrixWorld.multiplyMatrices( this.parent.matrixWorld, this.matrix );
+
+                    bone.children[ j ].matrixWorld.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );
+                    ///
+                    //bones[ i ].children[ j ].matrix.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );
+
+                }
+
+            } 
+
+            offsetMatrix.multiplyMatrices( matrix, boneInverses[ i ] );
+            offsetMatrix.toArray( boneMatrices, i * 16 );
+
+        }
+
+        if ( boneTexture !== undefined ) {
+
+            boneTexture.needsUpdate = true;
+
+        }
+
+    };
+
+})();
+
+var gui = ( function () {
+
+'use strict';
+
+var ui;
+var content, mainMenu, menu, timebarre;
+var gender, genderIM
+var isOpen = false;
+
+var selectColor = '#db0bfa'
+
+var BB = [ 'X', 'VIEW', 'VIDEO', 'ANIMATION', 'MATERIAL', 'BONES' ];
+
+var current = 'none';
+
+var isMan = true;
+
+var bone, sx, sy, sz, wx, wy, wz;
+
+
+gui = {
+
+    init: function ( container ) {
+
+        content = document.createElement( 'div' );
+        content.style.cssText = 'position: absolute; top:0; left:0; pointer-events:none; width:100%; height:100%;';
+        container.appendChild( content );
+
+        gender = document.createElement( 'div' );
+        gender.style.cssText = 'position: absolute; bottom:50px; left:10px; pointer-events:auto; width:60px; height:90px; cursor:pointer;';
+
+        genderIM = new Image();
+        genderIM.src = 'assets/textures/m.png';
+
+        gender.addEventListener( 'click', function(e){ 
+            if(isMan) {
+                isMan = false;
+                genderIM.src = 'assets/textures/w.png';
+            } else {
+                isMan = true;
+                genderIM.src = 'assets/textures/m.png';
+            }
+
+            main.switchModel();
+
+        }, false );
+
+        gender.appendChild( genderIM );
+        content.appendChild( gender );
+
+        mainMenu = document.createElement( 'div' );
+        mainMenu.style.cssText = 'position: absolute; top:50px; right:0; pointer-events:none; width:200px; height:100%; display:none;';
+        content.appendChild( mainMenu );
+
+        menu = document.createElement( 'div' );
+        menu.style.cssText = 'position: absolute; top:0px; left:0px; height:50px; width:100%; pointer-events:none; ';
+        content.appendChild( menu );
+
+        timebarre = new Timebarre( content, selectColor );
+
+        for(var i=0; i<BB.length; i++ ) this.addButton(i);
+
+        ui = new UIL.Gui( { w:200, bg:'rgba(23,23,23,0)', close:false, parent:mainMenu, top:50, css:'right:0; transition:none;' } );
+
+    },
+
+    addButton: function ( i ) {
+
+        var b = document.createElement('div');
+        b.style.cssText =  'color:#CCC;  font-size: 15px;  margin:0px 0px; padding: 0px 15px; line-height:50px; position:relative; pointer-events:auto; height:50px; display:inline-block; text-align:center; cursor:pointer; transition:all 0.3s ease;';
+        b.textContent = BB[i];
+        b.id = i;
+
+        b.addEventListener( 'mouseover', function(e){ this.style.color = '#FFF'; this.style.background = 'rgba(153,153,153,0.5)'; }, false );
+        b.addEventListener( 'mouseout', function(e){ this.style.color = '#CCC';this.style.background = 'none';}, false );
+        b.addEventListener( 'mousedown', function(e){ gui.select( this.id ); }, false );
+
+        menu.appendChild(b);
+
+    },
+
+    close: function () {
+
+        if(!isOpen) return;
+
+        mainMenu.style.display = 'none';
+        isOpen = false;
+
+    },
+
+    open: function () {
+
+        if( isOpen ) return;
+
+        mainMenu.style.display = 'block';
+        isOpen = true;
+
+    },
+
+    select: function ( id ) {
+
+        view.setMode('normal');
+
+        id = Number(id);
+        ui.clear();
+        timebarre.hide();
+        gui.open();
+
+        switch( id ){
+            case 0: gui.close(); break;
+            case 1: gui.view(); break;
+            case 2: gui.video(); break;
+            case 3: gui.animation(); break;
+            case 4: gui.material(); break;
+            case 5: gui.bones(); break;
+           // case 5: gui.morph(); break;
+        }
+
+    },
+
+
+    view: function () {
+
+        var params = view.getSetting();
+
+        ui.add('Bool', { name:'MID RESOLUTION', value:view.pixelRatio === 1 ? false : true, p:60 } ).onChange( view.setPixelRatio );
+
+        ui.add('Bool', { name:'GRID', value:view.isGrid, p:60 } ).onChange( view.addGrid );
+        ui.add('Bool', { name:'SHADOW', value:view.isShadow, p:60 } ).onChange( view.addShadow );
+        ui.add('Bool', { name:'SKELETON', value: main.model.isSkeleton, p:60 } ).onChange( function(b){ main.showSkeleton(b); } );
+        ui.add('Bool', { name:'SKY', value:false, p:60 } ).onChange( view.showSky );
+
+        ui.add('title',  { name:' ', h:30});
+
+        ui.add( params, 'gammaInput', { type:'Bool', fontColor:'#EEE', bColor:'#b2b2b2', p:60  } ).onChange( function(){ view.setTone( 'up' ); } );
+        ui.add( params, 'gammaOutput', { type:'Bool', fontColor:'#EEE', bColor:'#b2b2b2', p:60  } ).onChange( function(){ view.setTone( 'up' ); } );
+
+        ui.add( params, 'exposure', { min:0, max:10, precision:2, fontColor:'#fc4100' } ).onChange( function(){ view.setTone(); } );
+        ui.add( params, 'whitePoint', { min:0, max:10, precision:1, fontColor:'#fc4100' } ).onChange( function(){ view.setTone(); } );
+        ui.add('list', { name:'type',  bColor:'#b2b2b2', list:['None', 'Linear', 'Reinhard', 'Uncharted2', 'Cineon'], fontColor:'#333', value:params.tone, h:30 }).onChange( function(v){ view.setTone(v); } );
+
+    },
+
+    video: function () {
+
+        ui.add('Bool', { name:'CAPTURE MODE', value:view.getCaptueMode(), p:60 } ).onChange( function( b ){ view.captureMode( b ) } );
+        ui.add('number', { name:'resolution', value:view.videoSize, precision:0, step:10 }).onChange( view.setVideoSize );
+        ui.add('button', { name:'START', h:20, p:0 }).onChange( function( ){view.startCapture()} );
+        ui.add('button', { name:'STOP', h:20, p:0 }).onChange( function( ){view.saveCapture()}  );
+
+    },
+
+    material: function () {
+
+        var model = main.model;
+        var settings = model.settings;
+
+        var mats = ['Basic', 'Normal', 'Depth', 'Toon', 'Lambert', 'Phong','Standard'];
+
+        ui.add('list', { name:'type', width:100, list:mats, value:settings.type, full:true }).onChange( function( name ){ model.setMaterial( name ); } );
+
+        ui.add( settings, 'muscles', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
+        ui.add( settings, 'oamap', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
+        ui.add( settings, 'lightmap', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
+        ui.add( settings, 'metalness', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
+        ui.add( settings, 'roughness', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
+        ui.add( settings, 'skinAlpha', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
+        ui.add( settings, 'shininess', { min:0, max:200, fontColor:'#D4B87B', precision:0 } ).onChange( gui.applyMaterial );
+        ui.add( settings, 'opacity', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
+
+    },
+
+    applyMaterial: function(){
+
+        main.model.updateSetting();
+
+    },
+
+    bones: function () {
+
+        view.setMode('bones');
+
+        bone = ui.add('title', { name:'none', h:30, r:10 } );
+
+        var model = main.model;
+
+        sx = ui.add('slide',  { name:'scale X',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ model.setScalling('x', v); } );
+        sy = ui.add('slide',  { name:'scale Y',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ model.setScalling('y', v); } );
+        sz = ui.add('slide',  { name:'scale Z',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ model.setScalling('z', v); } );
+
+        /*wx = ui.add('slide',  { name:'scale X',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ model.setScale('x', v); } );
+        wy = ui.add('slide',  { name:'scale Y',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ model.setScale('y', v); } );
+        wz = ui.add('slide',  { name:'scale Z',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ model.setScale('z', v); } );*/
+
+    },
+
+    setBones: function( name, id, v ){
+
+        bone.text( name );
+        bone.text2( id );
+        sx.setValue(v.x);
+        sy.setValue(v.y);
+        sz.setValue(v.z);
+
+        /*wx.setValue(1);
+        wy.setValue(1);
+        wz.setValue(1);*/
+
+    },
+
+    animation: function () {
+
+        ui.add('slide', { name:'framerate', min:24, max:60, value:60, precision:0, step:1, stype:1 }).onChange( view.setFramerate );
+
+        current = 'anim';
+        ui.add('slide',  { name:'animation', min:-1, max:1, value:main.timescale, precision:2, stype:1 }).onChange( main.setTimescale );
+        ui.add('Bool', { name:'LOCK HIP', value: main.model.isLockHip, p:60 } ).onChange( main.lockHip );
+        ui.add('button', { name:'LOAD BVH', fontColor:'#D4B87B', h:40, drag:true, p:0 }).onChange( main.loadAnimation );
+
+        var an = main.animations, name;
+
+        for(var i=0; i<an.length; i++){
+
+            name = an[i];
+            //ui.add( 'button', { name:name, p:0 }).onChange( avatar.play );
+            ui.add( 'button', { name:name, p:0 }).onChange( function(n){ main.model.play( n ); } );
+
+        }
+
+        timebarre.show();
+
+    },
+
+    addAnim: function( name ){
+
+        if( current !== 'anim' ) return;
+        //ui.add( 'button', { name:name, p:0 }).onChange( avatar.play );
+        ui.add( 'button', { name:name, p:0 }).onChange( function(n){ main.model.play( n ); } );
+
+    },
+
+    /*morph: function () {
+
+        var mo = avatar.getMorph(), name;
+
+        for(var i=0; i<mo.length; i++){
+
+            name = mo[i];
+            ui.add('slide',  { name:'eye '+name, min:0, max:1, value:0, precision:2 }).onChange( avatar.morphEye );
+
+        }
+
+        ui.add('slide',  { name:'eye size', min:0.5, max:2, value:1, precision:2 }).onChange( avatar.sizeEye );
+
+        for(var i=0; i<mo.length; i++){
+
+            name = mo[i];
+            ui.add('slide',  { name:name, min:0, max:1, value:0, precision:2 }).onChange( avatar.morphMouth  );
+        }
+
+        ui.add('slide',  { name:'mouth size', min:0.5, max:2, value:1, precision:2 }).onChange( avatar.sizeMouth );
+        
+
+    },*/
+
+    // PLAY BARRE
+
+    updateTimeBarre: function ( m ) {
+
+        if( !timebarre.isHide ) {
+
+            timebarre.setTotalFrame( m.frameMax, m.frameTime );
+            timebarre.update( m.frame );
+
+        }
+
+    },
+
+    resize: function () {
+
+        if( timebarre ) timebarre.resize();
+
+    },
+
+   /* setTotalFrame: function ( v, ft ) {
+
+        if( timebarre ) timebarre.setTotalFrame( v, ft );
+
+    },
+
+    updateTime: function ( f ) {
+
+        if( timebarre ) timebarre.update( f );
+
+    },
+*/
+    inPlay:function(){
+        if( timebarre ) timebarre.inPlay();
+    }
+
+
+
+
+}
+
+
+
+return gui;
+
+})();
+
+
+var Timebarre = function( p, sel ){
+
+    this.select = sel;
+
+    this.playIcon = "<svg width='18px' height='17px'><path fill='#CCC' d='M 14 8 L 5 3 4 4 4 13 5 14 14 9 14 8 Z'/></svg>";
+    this.pauseIcon = "<svg width='18px' height='17px'><path fill='#CCC' d='M 14 4 L 13 3 11 3 10 4 10 13 11 14 13 14 14 13 14 4 M 8 4 L 7 3 5 3 4 4 4 13 5 14 7 14 8 13 8 4 Z'/></svg>";
+
+    this.playing = true;
+
+    this.parent = p;
+
+    this.down = false;
+    this.isHide = true;
+
+    this.width = window.innerWidth - 80;
+    this.totalFrame = 0;
+    this.frame = 0;
+    this.ratio = 0;
+
+    this.content = document.createElement('div');
+    this.content.style.cssText = "position:absolute; bottom:0; left:0px; width:100%; height:50px; pointer-events:none; display:none; ";
+    this.parent.appendChild( this.content );
+
+    this.timeInfo = document.createElement('div');
+    this.timeInfo.style.cssText = "position:absolute; bottom:36px; left:60px; width:200px; height:10px; pointer-events:none; color:#CCC; ";
+    this.content.appendChild(this.timeInfo);
+
+    this.timeline = document.createElement('div');
+    this.timeline.style.cssText = "position:absolute; bottom:20px; left:60px; width:"+this.width+"px; height:5px; border:3px solid rgba(255,255,255,0.2); pointer-events:auto; cursor:pointer;";
+    this.content.appendChild(this.timeline);
+
+    this.framer = document.createElement('div');
+    this.framer.style.cssText = "position:absolute; top:0px; left:0px; width:1px; height:5px; background:#CCC; pointer-events:none;";
+    this.timeline.appendChild(this.framer);
+
+    this.playButton = document.createElement('div');
+    this.playButton.style.cssText = "position:absolute; top:5px; left:10px; width:18px; height:18px; pointer-events:auto; cursor:pointer; border:3px solid rgba(255,255,255,0.2); padding: 5px 5px;";
+    this.content.appendChild( this.playButton );
+
+    this.playButton.innerHTML = this.playing ? this.playIcon : this.pauseIcon;
+    this.playButton.childNodes[0].childNodes[0].setAttribute('fill', '#CCC');
+
+
+
+        //this.playButton.addEventListener('mouseover', editor.play_over, false );
+        //this.playButton.addEventListener('mouseout', editor.play_out, false );
+        
+
+    var _this = this;
+    //window.addEventListener( 'resize', function(e){ _this.resize(e); }, false );
+    this.timeline.addEventListener( 'mouseover', function ( e ) { _this.tOver(e); }, false );
+    this.timeline.addEventListener( 'mouseout', function ( e ) { _this.tOut(e); }, false );
+
+    this.timeline.addEventListener( 'mousedown', function ( e ) {  _this.tDown(e); }, false );
+    document.addEventListener( 'mouseup', function ( e ) {  _this.tUp(e); }, false );
+    document.addEventListener( 'mousemove', function ( e ) {  _this.tMove(e); }, false );//e.stopPropagation();
+
+    this.playButton.addEventListener('mousedown',  function ( e ) { _this.play_down(e); }, false );
+    this.playButton.addEventListener('mouseover',  function ( e ) { _this.play_over(e); }, false );
+    this.playButton.addEventListener('mouseout',  function ( e ) { _this.play_out(e); }, false );
+}
+
+
+
+Timebarre.prototype = {
+
+    inPlay: function ( e ) {
+        this.playing = true;
+        this.playButton.innerHTML = this.playIcon;
+    },
+
+    play_down: function ( e ) {
+
+        if( this.playing ){ 
+            this.playing = false;
+            main.model.pause();
+        } else {
+            this.playing = true;
+            main.model.unPause();
+        }
+
+        this.playButton.innerHTML = this.playing ? this.playIcon : this.pauseIcon;
+
+    },
+
+    play_over: function ( e ) { 
+
+        //this.playButton.style.border = "1px solid " + selectColor;
+        //this.playButton.style.background = selectColor;
+        this.playButton.childNodes[0].childNodes[0].setAttribute('fill', this.select );
+
+    },
+
+    play_out: function ( e ) { 
+
+        //this.playButton.style.border = "1px solid #3f3f3f";
+        //this.playButton.style.background = 'none';
+        this.playButton.childNodes[0].childNodes[0].setAttribute('fill', '#CCC');
+
+    },
+
+    show: function () {
+
+        if(!this.isHide) return;
+        this.content.style.display = 'block';
+        this.isHide = false;
+    },
+
+    hide:function () {
+
+        if(this.isHide) return;
+        this.content.style.display = 'none';
+        this.isHide = true;
+
+    },
+    
+    setTotalFrame:function( t, ft ){
+
+        this.totalFrame = t;
+        this.frameTime = ft;
+        this.ratio = this.totalFrame / this.width;
+        this.timeInfo.innerHTML = this.totalFrame + ' frames';
+
+    },
+
+    resize:function(e){
+
+        this.width = window.innerWidth - 80;
+        this.timeline.style.width = this.width+'px';
+        this.ratio = this.totalFrame / this.width;
+
+    },
+
+    update: function ( f ) {
+
+        //if( this.isHide ) return;
+
+        this.frame = f;
+        this.timeInfo.innerHTML = this.frame + ' / ' + this.totalFrame;
+        this.framer.style.width = this.frame / this.ratio + 'px';
+
+    },
+
+    tOut:function(e){
+
+        if(!this.down) this.framer.style.background = "#CCC";
+
+    },
+
+    tOver:function(e){
+
+        this.framer.style.background = this.select;
+
+    },
+
+    tUp:function(e){
+
+        this.down = false;
+        this.framer.style.background = "#CCC";
+
+    },
+
+    tDown:function(e){
+
+        this.down = true;
+        this.tMove(e);
+        this.playing = false;
+        this.playButton.innerHTML = this.playing ? this.playIcon : this.pauseIcon;
+        this.framer.style.background = this.select;
+
+    },
+
+    tMove:function(e){
+
+        if(this.down){
+            var f = Math.floor((e.clientX-20)*this.ratio);
+            if(f<0) f = 0;
+            if(f>this.totalFrame) f = this.totalFrame; 
+            this.frame = f;
+            main.model.playOne( this.frame );
+            //this.parent.gotoFrame(this.frame);
+        }
+    }
+
+}
 var main = ( function () {
 
 'use strict';
 
+var modelName = 'avatar';
+var envmame = 'studio';
+var path = './assets/'
+
+var models = [
+
+    'bvh/base.z',
+    'models/' + modelName + '.sea',
+
+];
+
+var textures = [
+
+    'envmap/' + envmame + '.jpg',
+    'avatar_c.png', 
+    'avatar_id.png',
+    'avatar_ao.png',
+    'avatar_n_m.png', 'avatar_n_w.png', 
+    'avatar_skin_n_m.png', 'avatar_skin_n_w.png', 
+    'avatar_l_m.png', 'avatar_l_w.png', 
+    'muscular.png',
+    'metalmuscl.png',
+    'transition.png',
+    'eye_m.png', 'eye_w.png', 'eye_n.png', 'eye_l.png',
+
+];
+
+var scene, man, woman, bvhLoader;
+
+var isMan = false;
+var isMorph = false;
+
+
 main = {
 
+	model: null,
+	animations: [],
+	timescale: 0.5,
+
     // --------------------------
-    //  INIT
+    //   INIT
     // --------------------------
 
     init: function ( container ) {
 
         view.init( container );
         gui.init( container );
-        avatar.init();
+        shader.init();
+
+        scene = view.getContent();
+        bvhLoader = new THREE.BVHLoader();
+
+
+        //avatar.init();
+
+        main.loadModel();
 
     },
 
+    // --------------------------
+    //   LOAD
+    // --------------------------
 
+    loadModel: function () {
+
+    	var asset = [], i = models.length;
+        while(i--) asset[i] = path + models[i];
+        pool.load( asset, main.onLoadModel );
+
+    },
+
+    loadTextures: function () {
+
+    	var asset = [], i = textures.length;
+        while(i--) asset[i] = path + 'textures/' + textures[i];
+        pool.load( asset, main.onLoadTextures );
+
+    },
+
+    // --------------------------
+    //   ON LOAD
+    // --------------------------
+
+    onLoadModel: function ( p ) {
+
+        var meshs = pool.meshByName ( modelName );
+
+    	view.extendGeometry( meshs.man.geometry );
+        view.extendGeometry( meshs.woman.geometry );
+
+        /*if( isMorph ){
+
+            view.correctMorph( [ 'big' ], 'man', meshs );
+            view.correctMorph( [ 'big' ], 'woman', meshs );
+
+        }*/
+
+        man = new Model( 'man', meshs, isMorph );
+        woman = new Model( 'wom', meshs, isMorph );
+
+        main.setTimescale();
+
+        // animation
+
+        main.addAnimation( 'base', p.base );
+
+        main.switchModel();
+        main.model.play('idle');
+        main.loadTextures();
+
+    },
+
+    onLoadTextures: function ( p ) {
+
+    	var txt = {};
+
+        var i = textures.length, name, n, t;
+
+        while(i--){
+
+            n = textures[i];
+            name = n.substring( n.lastIndexOf('/')+1, n.lastIndexOf('.') )
+
+            if( name === envmame ) view.initEnvScene( p[name] );
+            else {
+
+                t = new THREE.Texture( p[name] );
+                t.flipY = false;
+                if( name === 'avatar_c' || name === 'avatar_ao' || name === 'muscular' ) t.wrapS = THREE.MirroredRepeatWrapping;
+                else t.wrapS = THREE.RepeatWrapping;
+                t.needsUpdate = true;
+                txt[ name ] = t;
+
+            }
+
+        }
+
+        man.setTextures( txt );
+        woman.setTextures( txt );
+
+    },
+
+    // --------------------------
+    //   CHOOSE MODEL
+    // --------------------------
+
+    switchModel: function () {
+
+        var currentPlay = '';
+
+        if( main.model !== null ) {
+            currentPlay = main.model.currentPlay;
+            main.model.removeTo( scene );
+        }
+
+        isMan = isMan ? false : true;
+        main.model = isMan ? man : woman;
+
+        main.model.addTo( scene );
+
+        if( view.getMode() === 'bones' ) gui.bones();
+        if( currentPlay ) main.model.play( currentPlay );
+
+    },
+
+    // --------------------------
+    //   ANIMATION
+    // --------------------------
+
+    loadAnimation: function ( data, name, type ) {
+
+    	if( type === 'z' ) data = SEA3D.File.LZMAUncompress( data );
+        name = name.substring( 0, name.lastIndexOf('.') );
+        main.applyAnimation( name, bvhLoader.parse( data ) );
+
+    },
+
+    addAnimation: function ( name, buffer ) {
+
+        main.applyAnimation( name, bvhLoader.parse( buffer ) );
+
+    },
+
+    applyAnimation: function ( name, result ){
+
+        if( main.animations.indexOf( name ) !== -1 ) return;
+
+        var leg = result.leg || 0;
+        //var manRatio = man.hipPos.y / Math.abs(leg);
+        ///var womRatio = woman.hipPos.y / Math.abs(leg);
+
+        result.clip.name = name;
+        var bvhClip = result.clip;
+        var seq = [];
+        var decale = man.hipPos.y;
+
+        if( name === 'base' ){
+
+        	seq = [
+
+                ['idle', 5, 25], ['walk', 325, 355],
+                ['walk_side_r', 360, 390], ['walk_diag_r', 395, 425],
+                ['walk_side_l', 430, 460], ['walk_diag_l', 465, 495],
+                ['run', 500, 530 ], ['run_side_r', 535, 565 ], ['run_diag_r', 570, 600 ],
+                ['run_side_l', 605, 635 ], ['run_diag_l', 640, 670 ],
+                ['crouch', 675, 705], ['crouch_side_r', 710, 740 ], ['crouch_diag_r', 745, 775 ], 
+                ['crouch_side_l', 780, 810 ], ['crouch_diag_l', 815, 845 ],
+
+            ];
+
+        }
+
+       
+        man.reset();
+        woman.reset();
+
+        bvhLoader.applyToModel( man.mesh, bvhClip, man.poseMatrix, seq, leg );
+        bvhLoader.applyToModel( woman.mesh, bvhClip, woman.poseMatrix, seq, leg );
+
+        if( seq.length ){
+            for( var i=0; i < seq.length; i++ ){ 
+                main.animations.push( seq[i][0] );
+                gui.addAnim( seq[i][0] );
+            }
+        } else { 
+            main.model.play( name );
+            main.animations.push( name );
+            gui.addAnim( name );
+        }
+
+    },
+
+    setTimescale: function ( v ) {
+
+        if( v !== undefined ) main.timescale = v;
+        man.setTimescale( main.timescale );
+        woman.setTimescale( main.timescale );
+
+    },
+
+    lockHip: function ( b ) {
+
+    	man.isLockHip = b;
+    	woman.isLockHip = b;
+
+    },
+
+    // --------------------------
+    //   TEXTURES
+    // --------------------------
+
+    updateMaterial: function () {
+
+        man.updateMaterial();
+        woman.updateMaterial();
+
+    },
+
+    // --------------------------
+    //   SKELETON
+    // --------------------------
+
+    showSkeleton: function ( b ) {
+
+        man.isSkeleton = b;
+        woman.isSkeleton = b;
+        main.model.showSkeleton( b );
+
+    },
+
+    
 }
 
 return main;

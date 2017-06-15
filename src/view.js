@@ -44,14 +44,10 @@ view = {
     isGrid: false,
     videoSize: [1920/3,1080/3],
 
- 
-
-    
-
     update: function (  ) {
 
         var delta = clock.getDelta();
-        if( avatar ) avatar.update( delta );
+        if( main.model ) main.model.update( delta );
         
     },
 
@@ -117,7 +113,10 @@ view = {
     up: function ( e ) {
 
         e.preventDefault();
+
         isDown = false;
+
+        if(startPos===undefined) return;
 
         endPos = view.getCurrentPosition();
 
@@ -127,10 +126,8 @@ view = {
         if( ax < 5 && ay < 5 ){
 
         	view.findMouse( e );
-        	//view.pickTest();
         	var color = view.pick();
-        	console.log(color)
-
+        
         }
 
         
@@ -196,7 +193,7 @@ view = {
 
                 var color = view.getPixelValue( pixel );
 
-                avatar.getModel().showBones( color );
+                main.model.showBones( color );
 
                 console.log(pixel, color)
 
@@ -228,9 +225,7 @@ view = {
 
     	if( pickingTexture === null ) view.initPickScene();
 
-    	var model = avatar.getModel();
-
-
+    	var model = main.model;
 
     	model.swapMaterial(true);
     	plane.visible = false;
@@ -251,7 +246,7 @@ view = {
     // SET
 
     setMode: function ( Mode ) { 
-    	if( mode === 'bones' && mode !== Mode ) avatar.getModel().hideBones();
+    	if( mode === 'bones' && mode !== Mode ) main.model.hideBones();
     	mode = Mode;
     },
 
@@ -411,7 +406,7 @@ view = {
 
         if(nup){
 
-            avatar.upTexture();
+            main.updateMaterial();
 
         }
 
@@ -617,17 +612,25 @@ view = {
 
     // MODEL ADD
 
+    extendGeometry: function( geometry ){
+
+        view.reversUV( geometry );
+        view.addVertexColor( geometry );
+
+    },
+
     addVertexColor: function( geometry ){
 
         var color = new THREE.Float32BufferAttribute( geometry.attributes.position.count*3, 3 );
         var i = color.count, n;
-        //console.log('count', i)
+
         while(i--){ 
             n = i*3
             color[n] = 1;
             color[n+1] = 1;
             color[n+2] = 1;
         }
+
         geometry.addAttribute( 'color', color );
         geometry.attributes.color.needsUpdate = true;
 
@@ -635,19 +638,17 @@ view = {
 
     addUV2: function( geometry ){
 
-        if( geometry ) geometry.addAttribute( 'uv2', geometry.attributes.uv );
+        geometry.addAttribute( 'uv2', geometry.attributes.uv );
 
     },
 
-    correctMorph: function ( name, meshs ){
+    correctMorph: function ( morphs, name, meshs ){
 
-        //var morph = ['_open', '_close', '_sad', '_happy' ];
-        var morph = ['big' ];
+        for( var i=0; i < morphs.length; i++ ) {
 
-        for( var i=0; i < morph.length; i++ ) {
-
-            meshs[name].geometry.morphAttributes.position[i].array = meshs[name+'_'+morph[i]].geometry.attributes.position.array;
-            meshs[name].geometry.morphAttributes.normal[i].array = meshs[name+'_'+morph[i]].geometry.attributes.normal.array;
+            view.extendGeometry( meshs[ name + '_' + morphs[ i ] ].geometry );
+            meshs[name].geometry.morphAttributes.position[i].array = meshs[ name + '_' + morphs[ i ] ].geometry.attributes.position.array;
+            meshs[name].geometry.morphAttributes.normal[i].array = meshs[ name + '_' + morphs[ i ] ].geometry.attributes.normal.array;
 
         }
 
@@ -858,6 +859,14 @@ view = {
     },
 
 
+    clear: function ( mesh ){
+
+        var i = mesh.children.length;
+        while(i--) mesh.remove( mesh.children[i] );
+
+    },
+
+
 
 
 
@@ -880,6 +889,14 @@ THREE.Skeleton.prototype.update = ( function () {
     var identityMatrix = new THREE.Matrix4();
     var scaleMatrix = new THREE.Matrix4();
     var decal = new THREE.Vector3();
+    var invScale = new THREE.Vector3();
+    var baseScale = new THREE.Vector3( 1,1,1 );
+
+    var mtx = new THREE.Matrix4();
+    var tmtx = new THREE.Matrix4();
+
+    var p1 = new THREE.Vector3();
+    var p2 = new THREE.Vector3();
 
     return function update() {
 
@@ -888,25 +905,121 @@ THREE.Skeleton.prototype.update = ( function () {
         var boneMatrices = this.boneMatrices;
         var boneTexture = this.boneTexture;
 
+        var m, lng, bone;
+
         // flatten bone matrices to array
 
         for ( var i = 0, il = bones.length; i < il; i ++ ) {
 
+            bone = bones[ i ];
+
             // compute the offset between the current and the original transform
 
-            var matrix = bones[ i ] ? bones[ i ].matrixWorld : identityMatrix;
+            var matrix = bone ? bone.matrixWorld : identityMatrix;
 
-            if( bones[ i ].scalling !== undefined ){
+            //var scale = bones[ i ].parent.scale;
+            //invScale.set( 1/scale.x, 1/scale.y, 1/scale.z );
 
-                matrix.scale( bones[ i ].scalling );
+            if ( bone.parent && bones[ i ].parent.isBone ) {
 
-                for ( var j = 0, l = bones[ i ].children.length; j < l; j ++ ) {
+                if( bone.userData.mesh !== undefined ){
+
+                    m = bone.userData.mesh;
+
+                    p1.setFromMatrixPosition( bone.parent.matrixWorld );
+                    p2.setFromMatrixPosition( matrix );
+                    lng = p1.distanceTo( p2 );
+
+                    if( m.name ==='lFoot' || m.name ==='rFoot' || m.name ==='lToe' || m.name ==='rToe' ) tmtx.makeTranslation( -lng*0.5, 0, -1 );
+                    else tmtx.makeTranslation( -lng*0.5, 0, 0 );
+
+                    mtx.multiplyMatrices( bone.parent.matrixWorld, tmtx );
+
+                    
+                    //bones[ i ].userData.mesh.matrix.copy( matrix );
+                    m.position.setFromMatrixPosition( mtx );
+                    m.quaternion.setFromRotationMatrix( mtx );
+                    m.scale.x = lng;
+
+                    m.updateMatrixWorld(true);
+
+                }
+
+            	
+            }
+
+            /*for ( var j = 0, l = bones[ i ].children.length; j < l; j ++ ) {
+
+                scaleMatrix = matrix.clone();
+                scaleMatrix.multiply( bones[ i ].children[ j ].matrix.clone() )
+
+                //scaleMatrix.multiplyMatrices( matrix, bones[ i ].children[ j ].matrix );
+                bones[ i ].children[ j ].matrixWorld.scale( invScale );
+                bones[ i ].children[ j ].matrixWorld.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );
+
+            }*/
+
+            //for ( var j = 0, l = bones[ i ].children.length; j < l; j ++ ) {
+
+            //}
+
+            /*if( bones[ i ].parent ){
+            	var scale = bones[ i ].parent.scale;
+            	invScale.set( 1/scale.x, 1/scale.y, 1/scale.z );
+            	
+
+            	matrix.scale( invScale );
+
+            	for ( var j = 0, l = bones[ i ].children.length; j < l; j ++ ) {
 
                     scaleMatrix = matrix.clone();
                     scaleMatrix.multiply( bones[ i ].children[ j ].matrix.clone() )
 
                     //scaleMatrix.multiplyMatrices( matrix, bones[ i ].children[ j ].matrix );
+                    bones[ i ].children[ j ].matrixWorld.scale(scale)
                     bones[ i ].children[ j ].matrixWorld.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );
+
+                }
+            	//scaleMatrix = matrix.clone();
+                //scaleMatrix.multiply( bones[ i ].matrix.clone() );
+            	//matrix.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );
+            }*/
+
+            /*var scale = bones[ i ].scale;// : baseScale;
+            invScale.set( 1/scale.x, 1/scale.y, 1/scale.z )
+
+            for ( var j = 0, l = bones[ i ].children.length; j < l; j ++ ) {
+
+            	bones[ i ].children[ j ].scale.copy( invScale )
+
+                /*scaleMatrix = matrix.clone();
+                scaleMatrix.multiply( bones[ i ].children[ j ].matrix.clone() )
+
+                //scaleMatrix.multiplyMatrices( matrix, bones[ i ].children[ j ].matrix );
+                bones[ i ].children[ j ].matrixWorld.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );*/
+
+            //}
+
+            if( bone.scalling !== undefined ){
+
+                matrix.scale( bone.scalling );
+
+                for ( var j = 0, l = bones[ i ].children.length; j < l; j ++ ) {
+
+                    scaleMatrix = matrix.clone();
+                    scaleMatrix.multiply( bone.children[ j ].matrix );
+
+                    //decal.setFromMatrixPosition( scaleMatrix ).sub(bones[ i ].children[ j ].position)
+
+                    //bones[ i ].children[ j ].position.add( decal );
+                    //bones[ i ].children[ j ].matrix.setPosition( decal );
+                    //bones[ i ].children[ j ].matrixWorldNeedsUpdate = true;
+
+                    //bones[ i ].children[ j ].matrixWorld.multiplyMatrices( this.parent.matrixWorld, this.matrix );
+
+                    bone.children[ j ].matrixWorld.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );
+                    ///
+                    //bones[ i ].children[ j ].matrix.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );
 
                 }
 

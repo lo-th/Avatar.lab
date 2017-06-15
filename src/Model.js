@@ -1,6 +1,6 @@
-var V = {};
+var Model = function ( type, meshs, morph ) {
 
-V.Model = function ( type, meshs, morph ) {
+    if( morph === undefined ) morph = false;
 
     this.geoms = {
         man: meshs.man.geometry.clone(),
@@ -21,60 +21,26 @@ V.Model = function ( type, meshs, morph ) {
 
     };
 
-    this.colorBones = [
-        "0x000000",//root
-        "0x1600e3",// hip
-        "0x2600d8",// abdomen
-        "0x0018ff",//rThigh
-        "0x1818e7",//lThigh
-        "0x86005e",//chest
-        "0x1414eb",//lShin
-        "0x0014ff",//rShin
-        "0x0015ff",//rFoot
-        "0x0022ff",//rCollar
-        "0x1515ec",//lFoot
-        "0x880053",//neck
-        "0x2222dd",//lCollar
-        "0x1313ee",//lToe
-        "0x2020df",//lShldr
-        "0x0020ff",//rShldr
-        "0xcb001d",// head
-        "0x0013ff",//rToe
-        "0x001eff",//rForeArm
-        "0x1e1ee1",//lForeArm
-        "0x5d5da4",//lHand
-        "0x005dff",//rHand
-        "0x004eff",//rfinger20
-        "0x5454ab",//lfinger10
-        "0x003eff",//rfinger00
-        "0x0054ff",//rfinger10
-        "0x3e3ec1",//lfinger00
-        "0x4e4eb1",//lfinger20
-        "0x0048ff",//rfinger30
-        "0x0042ff",//rfinger40
-        "0x4848b7",//lfinger30
-        "0x4242bd",//lfinger40
-        "0x004aff",//rfinger31
-        "0x4a4ab5",//lfinger31
-        "0x4444bb",//lfinger41
-        "0x5050af",//lfinger21
-        "0x5656a9",//lfinger11
-        "0x0043ff",//rfinger01
-        "0x0050ff",//rfinger21
-        "0x4343be",//lfinger01
-        "0x0056ff",//rfinger11
-        "0x0044ff",//rfinger41
-        "0x0058ff",//rfinger12
-        "0x0041ff",//rfinger02
-        "0x0052ff",//rfinger22
-        "0x4646b9",//lfinger42
-        "0x4c4cb3",//lfinger32
-        "0x004cff",//rfinger32
-        "0x5252ad",//lfinger22
-        "0x4141c0",//lfinger02
-        "0x0046ff",//rfinger42
-        "0x5858a7"//lfinger12
-    ]
+    this.colorBonesName = {
+
+        '0x000000': 'root', '0x1600e3': 'hip', '0x2600d8': 'abdomen', '0x86005e': 'chest', '0x880053': 'neck', '0xcb001d': 'head',
+        '0x0018ff': 'rThigh', '0x0014ff': 'rShin', '0x0015ff': 'rFoot', '0x0013ff': 'rToe',
+        '0x1818e7': 'lThigh', '0x1414eb': 'lShin', '0x1515ec': 'lFoot', '0x1313ee': 'lToe',
+        '0x0022ff': 'rCollar', '0x0020ff': 'rShldr', '0x001eff': 'rForeArm', '0x005dff': 'rHand',
+        '0x2222dd': 'lCollar', '0x2020df': 'lShldr', '0x1e1ee1': 'lForeArm', '0x5d5da4': 'lHand',
+        
+        '0x3e3ec1': 'lfinger00', '0x4343be': 'lfinger01', '0x4141c0': 'lfinger02',
+        '0x003eff': 'rfinger00', '0x0043ff': 'rfinger01', '0x0041ff': 'rfinger02',
+        '0x5454ab': 'lfinger10', '0x0056ff': 'rfinger11', '0x0058ff': 'rfinger12',
+        '0x0054ff': 'rfinger10', '0x5656a9': 'lfinger11', '0x5858a7': 'lfinger12',
+        '0x4e4eb1': 'lfinger20', '0x5050af': 'lfinger21', '0x0052ff': 'rfinger22',
+        '0x004eff': 'rfinger20', '0x0050ff': 'rfinger21', '0x5252ad': 'lfinger22',
+        '0x4848b7': 'lfinger30', '0x4a4ab5': 'lfinger31', '0x4c4cb3': 'lfinger32',
+        '0x0048ff': 'rfinger30', '0x004aff': 'rfinger31', '0x004cff': 'rfinger32',
+        '0x4242bd': 'lfinger40', '0x4444bb': 'lfinger41', '0x4646b9': 'lfinger42',
+        '0x0042ff': 'rfinger40', '0x0044ff': 'rfinger41', '0x0046ff': 'rfinger42',
+        
+    };
 
     this.ref = meshs;
 
@@ -86,6 +52,8 @@ V.Model = function ( type, meshs, morph ) {
     this.isLockHip = true;
     this.isSkeleton = false;
 
+    this.center = null;
+
     this.preTime = 0;
 
     this.f = 0;
@@ -93,12 +61,21 @@ V.Model = function ( type, meshs, morph ) {
     this.breath = 0;
     this.breathSide = -1;
 
+    this.frame = 0;
+    this.frameMax = 0;
+    this.frameTime = 0;
+    this.currentPlay = '';
+
+    this.isPlay = false;
+
     this.txt = null;
     this.type = type;
 
     this.mats = [];
 
     this.position = new THREE.Vector3();
+
+    this.skell = null;
 
     var tSize = 1.4;
 
@@ -165,7 +142,7 @@ V.Model = function ( type, meshs, morph ) {
 
     this.isWithMorph = morph || false;
 
-    if(this.isWithMorph) this.mesh.morphTargetInfluences[0] = 1;
+    if( this.isWithMorph ) this.mesh.morphTargetInfluences[0] = 1;
 
     //console.log( this.hipPos )
     this.headBoneRef = this.b.head.rotation;
@@ -184,6 +161,8 @@ V.Model = function ( type, meshs, morph ) {
 
     //this.b.head.add( this.eyes );
 
+    //this.eyes.matrixWorld = this.b.head.matrixWorld;
+
     this.eyes.matrix = this.b.head.matrixWorld;
     this.eyes.matrixAutoUpdate = false;
 
@@ -198,96 +177,184 @@ V.Model = function ( type, meshs, morph ) {
 }
 
 
-V.Model.prototype = {
+Model.prototype = {
 
-    swapMaterial: function ( b ){
+    removeTo: function( Scene ){
 
-        if(b){ 
-            this.mesh.material = this.mats[2];
-            this.mats[1].visible = false;
-        } else {
-            this.mesh.material = this.mats[0];
-            this.mats[1].visible = true;
-        }
+        this.removeSkeleton();
 
-    },
+        Scene.remove( this.mesh );
+        Scene.remove( this.root );
 
-    upTexture: function (){
-
-        this.mats[0].needsUpdate = true;
-        this.mats[1].needsUpdate = true;
-        this.mats[2].needsUpdate = true;
+        this.isFull = false;
 
     },
 
-    setEnvmap: function () {
+    addTo: function ( Scene ){
 
-        this.mats[0].envMap = view.getEnvmap();
-        this.mats[1].envMap = view.getEnvmap();
+        if( this.isSkeleton ) this.addSkeleton();
 
-    },
+        Scene.add( this.mesh );
+        Scene.add( this.root );
 
-    setTextures: function ( txt ) {
-
-        this.txt = txt;
-
-        var m = this.mats[0];
-
-        if( m.map !== undefined ) m.map = this.txt.avatar_c;
-        if( m.envMap !== undefined ) m.envMap = view.getEnvmap();
-        if( m.alphaMap !== undefined ) m.alphaMap = this.type === 'man' ? this.txt.avatar_skin_n_m : this.txt.avatar_skin_n_w;
-        if( m.normalMap !== undefined ) m.normalMap = this.type === 'man' ? this.txt.avatar_n_m : this.txt.avatar_n_w;
-        if( m.lightMap !== undefined ) m.lightMap = this.type === 'man' ? this.txt.avatar_l_m : this.txt.avatar_l_w;
-        if( m.aoMap !== undefined ) m.aoMap = this.txt.avatar_ao;
-        if( m.bumpMap !== undefined ) m.bumpMap = this.txt.muscular;
-
-        m = this.mats[1];
-
-        if( m.map !== undefined ) m.map = this.type === 'man' ? this.txt.eye_m : this.txt.eye_w;
-        if( m.envMap !== undefined ) m.envMap = view.getEnvmap();
-        if( m.normalMap !== undefined ) m.normalMap = this.txt.eye_n;
-        if( m.lightMap !== undefined ) m.lightMap = this.txt.eye_l;
-
-        m = this.mats[2];
-        m.map = this.txt.avatar_id;
-
-        this.upTexture();
+        this.isFull = true;
 
     },
 
-    switchGender: function () {
+    // --------------------------
+    // HELPER
+    // --------------------------
 
-        if(this.type==='man'){
+    addHelper: function ( b ) {
 
-            this.mesh.geometry.dispose();
-
-            this.mesh.geometry.copy( this.geoms.woman )
-
-        }
-
-
+        this.center = new THREE.Mesh( new THREE.CircleGeometry(25), new THREE.MeshBasicMaterial({ color:0x00FF00, wireframe:true }) );
+        this.center.geometry.applyMatrix( new THREE.Matrix4().makeRotationX( -Math.PI*0.5 ) );
+        this.root.add( this.center );
 
     },
 
-    addSkeleton: function ( b ) {
+    // --------------------------
+    // SKELETON BOX
+    // --------------------------
 
-        if( b ){
-            this.isSkeleton = true;
-            this.helper = new THREE.SkeletonHelper( this.b.hip );
-            this.helper.skeleton = this.mesh.skeleton;
-            this.root.add( this.helper );
-        } else {
-            if(this.isSkeleton){
-                this.root.remove( this.helper );
-                this.isSkeleton = false;
+    showSkeleton: function ( b ) {
+
+        if( b ) this.addSkeleton();
+        else this.removeSkeleton();
+        //this.isSkeleton = b;
+
+    },
+
+    removeSkeleton: function () {
+
+        if( this.skell === null ) return;
+
+        var i = this.skell.children.length;
+        while(i--) this.skell.remove( this.skell.children[i] );
+        this.root.remove( this.skell );
+        this.skell = null;
+
+    },
+
+    addSkeleton: function () {
+
+        if( this.skell !== null ) return;
+
+        var ignor = [ 
+            'rThigh', 'lThigh', 'hip', 'rCollar', 'lCollar',
+            'rfinger40', 'rfinger30', 'rfinger00', 'rfinger10',
+            'lfinger40', 'lfinger30', 'lfinger00', 'lfinger10',
+        ]
+
+        this.skell = new THREE.Group();
+        this.root.add( this.skell );
+
+        var p1 = new THREE.Vector3();
+        var p2 = new THREE.Vector3();
+
+        var geo = new THREE.BoxBufferGeometry( 1, 1, 1 );
+        var mat = new THREE.MeshBasicMaterial( { color:0xFFFFFF, wireframe:true, depthTest: true, depthWrite: true } );
+
+        this.meshBones = [];
+
+        var bones = this.bones, bone, mesh, lng, name;
+
+        for ( var i = 0; i < bones.length; i ++ ) {
+
+            bone = this.bones[i];
+            name = bone.name;
+
+            if ( bone.parent && bone.parent.isBone ){
+                if ( ignor.indexOf(name) === -1 ){
+
+                    p1.setFromMatrixPosition( bone.parent.matrixWorld );
+                    p2.setFromMatrixPosition( bone.matrixWorld );
+
+                    lng = p1.distanceTo( p2 );
+
+                    mesh = new THREE.Mesh( geo, mat );
+                    mesh.userData.lng = lng;
+                    mesh.name = bone.parent.name;
+
+                    if(name.substring(0,2) !== 'lf' && name.substring(0,2) !== 'rf'){
+
+                        mesh.scale.y = 2;
+                        mesh.scale.z = 2;
+                        
+                    } else {
+                        mesh.scale.y = 0.5;
+                        mesh.scale.z = 0.5;
+                    }
+
+                    if( mesh.name==='rHand' || mesh.name==='lHand' ){
+                        mesh.scale.y = 2;
+                        mesh.scale.y = 3;
+                    }
+
+                    if( mesh.name==='head' ){
+                        mesh.scale.y = 5;
+                        mesh.scale.z = 5;
+                    }
+
+                    if( mesh.name==='hip' || mesh.name==='abdomen' || mesh.name==='chest' ){
+                        mesh.scale.y = 10;
+                        mesh.scale.z = 5;
+                    }
+
+                    if( mesh.name==='rCollar' || mesh.name==='lCollar' || mesh.name==='rShldr' || mesh.name==='lShldr' ){
+                        mesh.scale.y = 3;
+                        mesh.scale.z = 3;
+                    }
+
+                    if( mesh.name==='rThigh' || mesh.name==='lThigh' ){
+                        mesh.scale.y = 4;
+                        mesh.scale.z = 4;
+                    }
+                    if( mesh.name==='rShin' || mesh.name==='lShin' ){
+                        mesh.scale.y = 3;
+                        mesh.scale.z = 3;
+                    }
+                    if( mesh.name==='lFoot' || mesh.name==='rFoot' || mesh.name==='lToe' || mesh.name==='rToe' ){
+                        mesh.scale.y = 3;
+                        mesh.scale.z = 2;
+                    }
+
+                    this.skell.add( mesh );
+                    bone.userData.mesh = mesh;
+
+                }
+
             }
+
         }
+
 
     },
 
-    lockHip: function ( b ) {
+    // --------------------------
+    // ANIMATION
+    // --------------------------
 
-        this.isLockHip = b;
+    update: function ( delta ){
+
+        THREE.SEA3D.AnimationHandler.update( delta );
+
+        this.getAnimInfo();
+        this.breathing();
+        this.look();
+
+        if( this.isLockHip ){ 
+            //this.b.hip.position.x = 0;
+            this.b.hip.position.z = 0;
+            this.b.hip.position.y = 0;
+        }
+
+        if( this.center !== null ){ 
+            this.center.position.copy( this.getHipPos() );
+            this.center.position.y = 0;
+        }
+
+        if( gui ) gui.updateTimeBarre( this );
 
     },
 
@@ -296,7 +363,6 @@ V.Model.prototype = {
         this.mesh.stopAll();
 
         var i, name, bone, lng = this.bones.length;
-
 
         for( i=0; i<lng; i++){
 
@@ -313,39 +379,155 @@ V.Model.prototype = {
 
     },
 
-    removeFromScene: function( Scene ){
-
-        Scene.remove( this.mesh );
-        Scene.remove( this.root );
-
-        this.isFull = false;
-
-    },
-
-    addToScene: function ( Scene ){
-
-        Scene.add( this.mesh );
-        Scene.add( this.root );
-
-        this.isFull = true;
-
-    },
-
     stop: function (){
 
         this.mesh.stopAll();
+        this.isPlay = false;
 
     },
 
     play: function ( name, crossfade, offset, weight ){
 
+        this.unPause();
         this.mesh.play( name, crossfade, offset, weight );
+
+    },
+
+    playOne: function ( f ) {
+
+        var offset = f * this.frameTime;
+        this.mesh.play( this.currentPlay, 0, offset, 1 );
+        this.pause();
+
+    },
+
+    pause: function () {
+
+        this.mesh.pauseAll();
+        this.isPlay = false;
+
+    },
+
+    unPause: function () {
+
+        this.mesh.unPauseAll();
+        this.isPlay = true;
 
     },
 
     getTime: function () {
 
         return this.mesh.currentAnimationAction ? this.mesh.currentAnimationAction.time : false;
+
+    },
+
+    breathing: function () {
+
+        if( this.b.chest && this.b.abdomen ){
+
+            if(this.breathSide > 0){
+                this.b.chest.scalling.z = Math.lerp (1,1.04, this.breath*0.05);
+                this.b.chest.scalling.y = Math.lerp (1,1.02, this.breath*0.05);
+                this.b.abdomen.scalling.z = Math.lerp (1,0.92, this.breath*0.05);
+            }else{
+                this.b.chest.scalling.z = Math.lerp (1.04,1, this.breath*0.05);
+                this.b.chest.scalling.y = Math.lerp (1.02,1, this.breath*0.05);
+                this.b.abdomen.scalling.z = Math.lerp (0.92,1, this.breath*0.05);
+            }
+
+            this.breath ++;
+
+            if( this.breath === 20 ){ this.breath = 0; this.breathSide = this.breathSide > 0 ? -1:1; }
+        }
+
+    },
+
+    look: function () {
+
+        var v = view.getMouse();
+
+        if( this.isPlay ) this.b.head.rotation.set( this.headBoneRef.x-(((v.x*6))*Math.torad), this.headBoneRef.y+(((v.y*6)+4)*Math.torad), this.headBoneRef.z);
+        
+        this.eyeTarget.position.set(-3.54+(-v.y*3), (-v.x*3), -10);
+        this.eye_l.lookAt( this.eyeTarget.position.clone().add(new THREE.Vector3(0,-1.4,0)) );
+        this.eye_r.lookAt( this.eyeTarget.position.clone().add(new THREE.Vector3(0,1.4,0)) );
+
+    },
+
+    
+    getAnimInfo: function (){
+
+        var anim = this.mesh.currentAnimation;
+        //var anim = this.mesh.currentAnimationAction;
+
+        if( !anim ){
+
+            this.frame = 0;
+            this.frameMax = 0;
+            this.currentPlay = '';
+
+        } else {
+
+            this.frameTime = anim.clip.frameTime;
+            var f = 1 / this.frameTime;
+            this.frame = Math.round( this.mesh.currentAnimationAction.time * f );
+            this.frameMax = Math.round( anim.clip.duration * f );
+            this.currentPlay = anim.name;
+
+        }
+
+    },
+
+    getHipPos: function () {
+
+        return this.b.hip.getWorldPosition();
+
+    },
+
+    setPosition: function ( pos ) {
+
+        this.mesh.position.copy( this.position );
+
+    },
+
+    setDebug: function ( b ) {
+
+        this.debug = b;
+        this.addHelper( this.debug );
+
+        var i = this.mats.length;
+        while( i-- ) this.mats[i].wireframe = this.debug;
+        
+    },
+
+    // --------------------------
+    // MATERIAL
+    // --------------------------
+
+    swapMaterial: function ( b ){
+
+        if(b){ 
+            this.mesh.material = this.mats[2];
+            this.mats[1].visible = false;
+        } else {
+            this.mesh.material = this.mats[0];
+            this.mats[1].visible = true;
+        }
+
+    },
+
+    updateMaterial: function (){
+
+        this.mats[0].needsUpdate = true;
+        this.mats[1].needsUpdate = true;
+        this.mats[2].needsUpdate = true;
+
+    },
+
+    setEnvmap: function () {
+
+        this.mats[0].envMap = view.getEnvmap();
+        this.mats[1].envMap = view.getEnvmap();
 
     },
 
@@ -395,16 +577,37 @@ V.Model.prototype = {
         m = this.mats[2];
         m.skinning = true;
 
+    },
 
+    setTextures: function ( txt ) {
 
+        this.txt = txt;
 
-        //this.showBones('lShin')
+        var m = this.mats[0];
 
-        
+        if( m.map !== undefined ) m.map = this.txt.avatar_c;
+        if( m.envMap !== undefined ) m.envMap = view.getEnvmap();
+        if( m.alphaMap !== undefined ) m.alphaMap = this.type === 'man' ? this.txt.avatar_skin_n_m : this.txt.avatar_skin_n_w;
+        if( m.normalMap !== undefined ) m.normalMap = this.type === 'man' ? this.txt.avatar_n_m : this.txt.avatar_n_w;
+        if( m.lightMap !== undefined ) m.lightMap = this.type === 'man' ? this.txt.avatar_l_m : this.txt.avatar_l_w;
+        if( m.aoMap !== undefined ) m.aoMap = this.txt.avatar_ao;
+        if( m.bumpMap !== undefined ) m.bumpMap = this.txt.muscular;
+
+        m = this.mats[1];
+
+        if( m.map !== undefined ) m.map = this.type === 'man' ? this.txt.eye_m : this.txt.eye_w;
+        if( m.envMap !== undefined ) m.envMap = view.getEnvmap();
+        if( m.normalMap !== undefined ) m.normalMap = this.txt.eye_n;
+        if( m.lightMap !== undefined ) m.lightMap = this.txt.eye_l;
+
+        m = this.mats[2];
+        m.map = this.txt.avatar_id;
+
+        this.updateMaterial();
 
     },
 
-    updateMaterial: function(){
+    updateSetting: function(){
 
         var set = this.settings;
         var m = this.mats[0];
@@ -420,92 +623,17 @@ V.Model.prototype = {
 
     },
 
-    getHipPos: function () {
 
-        return this.b.hip.getWorldPosition();
+    // --------------------------
+    // BONES
+    // --------------------------
 
-    },
+    setScale: function ( axe, v ){
 
-    setPosition: function ( pos ) {
-
-        this.mesh.position.copy( this.position );
-
-    },
-
-    setDebug: function ( b ) {
-
-        this.debug = b;
-        this.addHelper( this.debug );
-
-        var i = this.mats.length;
-        while( i-- ) this.mats[i].wireframe = this.debug;
-        
-    },
-
-    breathing: function () {
-
-        if( this.b.chest && this.b.abdomen ){
-
-            if(this.breathSide > 0){
-                this.b.chest.scalling.z = Math.lerp (1,1.04, this.breath*0.05);
-                this.b.chest.scalling.y = Math.lerp (1,1.02, this.breath*0.05);
-                this.b.abdomen.scalling.z = Math.lerp (1,0.92, this.breath*0.05);
-            }else{
-                this.b.chest.scalling.z = Math.lerp (1.04,1, this.breath*0.05);
-                this.b.chest.scalling.y = Math.lerp (1.02,1, this.breath*0.05);
-                this.b.abdomen.scalling.z = Math.lerp (0.92,1, this.breath*0.05);
-            }
-
-            this.breath ++;
-
-            if( this.breath === 20 ){ this.breath = 0; this.breathSide = this.breathSide > 0 ? -1:1; }
-        }
+        if(this.boneSelect===null) return;
+        this.boneSelect.scale[ axe ] = v;
 
     },
-
-    look: function () {
-
-        var v = view.getMouse();
-
-        this.b.head.rotation.set(this.headBoneRef.x-(((v.x*6))*Math.torad), this.headBoneRef.y+(((v.y*6)+4)*Math.torad), this.headBoneRef.z);
-        
-        this.eyeTarget.position.set(-3.54+(-v.y*3), (-v.x*3), -10);
-        this.eye_l.lookAt( this.eyeTarget.position.clone().add(new THREE.Vector3(0,-1.4,0)) );
-        this.eye_r.lookAt( this.eyeTarget.position.clone().add(new THREE.Vector3(0,1.4,0)) );
-
-    },
-
-    update: function (){
-
-        this.breathing();
-        this.look();
-
-        //this.headMap.update( x, y );
-        //if( this.isSkeleton ) this.helper.update();
-        if( this.isLockHip ){ 
-            //this.b.hip.position.x = 0;
-            this.b.hip.position.z = 0;
-            this.b.hip.position.y = 0;
-        }
-
-    },
-
-    getAnimInfo: function (){
-
-        var anim = this.mesh.currentAnimation;
-        if(!anim) return { name: 'none', frame:0 }
-        var t = this.mesh.currentAnimationAction.time;
-        var f = anim.clip.frameTime;
-        var d = anim.clip.duration;
-        return { name:anim.name, frame: Math.round(t/f), total:Math.round( d/f ) }
-
-    },
-
-    /*findID: function ( name ){
-
-        return this.bonesNames.indexOf(name);
-
-    },*/
 
     setScalling: function ( axe, v ){
 
@@ -522,44 +650,32 @@ V.Model.prototype = {
 
     },
 
-    showBones: function ( name ) {
+    showBones: function ( color ) {
 
-        var i, lng, n, n4, w0, w1, w2, w3, x;
+        var i, lng, n, n4, w0, w1, w2, w3, x, id, existe = false;
 
-        var id = id = this.colorBones.indexOf(name);
+        var name = this.colorBonesName[ color ];
 
-        if( name === '0x1100e5' ){
-            if(this.type === 'man' ) id = 1;
-            else id = 5; 
+        if( color === '0x1100e5' ){
+            if( this.type === 'man' ) name = 'hip';
+            else name = 'chest'; 
         }
 
-        if(id === -1) this.bonesNames.indexOf( name );
+        if( this.b[name] !== undefined ) existe = true;
+        if( name === 'root' ) existe = false
 
-     
-
-        if(id === -1) return;
-
-        if( id === 0 ){
+        if( !existe ){
             this.hideBones();
-            return;
-        } else {
-            this.boneSelect = this.bones[id];
-            this.mats[0].vertexColors = THREE.VertexColors;
-            this.mats[0].needsUpdate = true;
-        }
-
+            return;}
+    
+        this.boneSelect = this.b[name];
+        id = this.bones.indexOf( this.boneSelect );
+        this.mats[0].vertexColors = THREE.VertexColors;
+        this.mats[0].needsUpdate = true;
         
+        if(gui) gui.setBones( name, id, this.boneSelect.scalling );
 
-
-        if(gui){
-
-            gui.setBones( this.bonesNames[id], id, this.boneSelect.scalling );
-
-        }
-
-        
-
-        
+        // update vertex color
 
         var colors = this.geometry.attributes.color.array;
         var index = this.geometry.attributes.skinIndex.array;
@@ -586,7 +702,6 @@ V.Model.prototype = {
         }
 
         this.geometry.attributes.color.needsUpdate = true;
-        //this.mats[0].vertexColors = THREE.VertexColors;
 
     },
 

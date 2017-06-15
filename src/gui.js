@@ -3,7 +3,7 @@ var gui = ( function () {
 'use strict';
 
 var ui;
-var content, main, menu, timebarre;
+var content, mainMenu, menu, timebarre;
 var gender, genderIM
 var isOpen = false;
 
@@ -15,7 +15,7 @@ var current = 'none';
 
 var isMan = true;
 
-var bone, sx, sy, sz;
+var bone, sx, sy, sz, wx, wy, wz;
 
 
 gui = {
@@ -41,16 +41,16 @@ gui = {
                 genderIM.src = 'assets/textures/m.png';
             }
 
-            avatar.switchModel();
+            main.switchModel();
 
         }, false );
 
         gender.appendChild( genderIM );
         content.appendChild( gender );
 
-        main = document.createElement( 'div' );
-        main.style.cssText = 'position: absolute; top:50px; right:0; pointer-events:none; width:200px; height:100%; display:none;';
-        content.appendChild( main );
+        mainMenu = document.createElement( 'div' );
+        mainMenu.style.cssText = 'position: absolute; top:50px; right:0; pointer-events:none; width:200px; height:100%; display:none;';
+        content.appendChild( mainMenu );
 
         menu = document.createElement( 'div' );
         menu.style.cssText = 'position: absolute; top:0px; left:0px; height:50px; width:100%; pointer-events:none; ';
@@ -60,7 +60,7 @@ gui = {
 
         for(var i=0; i<BB.length; i++ ) this.addButton(i);
 
-        ui = new UIL.Gui( { w:200, bg:'rgba(23,23,23,0)', close:false, parent:main, top:50, css:'right:0; transition:none;' } );
+        ui = new UIL.Gui( { w:200, bg:'rgba(23,23,23,0)', close:false, parent:mainMenu, top:50, css:'right:0; transition:none;' } );
 
     },
 
@@ -83,7 +83,7 @@ gui = {
 
         if(!isOpen) return;
 
-        main.style.display = 'none';
+        mainMenu.style.display = 'none';
         isOpen = false;
 
     },
@@ -92,7 +92,7 @@ gui = {
 
         if( isOpen ) return;
 
-        main.style.display = 'block';
+        mainMenu.style.display = 'block';
         isOpen = true;
 
     },
@@ -110,7 +110,7 @@ gui = {
             case 0: gui.close(); break;
             case 1: gui.view(); break;
             case 2: gui.video(); break;
-            case 3: gui.anim(); break;
+            case 3: gui.animation(); break;
             case 4: gui.material(); break;
             case 5: gui.bones(); break;
            // case 5: gui.morph(); break;
@@ -127,7 +127,7 @@ gui = {
 
         ui.add('Bool', { name:'GRID', value:view.isGrid, p:60 } ).onChange( view.addGrid );
         ui.add('Bool', { name:'SHADOW', value:view.isShadow, p:60 } ).onChange( view.addShadow );
-        ui.add('Bool', { name:'SKELETON', value:avatar.getModel().isSkeleton, p:60 } ).onChange( avatar.addSkeleton );
+        ui.add('Bool', { name:'SKELETON', value: main.model.isSkeleton, p:60 } ).onChange( function(b){ main.showSkeleton(b); } );
         ui.add('Bool', { name:'SKY', value:false, p:60 } ).onChange( view.showSky );
 
         ui.add('title',  { name:' ', h:30});
@@ -152,7 +152,7 @@ gui = {
 
     material: function () {
 
-        var model = avatar.getModel();
+        var model = main.model;
         var settings = model.settings;
 
         var mats = ['Basic', 'Normal', 'Depth', 'Toon', 'Lambert', 'Phong','Standard'];
@@ -172,7 +172,7 @@ gui = {
 
     applyMaterial: function(){
 
-        avatar.getModel().updateMaterial();
+        main.model.updateSetting();
 
     },
 
@@ -182,11 +182,15 @@ gui = {
 
         bone = ui.add('title', { name:'none', h:30, r:10 } );
 
-        var model = avatar.getModel();
+        var model = main.model;
 
         sx = ui.add('slide',  { name:'scale X',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ model.setScalling('x', v); } );
         sy = ui.add('slide',  { name:'scale Y',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ model.setScalling('y', v); } );
         sz = ui.add('slide',  { name:'scale Z',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ model.setScalling('z', v); } );
+
+        /*wx = ui.add('slide',  { name:'scale X',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ model.setScale('x', v); } );
+        wy = ui.add('slide',  { name:'scale Y',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ model.setScale('y', v); } );
+        wz = ui.add('slide',  { name:'scale Z',  min:0, max:2, value:1, precision:2, fontColor:'#D4B87B', stype:1, bColor:'#999' }).onChange( function(v){ model.setScale('z', v); } );*/
 
     },
 
@@ -198,23 +202,28 @@ gui = {
         sy.setValue(v.y);
         sz.setValue(v.z);
 
+        /*wx.setValue(1);
+        wy.setValue(1);
+        wz.setValue(1);*/
+
     },
 
-    anim: function () {
+    animation: function () {
 
         ui.add('slide', { name:'framerate', min:24, max:60, value:60, precision:0, step:1, stype:1 }).onChange( view.setFramerate );
 
         current = 'anim';
-        ui.add('slide',  { name:'animation', min:-1, max:1, value:avatar.getTimescale(), precision:2, stype:1 }).onChange( avatar.setTimescale );
-        ui.add('Bool', { name:'LOCK HIP', value:avatar.getModel().isLockHip, p:60 } ).onChange( avatar.lockHip );
-        ui.add('button', { name:'LOAD BVH', fontColor:'#D4B87B', h:40, drag:true, p:0 }).onChange( avatar.loadSingle );
+        ui.add('slide',  { name:'animation', min:-1, max:1, value:main.timescale, precision:2, stype:1 }).onChange( main.setTimescale );
+        ui.add('Bool', { name:'LOCK HIP', value: main.model.isLockHip, p:60 } ).onChange( main.lockHip );
+        ui.add('button', { name:'LOAD BVH', fontColor:'#D4B87B', h:40, drag:true, p:0 }).onChange( main.loadAnimation );
 
-        var an = avatar.getAnimations(), name;
+        var an = main.animations, name;
 
         for(var i=0; i<an.length; i++){
 
             name = an[i];
-            ui.add( 'button', { name:name, p:0 }).onChange( avatar.play );
+            //ui.add( 'button', { name:name, p:0 }).onChange( avatar.play );
+            ui.add( 'button', { name:name, p:0 }).onChange( function(n){ main.model.play( n ); } );
 
         }
 
@@ -225,11 +234,12 @@ gui = {
     addAnim: function( name ){
 
         if( current !== 'anim' ) return;
-        ui.add( 'button', { name:name, p:0 }).onChange( avatar.play );
+        //ui.add( 'button', { name:name, p:0 }).onChange( avatar.play );
+        ui.add( 'button', { name:name, p:0 }).onChange( function(n){ main.model.play( n ); } );
 
     },
 
-    morph: function () {
+    /*morph: function () {
 
         var mo = avatar.getMorph(), name;
 
@@ -251,9 +261,20 @@ gui = {
         ui.add('slide',  { name:'mouth size', min:0.5, max:2, value:1, precision:2 }).onChange( avatar.sizeMouth );
         
 
-    },
+    },*/
 
     // PLAY BARRE
+
+    updateTimeBarre: function ( m ) {
+
+        if( !timebarre.isHide ) {
+
+            timebarre.setTotalFrame( m.frameMax, m.frameTime );
+            timebarre.update( m.frame );
+
+        }
+
+    },
 
     resize: function () {
 
@@ -261,7 +282,7 @@ gui = {
 
     },
 
-    setTotalFrame: function ( v, ft ) {
+   /* setTotalFrame: function ( v, ft ) {
 
         if( timebarre ) timebarre.setTotalFrame( v, ft );
 
@@ -272,7 +293,7 @@ gui = {
         if( timebarre ) timebarre.update( f );
 
     },
-
+*/
     inPlay:function(){
         if( timebarre ) timebarre.inPlay();
     }
@@ -342,9 +363,9 @@ var Timebarre = function( p, sel ){
     this.timeline.addEventListener( 'mouseover', function ( e ) { _this.tOver(e); }, false );
     this.timeline.addEventListener( 'mouseout', function ( e ) { _this.tOut(e); }, false );
 
-    this.timeline.addEventListener( 'mousedown', function ( e ) { _this.tDown(e); }, false );
-    document.body.addEventListener( 'mouseup', function ( e ) { _this.tUp(e); }, false );
-    document.body.addEventListener( 'mousemove', function ( e ) { _this.tMove(e); }, false );
+    this.timeline.addEventListener( 'mousedown', function ( e ) {  _this.tDown(e); }, false );
+    document.addEventListener( 'mouseup', function ( e ) {  _this.tUp(e); }, false );
+    document.addEventListener( 'mousemove', function ( e ) {  _this.tMove(e); }, false );//e.stopPropagation();
 
     this.playButton.addEventListener('mousedown',  function ( e ) { _this.play_down(e); }, false );
     this.playButton.addEventListener('mouseover',  function ( e ) { _this.play_over(e); }, false );
@@ -364,10 +385,10 @@ Timebarre.prototype = {
 
         if( this.playing ){ 
             this.playing = false;
-            avatar.pause();
+            main.model.pause();
         } else {
             this.playing = true;
-            avatar.unPause();
+            main.model.unPause();
         }
 
         this.playButton.innerHTML = this.playing ? this.playIcon : this.pauseIcon;
@@ -422,11 +443,11 @@ Timebarre.prototype = {
 
     },
 
-    update:function( t ){
+    update: function ( f ) {
 
-        if( this.isHide ) return;
+        //if( this.isHide ) return;
 
-        this.frame = Math.round( t / this.frameTime );
+        this.frame = f;
         this.timeInfo.innerHTML = this.frame + ' / ' + this.totalFrame;
         this.framer.style.width = this.frame / this.ratio + 'px';
 
@@ -468,7 +489,7 @@ Timebarre.prototype = {
             if(f<0) f = 0;
             if(f>this.totalFrame) f = this.totalFrame; 
             this.frame = f;
-            avatar.playOne( this.frame );
+            main.model.playOne( this.frame );
             //this.parent.gotoFrame(this.frame);
         }
     }

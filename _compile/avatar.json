@@ -17,10 +17,9 @@
     "src/BVHLoader.js",
     "src/math.js",
     "src/pool.js",
+    "src/shader.js",
     "src/Model.js",
     "src/view.js",
     "src/gui.js",
-    "src/avatar.js",
-    "src/animator.js",
     "src/main.js"
 ]
