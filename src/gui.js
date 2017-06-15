@@ -215,7 +215,6 @@ gui = {
             sx.setValue( 1 );
             sy.setValue( 1 );
             sz.setValue( 1 );
-
             return;
         }
 

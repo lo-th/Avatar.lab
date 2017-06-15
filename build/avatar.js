@@ -67602,7 +67602,6 @@ gui = {
             sx.setValue( 1 );
             sy.setValue( 1 );
             sz.setValue( 1 );
-
             return;
         }
 
@@ -68069,7 +68068,7 @@ main = {
 
         main.model.addTo( scene );
 
-        if( view.getMode() === 'bones' ) gui.bones();
+        if( view.getMode() === 'bones' ) gui.setBones('none');
         if( currentPlay ) main.model.play( currentPlay );
 
     },

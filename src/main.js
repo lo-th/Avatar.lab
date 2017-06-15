@@ -162,7 +162,7 @@ main = {
 
         main.model.addTo( scene );
 
-        if( view.getMode() === 'bones' ) gui.bones();
+        if( view.getMode() === 'bones' ) gui.setBones('none');
         if( currentPlay ) main.model.play( currentPlay );
 
     },
