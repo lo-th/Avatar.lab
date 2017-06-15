@@ -297,7 +297,7 @@ view = {
         renderer.setSize( vs.w, vs.h );
         container.appendChild( renderer.domElement );
 
-        view.setTone();
+        
 
         /*debug = document.createElement('div');
         debug.className = 'debug';

@@ -66642,7 +66642,7 @@ view = {
         renderer.setSize( vs.w, vs.h );
         container.appendChild( renderer.domElement );
 
-        view.setTone();
+        
 
         /*debug = document.createElement('div');
         debug.className = 'debug';
@@ -68047,6 +68047,8 @@ main = {
 
         man.setTextures( txt );
         woman.setTextures( txt );
+
+        view.setTone();
 
     },
 

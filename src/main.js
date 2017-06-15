@@ -142,6 +142,8 @@ main = {
         man.setTextures( txt );
         woman.setTextures( txt );
 
+        view.setTone();
+
     },
 
     // --------------------------
