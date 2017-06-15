@@ -2,7 +2,7 @@ var view = ( function () {
 
 'use strict';
 
-var renderer, scene, camera, controler, transformer, clock, plane, materialShadow, ambient, light, debug, follow, mouse, pixel, raycaster, content;
+var renderer, scene, camera, controler, transformer, clock, plane, materialShadow, ambient, light, follow, mouse, pixel, raycaster, content;
 var grid = null, capturer = null;
 var vs = { w:1, h:1, mx:0, my:0 };
 var t = { now:0, delta:0, then:0, inter:0, tmp:0, n:0 };
@@ -72,7 +72,7 @@ view = {
 
             if ( t.now - 1000 > t.tmp ){ 
                 t.tmp = t.now; 
-                debug.innerHTML = t.n;
+                gui.setText( t.n );
                 t.n = 0;
             }
 
@@ -126,7 +126,7 @@ view = {
         if( ax < 5 && ay < 5 ){
 
         	view.findMouse( e );
-        	var color = view.pick();
+        	view.pick();
         
         }
 
@@ -221,7 +221,7 @@ view = {
 
     pick: function () {
 
-    	if(mode!=='bones') return;
+    	if( mode !== 'bones' ) return;
 
     	if( pickingTexture === null ) view.initPickScene();
 
@@ -239,7 +239,7 @@ view = {
 
     	model.showBones( color );
 
-    	return color;
+    	//return color;
 
     },
 
@@ -299,9 +299,9 @@ view = {
 
         view.setTone();
 
-        debug = document.createElement('div');
+        /*debug = document.createElement('div');
         debug.className = 'debug';
-        container.appendChild( debug );
+        container.appendChild( debug );*/
 
         scene = new THREE.Scene();
 

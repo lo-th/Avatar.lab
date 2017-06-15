@@ -665,6 +665,7 @@ Model.prototype = {
         if( name === 'root' ) existe = false
 
         if( !existe ){
+            if( gui ) gui.setBones('none');
             this.hideBones();
             return;}
     
@@ -673,7 +674,7 @@ Model.prototype = {
         this.mats[0].vertexColors = THREE.VertexColors;
         this.mats[0].needsUpdate = true;
         
-        if(gui) gui.setBones( name, id, this.boneSelect.scalling );
+        if( gui ) gui.setBones( name, id, this.boneSelect.scalling );
 
         // update vertex color
 

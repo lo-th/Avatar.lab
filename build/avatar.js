@@ -66301,6 +66301,7 @@ Model.prototype = {
         if( name === 'root' ) existe = false
 
         if( !existe ){
+            if( gui ) gui.setBones('none');
             this.hideBones();
             return;}
     
@@ -66309,7 +66310,7 @@ Model.prototype = {
         this.mats[0].vertexColors = THREE.VertexColors;
         this.mats[0].needsUpdate = true;
         
-        if(gui) gui.setBones( name, id, this.boneSelect.scalling );
+        if( gui ) gui.setBones( name, id, this.boneSelect.scalling );
 
         // update vertex color
 
@@ -66346,7 +66347,7 @@ var view = ( function () {
 
 'use strict';
 
-var renderer, scene, camera, controler, transformer, clock, plane, materialShadow, ambient, light, debug, follow, mouse, pixel, raycaster, content;
+var renderer, scene, camera, controler, transformer, clock, plane, materialShadow, ambient, light, follow, mouse, pixel, raycaster, content;
 var grid = null, capturer = null;
 var vs = { w:1, h:1, mx:0, my:0 };
 var t = { now:0, delta:0, then:0, inter:0, tmp:0, n:0 };
@@ -66416,7 +66417,7 @@ view = {
 
             if ( t.now - 1000 > t.tmp ){ 
                 t.tmp = t.now; 
-                debug.innerHTML = t.n;
+                gui.setText( t.n );
                 t.n = 0;
             }
 
@@ -66470,7 +66471,7 @@ view = {
         if( ax < 5 && ay < 5 ){
 
         	view.findMouse( e );
-        	var color = view.pick();
+        	view.pick();
         
         }
 
@@ -66565,7 +66566,7 @@ view = {
 
     pick: function () {
 
-    	if(mode!=='bones') return;
+    	if( mode !== 'bones' ) return;
 
     	if( pickingTexture === null ) view.initPickScene();
 
@@ -66583,7 +66584,7 @@ view = {
 
     	model.showBones( color );
 
-    	return color;
+    	//return color;
 
     },
 
@@ -66643,9 +66644,9 @@ view = {
 
         view.setTone();
 
-        debug = document.createElement('div');
+        /*debug = document.createElement('div');
         debug.className = 'debug';
-        container.appendChild( debug );
+        container.appendChild( debug );*/
 
         scene = new THREE.Scene();
 
@@ -67389,7 +67390,7 @@ var gui = ( function () {
 'use strict';
 
 var ui;
-var content, mainMenu, menu, timebarre;
+var content, mainMenu, menu, timebarre, topText;
 var gender, genderIM
 var isOpen = false;
 
@@ -67403,6 +67404,9 @@ var isMan = true;
 
 var bone, sx, sy, sz, wx, wy, wz;
 
+var hb = 14;
+var hc = '#929292';
+
 
 gui = {
 
@@ -67414,6 +67418,9 @@ gui = {
 
         gender = document.createElement( 'div' );
         gender.style.cssText = 'position: absolute; bottom:50px; left:10px; pointer-events:auto; width:60px; height:90px; cursor:pointer;';
+
+        topText = document.createElement( 'div' );
+        topText.style.cssText = 'position: absolute; top:0px; right:0px; color:#CCC; font-size: 14px; margin:0px 0px; padding: 0px 15px; line-height:40px; pointer-events:none; width:40px; height:40px; text-align: center; ';
 
         genderIM = new Image();
         genderIM.src = 'assets/textures/m.png';
@@ -67433,13 +67440,14 @@ gui = {
 
         gender.appendChild( genderIM );
         content.appendChild( gender );
+        content.appendChild( topText );
 
         mainMenu = document.createElement( 'div' );
-        mainMenu.style.cssText = 'position: absolute; top:50px; right:0; pointer-events:none; width:200px; height:100%; display:none;';
+        mainMenu.style.cssText = 'position: absolute; top:40px; right:0; pointer-events:none; width:200px; height:100%; display:none;';
         content.appendChild( mainMenu );
 
         menu = document.createElement( 'div' );
-        menu.style.cssText = 'position: absolute; top:0px; left:0px; height:50px; width:100%; pointer-events:none; ';
+        menu.style.cssText = 'position: absolute; top:0px; left:0px; height:40px; width:100%; pointer-events:none; ';
         content.appendChild( menu );
 
         timebarre = new Timebarre( content, selectColor );
@@ -67450,10 +67458,16 @@ gui = {
 
     },
 
+    setText: function ( t ) {
+
+        topText.innerHTML = t;
+
+    },
+
     addButton: function ( i ) {
 
         var b = document.createElement('div');
-        b.style.cssText =  'color:#CCC;  font-size: 15px;  margin:0px 0px; padding: 0px 15px; line-height:50px; position:relative; pointer-events:auto; height:50px; display:inline-block; text-align:center; cursor:pointer; transition:all 0.3s ease;';
+        b.style.cssText =  'color:#CCC;  font-size: 14px;  margin:0px 0px; padding: 0px 15px; line-height:40px; position:relative; pointer-events:auto; height:40px; display:inline-block; text-align:center; cursor:pointer; transition:all 0.3s ease;';
         b.textContent = BB[i];
         b.id = i;
 
@@ -67461,7 +67475,7 @@ gui = {
         b.addEventListener( 'mouseout', function(e){ this.style.color = '#CCC';this.style.background = 'none';}, false );
         b.addEventListener( 'mousedown', function(e){ gui.select( this.id ); }, false );
 
-        menu.appendChild(b);
+        menu.appendChild( b );
 
     },
 
@@ -67509,17 +67523,17 @@ gui = {
 
         var params = view.getSetting();
 
-        ui.add('Bool', { name:'MID RESOLUTION', value:view.pixelRatio === 1 ? false : true, p:60 } ).onChange( view.setPixelRatio );
+        ui.add('Bool', { name:'MID RESOLUTION', value:view.pixelRatio === 1 ? false : true, p:60, bColor:hc, inh:hb } ).onChange( view.setPixelRatio );
 
-        ui.add('Bool', { name:'GRID', value:view.isGrid, p:60 } ).onChange( view.addGrid );
-        ui.add('Bool', { name:'SHADOW', value:view.isShadow, p:60 } ).onChange( view.addShadow );
-        ui.add('Bool', { name:'SKELETON', value: main.model.isSkeleton, p:60 } ).onChange( function(b){ main.showSkeleton(b); } );
-        ui.add('Bool', { name:'SKY', value:false, p:60 } ).onChange( view.showSky );
+        ui.add('Bool', { name:'GRID', value:view.isGrid, p:60, bColor:hc, inh:hb } ).onChange( view.addGrid );
+        ui.add('Bool', { name:'SHADOW', value:view.isShadow, p:60, bColor:hc, inh:hb } ).onChange( view.addShadow );
+        ui.add('Bool', { name:'SKELETON', value: main.model.isSkeleton, p:60, bColor:hc, inh:hb } ).onChange( function(b){ main.showSkeleton(b); } );
+        ui.add('Bool', { name:'SKY', value:false, p:60, bColor:hc, inh:hb } ).onChange( view.showSky );
 
         ui.add('title',  { name:' ', h:30});
 
-        ui.add( params, 'gammaInput', { type:'Bool', fontColor:'#EEE', bColor:'#b2b2b2', p:60  } ).onChange( function(){ view.setTone( 'up' ); } );
-        ui.add( params, 'gammaOutput', { type:'Bool', fontColor:'#EEE', bColor:'#b2b2b2', p:60  } ).onChange( function(){ view.setTone( 'up' ); } );
+        ui.add( params, 'gammaInput', { type:'Bool', fontColor:'#EEE', p:60, bColor:hc, inh:hb  } ).onChange( function(){ view.setTone( 'up' ); } );
+        ui.add( params, 'gammaOutput', { type:'Bool', fontColor:'#EEE', p:60, bColor:hc, inh:hb  } ).onChange( function(){ view.setTone( 'up' ); } );
 
         ui.add( params, 'exposure', { min:0, max:10, precision:2, fontColor:'#fc4100' } ).onChange( function(){ view.setTone(); } );
         ui.add( params, 'whitePoint', { min:0, max:10, precision:1, fontColor:'#fc4100' } ).onChange( function(){ view.setTone(); } );
@@ -67529,7 +67543,7 @@ gui = {
 
     video: function () {
 
-        ui.add('Bool', { name:'CAPTURE MODE', value:view.getCaptueMode(), p:60 } ).onChange( function( b ){ view.captureMode( b ) } );
+        ui.add('Bool', { name:'CAPTURE MODE', value:view.getCaptueMode(), p:60, bColor:hc, inh:hb } ).onChange( function( b ){ view.captureMode( b ) } );
         ui.add('number', { name:'resolution', value:view.videoSize, precision:0, step:10 }).onChange( view.setVideoSize );
         ui.add('button', { name:'START', h:20, p:0 }).onChange( function( ){view.startCapture()} );
         ui.add('button', { name:'STOP', h:20, p:0 }).onChange( function( ){view.saveCapture()}  );
@@ -67566,7 +67580,7 @@ gui = {
 
         view.setMode('bones');
 
-        bone = ui.add('title', { name:'none', h:30, r:10 } );
+        bone = ui.add('title', { name:'Select bone in view', h:30, r:10 } );
 
         var model = main.model;
 
@@ -67581,6 +67595,16 @@ gui = {
     },
 
     setBones: function( name, id, v ){
+
+        if(name === 'none'){
+            bone.text( 'Select bone in view' );
+            bone.text2( '' );
+            sx.setValue( 1 );
+            sy.setValue( 1 );
+            sz.setValue( 1 );
+
+            return;
+        }
 
         bone.text( name );
         bone.text2( id );
@@ -67600,7 +67624,7 @@ gui = {
 
         current = 'anim';
         ui.add('slide',  { name:'animation', min:-1, max:1, value:main.timescale, precision:2, stype:1 }).onChange( main.setTimescale );
-        ui.add('Bool', { name:'LOCK HIP', value: main.model.isLockHip, p:60 } ).onChange( main.lockHip );
+        ui.add('Bool', { name:'LOCK HIP', value: main.model.isLockHip, p:60, bColor:hc, inh:hb } ).onChange( main.lockHip );
         ui.add('button', { name:'LOAD BVH', fontColor:'#D4B87B', h:40, drag:true, p:0 }).onChange( main.loadAnimation );
 
         var an = main.animations, name;
