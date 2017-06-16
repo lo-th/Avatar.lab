@@ -54,8 +54,7 @@ main = {
         scene = view.getContent();
         bvhLoader = new THREE.BVHLoader();
 
-
-        //avatar.init();
+        view.setTone();
 
         main.loadModel();
 
@@ -142,7 +141,7 @@ main = {
         man.setTextures( txt );
         woman.setTextures( txt );
 
-        view.setTone();
+        //view.setTone();
 
     },
 

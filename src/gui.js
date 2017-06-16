@@ -33,7 +33,7 @@ gui = {
         gender.style.cssText = 'position: absolute; bottom:50px; left:10px; pointer-events:auto; width:60px; height:90px; cursor:pointer;';
 
         topText = document.createElement( 'div' );
-        topText.style.cssText = 'position: absolute; top:0px; right:0px; color:#CCC; font-size: 14px; margin:0px 0px; padding: 0px 15px; line-height:40px; pointer-events:none; width:40px; height:40px; text-align: center; ';
+        topText.style.cssText = 'position: absolute; top:0px; right:0px; color:#CCC; font-size: 14px; margin:0px 0px; padding: 0px 15px; line-height:40px; pointer-events:none; width:60px; height:40px; text-align: center; ';
 
         genderIM = new Image();
         genderIM.src = 'assets/textures/m.png';
@@ -180,6 +180,7 @@ gui = {
         ui.add( settings, 'skinAlpha', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
         ui.add( settings, 'shininess', { min:0, max:200, fontColor:'#D4B87B', precision:0 } ).onChange( gui.applyMaterial );
         ui.add( settings, 'opacity', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
+        ui.add( settings, 'reflectivity', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
 
     },
 

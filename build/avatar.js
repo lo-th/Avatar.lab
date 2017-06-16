@@ -16935,7 +16935,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 	}
 
-	function generateExtensions( extensions, parameters, rendererExtensions ) {
+	function generateExtensions( extensions, parameters, rendererExtensions, gl2 ) {
 
 		extensions = extensions || {};
 
@@ -16945,6 +16945,13 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 			( extensions.drawBuffers ) && rendererExtensions.get( 'WEBGL_draw_buffers' ) ? '#extension GL_EXT_draw_buffers : require' : '',
 			( extensions.shaderTextureLOD || parameters.envMap ) && rendererExtensions.get( 'EXT_shader_texture_lod' ) ? '#extension GL_EXT_shader_texture_lod : enable' : ''
 		];
+
+		if(gl2){
+
+			chunks = [
+			];
+
+		}
 
 		return chunks.filter( filterEmptyLine ).join( '\n' );
 
@@ -17054,6 +17061,9 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 		var gl = renderer.context;
 
+		var gl2 = renderer.gl2 ? '#version 300 es': '';
+		var col = renderer.gl2 ? 'out vec4 FragColor_gl;': '';
+
 		var extensions = material.extensions;
 		var defines = material.defines;
 
@@ -17134,7 +17144,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 		//
 
-		var customExtensions = generateExtensions( extensions, parameters, renderer.extensions );
+		var customExtensions = generateExtensions( extensions, parameters, renderer.extensions, renderer.gl2 );
 
 		var customDefines = generateDefines( defines );
 
@@ -17167,6 +17177,8 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 			prefixVertex = [
 
+			    gl2,
+			    
 				'precision ' + parameters.precision + ' float;',
 				'precision ' + parameters.precision + ' int;',
 
@@ -17271,11 +17283,14 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 			].filter( filterEmptyLine ).join( '\n' );
 
 			prefixFragment = [
-
+			    gl2,
+			    
 				customExtensions,
 
 				'precision ' + parameters.precision + ' float;',
 				'precision ' + parameters.precision + ' int;',
+
+				col,
 
 				'#define SHADER_NAME ' + shader.name,
 
@@ -17364,6 +17379,20 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 		var vertexGlsl = prefixVertex + vertexShader;
 		var fragmentGlsl = prefixFragment + fragmentShader;
+
+		if( renderer.gl2 ){
+
+			vertexGlsl = vertexGlsl.replace(/attribute /g, "in ");
+			vertexGlsl = vertexGlsl.replace(/varying /g, "out ");
+			vertexGlsl = vertexGlsl.replace(/transpose/g, "transposition");
+
+			fragmentGlsl = fragmentGlsl.replace(/varying /g, "in ");
+			fragmentGlsl = fragmentGlsl.replace(/transpose/g, "transposition");
+			fragmentGlsl = fragmentGlsl.replace(/gl_FragColor/g, "FragColor_gl");
+			fragmentGlsl = fragmentGlsl.replace(/texture2D/g, "texture");
+			fragmentGlsl = fragmentGlsl.replace(/textureCube/g, "texture");
+
+		}
 
 		// console.log( '*VERTEX*', vertexGlsl );
 		// console.log( '*FRAGMENT*', fragmentGlsl );
@@ -19718,6 +19747,11 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 		}
 
+		var matrixWorldInverse = new THREE.Matrix4();
+
+		var standingMatrix = new THREE.Matrix4();
+		var standingMatrixInverse = new THREE.Matrix4();
+
 		var cameraL = new THREE.PerspectiveCamera();
 		cameraL.bounds = new THREE.Vector4( 0.0, 0.0, 0.5, 1.0 );
 		cameraL.layers.enable( 1 );
@@ -19760,6 +19794,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 		//
 
 		this.enabled = false;
+		this.standing = false;
 
 		this.getDevice = function () {
 
@@ -19804,6 +19839,18 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 			camera.updateMatrixWorld();
 
+			var stageParameters = device.stageParameters;
+
+			if ( this.standing && stageParameters ) {
+
+				standingMatrix.fromArray( stageParameters.sittingToStandingTransform );
+				standingMatrixInverse.getInverse( standingMatrix );
+
+				camera.matrixWorld.multiply( standingMatrix );
+				camera.matrixWorldInverse.multiply( standingMatrixInverse );
+
+			}
+
 			if ( device.isPresenting === false ) return camera;
 
 			//
@@ -19814,12 +19861,21 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 			cameraL.matrixWorldInverse.fromArray( frameData.leftViewMatrix );
 			cameraR.matrixWorldInverse.fromArray( frameData.rightViewMatrix );
 
+			if ( this.standing && stageParameters ) {
+
+				cameraL.matrixWorldInverse.multiply( standingMatrixInverse );
+				cameraR.matrixWorldInverse.multiply( standingMatrixInverse );
+
+			}
+
 			var parent = camera.parent;
 
 			if ( parent !== null ) {
 
-				cameraL.matrixWorldInverse.multiply( parent.matrixWorldInverse );
-				cameraR.matrixWorldInverse.multiply( parent.matrixWorldInverse );
+				matrixWorldInverse.getInverse( parent.matrixWorld );
+
+				cameraL.matrixWorldInverse.multiply( matrixWorldInverse );
+				cameraR.matrixWorldInverse.multiply( matrixWorldInverse );
 
 			}
 
@@ -19854,6 +19910,18 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 			}
 
 			return cameraVR;
+
+		};
+
+		this.getStandingMatrix = function () {
+
+			return standingMatrix;
+
+		};
+
+		this.submitFrame = function () {
+
+			if ( device && device.isPresenting ) device.submitFrame();
 
 		};
 
@@ -21165,8 +21233,6 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 			// update camera matrices and frustum
 
-			camera.onBeforeRender( _this );
-
 			if ( camera.parent === null ) camera.updateMatrixWorld();
 
 			if ( vr.enabled ) {
@@ -21351,7 +21417,11 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 			}
 
-			camera.onAfterRender( _this );
+			if ( vr.enabled ) {
+
+				vr.submitFrame();
+
+			}
 
 			// _gl.finish();
 
@@ -65419,11 +65489,13 @@ shader = {
         ];
 
         var normalPart = [
+
             '#ifdef USE_NORMALMAP',
                 'uniform sampler2D normalMap;',
                 'uniform vec2 normalScale;',
 
-                'vec3 perturbNormal2Arb( sampler2D Nmap, vec3 eye_pos, vec3 surf_norm ) {',
+                //'vec3 perturbNormal2Arb( sampler2D Nmap, vec3 eye_pos, vec3 surf_norm ) {',
+                'vec3 perturbNormal2Arb( vec3 eye_pos, vec3 surf_norm ) {',
 
                     'vec3 q0 = vec3( dFdx( eye_pos.x ), dFdx( eye_pos.y ), dFdx( eye_pos.z ) );',
                     'vec3 q1 = vec3( dFdy( eye_pos.x ), dFdy( eye_pos.y ), dFdy( eye_pos.z ) );',
@@ -65434,7 +65506,7 @@ shader = {
                     'vec3 T = normalize( -q0 * st1.s + q1 * st0.s );',
                     'vec3 N = normalize( surf_norm );',
 
-                    'vec3 mapN = texture2D( Nmap, vUv ).xyz * 2.0 - 1.0;',
+                    'vec3 mapN = texture2D( normalMap, vUv ).xyz * 2.0 - 1.0;',
                     'mapN.xy = normalScale * mapN.xy;',
                     'mat3 tsn = mat3( S, T, N );',
                     'return normalize( tsn * mapN );',
@@ -65452,7 +65524,8 @@ shader = {
             '    vec3 normal = normalize( vNormal ) * flipNormal;',
             '#endif',
             '#ifdef USE_NORMALMAP',
-            '   normal = perturbNormal2Arb( normalMap, -vViewPosition, normal );',
+            '   normal = perturbNormal2Arb( -vViewPosition, normal );',
+            //'   normal = perturbNormal2Arb( normalMap, -vViewPosition, normal );',
                 /*'#ifdef USE_ALPHAMAP',
                     'vec3 normalPlus = perturbNormal2Arb( alphaMap, -vViewPosition, normal );',
                     'normal = mix( normal, normalPlus, 0.5 );',
@@ -65621,6 +65694,7 @@ shader = {
         view.shaderRemplace('phong', 'fragment', '#include <map_fragment>', map.join("\n") );
         view.shaderRemplace('phong', 'fragment', '#include <normal_fragment>', normal.join("\n") );
         view.shaderRemplace('phong', 'fragment', '#include <emissivemap_fragment>', '' );
+        view.shaderRemplace('phong', 'fragment', '#include <alphamap_fragment>', '' );
 
         view.shaderRemplace('basic', 'fragment', '#include <map_fragment>', mapBasic.join("\n") );
         //view.shaderRemplace('basic', 'fragment', '#include <tonemapping_fragment>', '' );
@@ -65628,10 +65702,183 @@ shader = {
 
     },
 
+    convertToV2 : function () {
+
+    	for ( var m in THREE.ShaderLib ){
+            //console.log( m )
+
+            /*if(m==='basic'){
+                THREE.ShaderLib[m]['vertexShader'] =  '#version 300 es\n' + THREE.ShaderChunk['mesh'+m+'_vert']
+                THREE.ShaderLib[m]['fragmentShader'] =  '#version 300 es\n' + THREE.ShaderChunk['mesh'+m+'_frag']
+            }*/
+        }
+
+    },
+
 
 }
 
 return shader;
+
+})();
+//-----------------------
+// force local scalling
+//-----------------------
+
+THREE.Skeleton.prototype.update = ( function () {
+
+    var offsetMatrix = new THREE.Matrix4();
+    var identityMatrix = new THREE.Matrix4();
+    var scaleMatrix = new THREE.Matrix4();
+    var decal = new THREE.Vector3();
+    var invScale = new THREE.Vector3();
+    var baseScale = new THREE.Vector3( 1,1,1 );
+
+    var mtx = new THREE.Matrix4();
+    var tmtx = new THREE.Matrix4();
+
+    var p1 = new THREE.Vector3();
+    var p2 = new THREE.Vector3();
+
+    return function update() {
+
+        var bones = this.bones;
+        var boneInverses = this.boneInverses;
+        var boneMatrices = this.boneMatrices;
+        var boneTexture = this.boneTexture;
+
+        var m, lng, bone;
+
+        // flatten bone matrices to array
+
+        for ( var i = 0, il = bones.length; i < il; i ++ ) {
+
+            bone = bones[ i ];
+
+            // compute the offset between the current and the original transform
+
+            var matrix = bone ? bone.matrixWorld : identityMatrix;
+
+            //var scale = bones[ i ].parent.scale;
+            //invScale.set( 1/scale.x, 1/scale.y, 1/scale.z );
+
+            if ( bone.parent && bones[ i ].parent.isBone ) {
+
+                if( bone.userData.mesh !== undefined ){
+
+                    m = bone.userData.mesh;
+
+                    p1.setFromMatrixPosition( bone.parent.matrixWorld );
+                    p2.setFromMatrixPosition( matrix );
+                    lng = p1.distanceTo( p2 );
+
+                    if( m.name ==='lFoot' || m.name ==='rFoot' || m.name ==='lToe' || m.name ==='rToe' ) tmtx.makeTranslation( -lng*0.5, 0, -1 );
+                    else tmtx.makeTranslation( -lng*0.5, 0, 0 );
+
+                    mtx.multiplyMatrices( bone.parent.matrixWorld, tmtx );
+
+                    
+                    //bones[ i ].userData.mesh.matrix.copy( matrix );
+                    m.position.setFromMatrixPosition( mtx );
+                    m.quaternion.setFromRotationMatrix( mtx );
+                    m.scale.x = lng;
+
+                    m.updateMatrixWorld(true);
+
+                }
+
+            	
+            }
+
+            /*for ( var j = 0, l = bones[ i ].children.length; j < l; j ++ ) {
+
+                scaleMatrix = matrix.clone();
+                scaleMatrix.multiply( bones[ i ].children[ j ].matrix.clone() )
+
+                //scaleMatrix.multiplyMatrices( matrix, bones[ i ].children[ j ].matrix );
+                bones[ i ].children[ j ].matrixWorld.scale( invScale );
+                bones[ i ].children[ j ].matrixWorld.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );
+
+            }*/
+
+            //for ( var j = 0, l = bones[ i ].children.length; j < l; j ++ ) {
+
+            //}
+
+            /*if( bones[ i ].parent ){
+            	var scale = bones[ i ].parent.scale;
+            	invScale.set( 1/scale.x, 1/scale.y, 1/scale.z );
+            	
+
+            	matrix.scale( invScale );
+
+            	for ( var j = 0, l = bones[ i ].children.length; j < l; j ++ ) {
+
+                    scaleMatrix = matrix.clone();
+                    scaleMatrix.multiply( bones[ i ].children[ j ].matrix.clone() )
+
+                    //scaleMatrix.multiplyMatrices( matrix, bones[ i ].children[ j ].matrix );
+                    bones[ i ].children[ j ].matrixWorld.scale(scale)
+                    bones[ i ].children[ j ].matrixWorld.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );
+
+                }
+            	//scaleMatrix = matrix.clone();
+                //scaleMatrix.multiply( bones[ i ].matrix.clone() );
+            	//matrix.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );
+            }*/
+
+            /*var scale = bones[ i ].scale;// : baseScale;
+            invScale.set( 1/scale.x, 1/scale.y, 1/scale.z )
+
+            for ( var j = 0, l = bones[ i ].children.length; j < l; j ++ ) {
+
+            	bones[ i ].children[ j ].scale.copy( invScale )
+
+                /*scaleMatrix = matrix.clone();
+                scaleMatrix.multiply( bones[ i ].children[ j ].matrix.clone() )
+
+                //scaleMatrix.multiplyMatrices( matrix, bones[ i ].children[ j ].matrix );
+                bones[ i ].children[ j ].matrixWorld.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );*/
+
+            //}
+
+            if( bone.scalling !== undefined ){
+
+                matrix.scale( bone.scalling );
+
+                for ( var j = 0, l = bones[ i ].children.length; j < l; j ++ ) {
+
+                    scaleMatrix = matrix.clone();
+                    scaleMatrix.multiply( bone.children[ j ].matrix );
+
+                    //decal.setFromMatrixPosition( scaleMatrix ).sub(bones[ i ].children[ j ].position)
+
+                    //bones[ i ].children[ j ].position.add( decal );
+                    //bones[ i ].children[ j ].matrix.setPosition( decal );
+                    //bones[ i ].children[ j ].matrixWorldNeedsUpdate = true;
+
+                    //bones[ i ].children[ j ].matrixWorld.multiplyMatrices( this.parent.matrixWorld, this.matrix );
+
+                    bone.children[ j ].matrixWorld.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );
+                    ///
+                    //bones[ i ].children[ j ].matrix.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );
+
+                }
+
+            } 
+
+            offsetMatrix.multiplyMatrices( matrix, boneInverses[ i ] );
+            offsetMatrix.toArray( boneMatrices, i * 16 );
+
+        }
+
+        if ( boneTexture !== undefined ) {
+
+            boneTexture.needsUpdate = true;
+
+        }
+
+    };
 
 })();
 var Model = function ( type, meshs, morph ) {
@@ -65654,6 +65901,7 @@ var Model = function ( type, meshs, morph ) {
         lightmap:1,
         shininess:60,
         opacity:1,
+        reflectivity:0.1,
 
     };
 
@@ -65703,6 +65951,8 @@ var Model = function ( type, meshs, morph ) {
     this.currentPlay = '';
 
     this.isPlay = false;
+
+    this.isMapReady = false;
 
     this.txt = null;
     this.type = type;
@@ -66192,6 +66442,7 @@ Model.prototype = {
         if( m.bumpScale !== undefined ) m.bumpScale = set.skinAlpha;
         if( m.opacity !== undefined ) m.opacity = set.opacity;
         if( m.transparent !== undefined ) m.transparent = true;
+        if( m.reflectivity !== undefined ) m.reflectivity = set.reflectivity;
         
         //if( m.alphaTest !== undefined ) m.alphaTest = 0.9;
         
@@ -66204,6 +66455,7 @@ Model.prototype = {
         if( m.normalScale !== undefined ) m.normalScale = new THREE.Vector2( 0.5, 0.5 );
         if( m.metalness !== undefined ) m.metalness = 0.5;
         if( m.roughness !== undefined ) m.roughness = 0.1;
+        if( m.reflectivity !== undefined ) m.reflectivity = 0.5;
 
         // apply material
         this.mesh.material = this.mats[0];
@@ -66213,17 +66465,19 @@ Model.prototype = {
         m = this.mats[2];
         m.skinning = true;
 
+        if(this.isMapReady) this.setTextures();
+
     },
 
     setTextures: function ( txt ) {
 
-        this.txt = txt;
+        if( txt !== undefined ) this.txt = txt;
 
         var m = this.mats[0];
 
         if( m.map !== undefined ) m.map = this.txt.avatar_c;
         if( m.envMap !== undefined ) m.envMap = view.getEnvmap();
-        if( m.alphaMap !== undefined ) m.alphaMap = this.type === 'man' ? this.txt.avatar_skin_n_m : this.txt.avatar_skin_n_w;
+        //if( m.alphaMap !== undefined ) m.alphaMap = this.type === 'man' ? this.txt.avatar_skin_n_m : this.txt.avatar_skin_n_w;
         if( m.normalMap !== undefined ) m.normalMap = this.type === 'man' ? this.txt.avatar_n_m : this.txt.avatar_n_w;
         if( m.lightMap !== undefined ) m.lightMap = this.type === 'man' ? this.txt.avatar_l_m : this.txt.avatar_l_w;
         if( m.aoMap !== undefined ) m.aoMap = this.txt.avatar_ao;
@@ -66241,6 +66495,8 @@ Model.prototype = {
 
         this.updateMaterial();
 
+        this.isMapReady = true;
+
     },
 
     updateSetting: function(){
@@ -66256,6 +66512,7 @@ Model.prototype = {
         if( m.bumpScale !== undefined ) m.bumpScale = set.skinAlpha;
         if( m.shininess !== undefined ) m.shininess = set.shininess;
         if( m.opacity !== undefined ) m.opacity = set.opacity;
+        if( m.reflectivity !== undefined ) m.reflectivity = set.reflectivity;
 
     },
 
@@ -66362,6 +66619,8 @@ var endPos, startPos;
 var ballScene, ballCamera, ballTexture, ball, skymin;
 var envmap, sky;
 
+var version = '';
+
 var mode = 'normal';
 
 var setting = {
@@ -66379,6 +66638,8 @@ var setting = {
 var toneMappings;
 
 view = {
+
+    isGL2: false,
 
     framerate: 60,
 
@@ -66417,7 +66678,7 @@ view = {
 
             if ( t.now - 1000 > t.tmp ){ 
                 t.tmp = t.now; 
-                gui.setText( t.n );
+                gui.setText( t.n + ' ' + version );
                 t.n = 0;
             }
 
@@ -66606,9 +66867,46 @@ view = {
 
     getSetting: function () { return setting; },
 
-    
+    getWebGL: function ( force ) {
 
-    init: function ( container ) {
+        var canvas = document.createElement("canvas"), context;
+        canvas.style.cssText = 'position: absolute; top:0; left:0; width:100%; height:100%;'//pointer-events:auto;
+
+        var isWebGL2 = false;
+
+        var options = { 
+            antialias: this.isMobile ? false : true, 
+            alpha: this.isMobile ? false : true, 
+            stencil:false, depth:true, precision:"highp", premultipliedAlpha:true, preserveDrawingBuffer:false 
+        }
+
+        if( !force ){
+
+            context = canvas.getContext( 'webgl2', options );
+            if (!context) context = canvas.getContext( 'experimental-webgl2', options );
+            isWebGL2 = !!context;
+
+        }
+
+        if(!isWebGL2) {
+            context = canvas.getContext( 'webgl', options );
+            if (!context) context = canvas.getContext( 'experimental-webgl', options );
+        }
+
+        options.canvas = canvas;
+        options.context = context;
+        version = isWebGL2 ? 'GL2':'GL1';
+
+        view.isGL2 = isWebGL2;
+
+        if(isWebGL2) shader.convertToV2();
+
+
+        return options;
+
+    },
+
+    init: function ( container, forceGL1 ) {
 
         mouse = new THREE.Vector2();
         mouseBase = new THREE.Vector2();
@@ -66633,20 +66931,13 @@ view = {
         vs.w = window.innerWidth;
         vs.h = window.innerHeight;
 
-        //renderer = new THREE.WebGLRenderer({ precision: "mediump", antialias:false, alpha: this.isMobile ? false : true });
-
-        renderer = new THREE.WebGLRenderer({ precision: "highp", antialias: this.isMobile ? false : true, alpha: this.isMobile ? false : true });
+        renderer = new THREE.WebGLRenderer( view.getWebGL( forceGL1 ) );
+        renderer.gl2 = view.isGL2;
 
         view.pixelRatio = 1;//window.devicePixelRatio;//this.isMobile ? 0.5 : window.devicePixelRatio;
         renderer.setPixelRatio( view.pixelRatio );
         renderer.setSize( vs.w, vs.h );
         container.appendChild( renderer.domElement );
-
-        
-
-        /*debug = document.createElement('div');
-        debug.className = 'debug';
-        container.appendChild( debug );*/
 
         scene = new THREE.Scene();
 
@@ -66731,6 +67022,14 @@ view = {
 
     // TONE
 
+    disableTone: function( v ) {
+
+        renderer.gammaInput = false;
+        renderer.gammaOutput = false;
+        renderer.toneMapping = THREE.NoToneMapping;
+
+    },
+
     setTone : function( v ) {
 
         var tonesTypes = ['None', 'Linear', 'Reinhard', 'Uncharted2', 'Cineon'];
@@ -66749,16 +67048,7 @@ view = {
         renderer.toneMappingExposure = setting.exposure;
         renderer.toneMappingWhitePoint = setting.whitePoint;
 
-        if(nup){
-
-            main.updateMaterial();
-
-        }
-
-        //view.setLightIntensity();
-
-        //if( materials[0] && nup ) materials[0].needsUpdate = true;
-
+        if( nup ) main.updateMaterial();
 
     },
 
@@ -67195,9 +67485,13 @@ view = {
 
     renderEnvmap: function () {
 
+        view.disableTone();
+
     	ballTexture.needsUpdate = true;
     	ballCamera.updateCubeMap( renderer, ballScene );
         envmap = ballCamera.renderTarget.texture;
+
+        view.setTone();
 
         //skymin.material.envMap = envmap;
 
@@ -67222,169 +67516,6 @@ view = {
 return view;
 
 })();
-
-
-//-----------------------
-// force local scalling
-//-----------------------
-
-THREE.Skeleton.prototype.update = ( function () {
-
-    var offsetMatrix = new THREE.Matrix4();
-    var identityMatrix = new THREE.Matrix4();
-    var scaleMatrix = new THREE.Matrix4();
-    var decal = new THREE.Vector3();
-    var invScale = new THREE.Vector3();
-    var baseScale = new THREE.Vector3( 1,1,1 );
-
-    var mtx = new THREE.Matrix4();
-    var tmtx = new THREE.Matrix4();
-
-    var p1 = new THREE.Vector3();
-    var p2 = new THREE.Vector3();
-
-    return function update() {
-
-        var bones = this.bones;
-        var boneInverses = this.boneInverses;
-        var boneMatrices = this.boneMatrices;
-        var boneTexture = this.boneTexture;
-
-        var m, lng, bone;
-
-        // flatten bone matrices to array
-
-        for ( var i = 0, il = bones.length; i < il; i ++ ) {
-
-            bone = bones[ i ];
-
-            // compute the offset between the current and the original transform
-
-            var matrix = bone ? bone.matrixWorld : identityMatrix;
-
-            //var scale = bones[ i ].parent.scale;
-            //invScale.set( 1/scale.x, 1/scale.y, 1/scale.z );
-
-            if ( bone.parent && bones[ i ].parent.isBone ) {
-
-                if( bone.userData.mesh !== undefined ){
-
-                    m = bone.userData.mesh;
-
-                    p1.setFromMatrixPosition( bone.parent.matrixWorld );
-                    p2.setFromMatrixPosition( matrix );
-                    lng = p1.distanceTo( p2 );
-
-                    if( m.name ==='lFoot' || m.name ==='rFoot' || m.name ==='lToe' || m.name ==='rToe' ) tmtx.makeTranslation( -lng*0.5, 0, -1 );
-                    else tmtx.makeTranslation( -lng*0.5, 0, 0 );
-
-                    mtx.multiplyMatrices( bone.parent.matrixWorld, tmtx );
-
-                    
-                    //bones[ i ].userData.mesh.matrix.copy( matrix );
-                    m.position.setFromMatrixPosition( mtx );
-                    m.quaternion.setFromRotationMatrix( mtx );
-                    m.scale.x = lng;
-
-                    m.updateMatrixWorld(true);
-
-                }
-
-            	
-            }
-
-            /*for ( var j = 0, l = bones[ i ].children.length; j < l; j ++ ) {
-
-                scaleMatrix = matrix.clone();
-                scaleMatrix.multiply( bones[ i ].children[ j ].matrix.clone() )
-
-                //scaleMatrix.multiplyMatrices( matrix, bones[ i ].children[ j ].matrix );
-                bones[ i ].children[ j ].matrixWorld.scale( invScale );
-                bones[ i ].children[ j ].matrixWorld.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );
-
-            }*/
-
-            //for ( var j = 0, l = bones[ i ].children.length; j < l; j ++ ) {
-
-            //}
-
-            /*if( bones[ i ].parent ){
-            	var scale = bones[ i ].parent.scale;
-            	invScale.set( 1/scale.x, 1/scale.y, 1/scale.z );
-            	
-
-            	matrix.scale( invScale );
-
-            	for ( var j = 0, l = bones[ i ].children.length; j < l; j ++ ) {
-
-                    scaleMatrix = matrix.clone();
-                    scaleMatrix.multiply( bones[ i ].children[ j ].matrix.clone() )
-
-                    //scaleMatrix.multiplyMatrices( matrix, bones[ i ].children[ j ].matrix );
-                    bones[ i ].children[ j ].matrixWorld.scale(scale)
-                    bones[ i ].children[ j ].matrixWorld.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );
-
-                }
-            	//scaleMatrix = matrix.clone();
-                //scaleMatrix.multiply( bones[ i ].matrix.clone() );
-            	//matrix.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );
-            }*/
-
-            /*var scale = bones[ i ].scale;// : baseScale;
-            invScale.set( 1/scale.x, 1/scale.y, 1/scale.z )
-
-            for ( var j = 0, l = bones[ i ].children.length; j < l; j ++ ) {
-
-            	bones[ i ].children[ j ].scale.copy( invScale )
-
-                /*scaleMatrix = matrix.clone();
-                scaleMatrix.multiply( bones[ i ].children[ j ].matrix.clone() )
-
-                //scaleMatrix.multiplyMatrices( matrix, bones[ i ].children[ j ].matrix );
-                bones[ i ].children[ j ].matrixWorld.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );*/
-
-            //}
-
-            if( bone.scalling !== undefined ){
-
-                matrix.scale( bone.scalling );
-
-                for ( var j = 0, l = bones[ i ].children.length; j < l; j ++ ) {
-
-                    scaleMatrix = matrix.clone();
-                    scaleMatrix.multiply( bone.children[ j ].matrix );
-
-                    //decal.setFromMatrixPosition( scaleMatrix ).sub(bones[ i ].children[ j ].position)
-
-                    //bones[ i ].children[ j ].position.add( decal );
-                    //bones[ i ].children[ j ].matrix.setPosition( decal );
-                    //bones[ i ].children[ j ].matrixWorldNeedsUpdate = true;
-
-                    //bones[ i ].children[ j ].matrixWorld.multiplyMatrices( this.parent.matrixWorld, this.matrix );
-
-                    bone.children[ j ].matrixWorld.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );
-                    ///
-                    //bones[ i ].children[ j ].matrix.setPosition( decal.setFromMatrixPosition( scaleMatrix ) );
-
-                }
-
-            } 
-
-            offsetMatrix.multiplyMatrices( matrix, boneInverses[ i ] );
-            offsetMatrix.toArray( boneMatrices, i * 16 );
-
-        }
-
-        if ( boneTexture !== undefined ) {
-
-            boneTexture.needsUpdate = true;
-
-        }
-
-    };
-
-})();
-
 var gui = ( function () {
 
 'use strict';
@@ -67420,7 +67551,7 @@ gui = {
         gender.style.cssText = 'position: absolute; bottom:50px; left:10px; pointer-events:auto; width:60px; height:90px; cursor:pointer;';
 
         topText = document.createElement( 'div' );
-        topText.style.cssText = 'position: absolute; top:0px; right:0px; color:#CCC; font-size: 14px; margin:0px 0px; padding: 0px 15px; line-height:40px; pointer-events:none; width:40px; height:40px; text-align: center; ';
+        topText.style.cssText = 'position: absolute; top:0px; right:0px; color:#CCC; font-size: 14px; margin:0px 0px; padding: 0px 15px; line-height:40px; pointer-events:none; width:60px; height:40px; text-align: center; ';
 
         genderIM = new Image();
         genderIM.src = 'assets/textures/m.png';
@@ -67567,6 +67698,7 @@ gui = {
         ui.add( settings, 'skinAlpha', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
         ui.add( settings, 'shininess', { min:0, max:200, fontColor:'#D4B87B', precision:0 } ).onChange( gui.applyMaterial );
         ui.add( settings, 'opacity', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
+        ui.add( settings, 'reflectivity', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
 
     },
 
@@ -67960,8 +68092,7 @@ main = {
         scene = view.getContent();
         bvhLoader = new THREE.BVHLoader();
 
-
-        //avatar.init();
+        view.setTone();
 
         main.loadModel();
 
@@ -68048,7 +68179,7 @@ main = {
         man.setTextures( txt );
         woman.setTextures( txt );
 
-        view.setTone();
+        //view.setTone();
 
     },
 

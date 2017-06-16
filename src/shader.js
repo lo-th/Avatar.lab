@@ -57,11 +57,13 @@ shader = {
         ];
 
         var normalPart = [
+
             '#ifdef USE_NORMALMAP',
                 'uniform sampler2D normalMap;',
                 'uniform vec2 normalScale;',
 
-                'vec3 perturbNormal2Arb( sampler2D Nmap, vec3 eye_pos, vec3 surf_norm ) {',
+                //'vec3 perturbNormal2Arb( sampler2D Nmap, vec3 eye_pos, vec3 surf_norm ) {',
+                'vec3 perturbNormal2Arb( vec3 eye_pos, vec3 surf_norm ) {',
 
                     'vec3 q0 = vec3( dFdx( eye_pos.x ), dFdx( eye_pos.y ), dFdx( eye_pos.z ) );',
                     'vec3 q1 = vec3( dFdy( eye_pos.x ), dFdy( eye_pos.y ), dFdy( eye_pos.z ) );',
@@ -72,7 +74,7 @@ shader = {
                     'vec3 T = normalize( -q0 * st1.s + q1 * st0.s );',
                     'vec3 N = normalize( surf_norm );',
 
-                    'vec3 mapN = texture2D( Nmap, vUv ).xyz * 2.0 - 1.0;',
+                    'vec3 mapN = texture2D( normalMap, vUv ).xyz * 2.0 - 1.0;',
                     'mapN.xy = normalScale * mapN.xy;',
                     'mat3 tsn = mat3( S, T, N );',
                     'return normalize( tsn * mapN );',
@@ -90,7 +92,8 @@ shader = {
             '    vec3 normal = normalize( vNormal ) * flipNormal;',
             '#endif',
             '#ifdef USE_NORMALMAP',
-            '   normal = perturbNormal2Arb( normalMap, -vViewPosition, normal );',
+            '   normal = perturbNormal2Arb( -vViewPosition, normal );',
+            //'   normal = perturbNormal2Arb( normalMap, -vViewPosition, normal );',
                 /*'#ifdef USE_ALPHAMAP',
                     'vec3 normalPlus = perturbNormal2Arb( alphaMap, -vViewPosition, normal );',
                     'normal = mix( normal, normalPlus, 0.5 );',
@@ -259,10 +262,24 @@ shader = {
         view.shaderRemplace('phong', 'fragment', '#include <map_fragment>', map.join("\n") );
         view.shaderRemplace('phong', 'fragment', '#include <normal_fragment>', normal.join("\n") );
         view.shaderRemplace('phong', 'fragment', '#include <emissivemap_fragment>', '' );
+        view.shaderRemplace('phong', 'fragment', '#include <alphamap_fragment>', '' );
 
         view.shaderRemplace('basic', 'fragment', '#include <map_fragment>', mapBasic.join("\n") );
         //view.shaderRemplace('basic', 'fragment', '#include <tonemapping_fragment>', '' );
         
+
+    },
+
+    convertToV2 : function () {
+
+    	for ( var m in THREE.ShaderLib ){
+            //console.log( m )
+
+            /*if(m==='basic'){
+                THREE.ShaderLib[m]['vertexShader'] =  '#version 300 es\n' + THREE.ShaderChunk['mesh'+m+'_vert']
+                THREE.ShaderLib[m]['fragmentShader'] =  '#version 300 es\n' + THREE.ShaderChunk['mesh'+m+'_frag']
+            }*/
+        }
 
     },
 

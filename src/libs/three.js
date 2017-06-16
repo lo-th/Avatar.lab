@@ -16932,7 +16932,7 @@
 
 	}
 
-	function generateExtensions( extensions, parameters, rendererExtensions ) {
+	function generateExtensions( extensions, parameters, rendererExtensions, gl2 ) {
 
 		extensions = extensions || {};
 
@@ -16942,6 +16942,13 @@
 			( extensions.drawBuffers ) && rendererExtensions.get( 'WEBGL_draw_buffers' ) ? '#extension GL_EXT_draw_buffers : require' : '',
 			( extensions.shaderTextureLOD || parameters.envMap ) && rendererExtensions.get( 'EXT_shader_texture_lod' ) ? '#extension GL_EXT_shader_texture_lod : enable' : ''
 		];
+
+		if(gl2){
+
+			chunks = [
+			];
+
+		}
 
 		return chunks.filter( filterEmptyLine ).join( '\n' );
 
@@ -17051,6 +17058,9 @@
 
 		var gl = renderer.context;
 
+		var gl2 = renderer.gl2 ? '#version 300 es': '';
+		var col = renderer.gl2 ? 'out vec4 FragColor_gl;': '';
+
 		var extensions = material.extensions;
 		var defines = material.defines;
 
@@ -17131,7 +17141,7 @@
 
 		//
 
-		var customExtensions = generateExtensions( extensions, parameters, renderer.extensions );
+		var customExtensions = generateExtensions( extensions, parameters, renderer.extensions, renderer.gl2 );
 
 		var customDefines = generateDefines( defines );
 
@@ -17164,6 +17174,8 @@
 
 			prefixVertex = [
 
+			    gl2,
+			    
 				'precision ' + parameters.precision + ' float;',
 				'precision ' + parameters.precision + ' int;',
 
@@ -17268,11 +17280,14 @@
 			].filter( filterEmptyLine ).join( '\n' );
 
 			prefixFragment = [
-
+			    gl2,
+			    
 				customExtensions,
 
 				'precision ' + parameters.precision + ' float;',
 				'precision ' + parameters.precision + ' int;',
+
+				col,
 
 				'#define SHADER_NAME ' + shader.name,
 
@@ -17361,6 +17376,20 @@
 
 		var vertexGlsl = prefixVertex + vertexShader;
 		var fragmentGlsl = prefixFragment + fragmentShader;
+
+		if( renderer.gl2 ){
+
+			vertexGlsl = vertexGlsl.replace(/attribute /g, "in ");
+			vertexGlsl = vertexGlsl.replace(/varying /g, "out ");
+			vertexGlsl = vertexGlsl.replace(/transpose/g, "transposition");
+
+			fragmentGlsl = fragmentGlsl.replace(/varying /g, "in ");
+			fragmentGlsl = fragmentGlsl.replace(/transpose/g, "transposition");
+			fragmentGlsl = fragmentGlsl.replace(/gl_FragColor/g, "FragColor_gl");
+			fragmentGlsl = fragmentGlsl.replace(/texture2D/g, "texture");
+			fragmentGlsl = fragmentGlsl.replace(/textureCube/g, "texture");
+
+		}
 
 		// console.log( '*VERTEX*', vertexGlsl );
 		// console.log( '*FRAGMENT*', fragmentGlsl );
@@ -19715,6 +19744,11 @@
 
 		}
 
+		var matrixWorldInverse = new THREE.Matrix4();
+
+		var standingMatrix = new THREE.Matrix4();
+		var standingMatrixInverse = new THREE.Matrix4();
+
 		var cameraL = new THREE.PerspectiveCamera();
 		cameraL.bounds = new THREE.Vector4( 0.0, 0.0, 0.5, 1.0 );
 		cameraL.layers.enable( 1 );
@@ -19757,6 +19791,7 @@
 		//
 
 		this.enabled = false;
+		this.standing = false;
 
 		this.getDevice = function () {
 
@@ -19801,6 +19836,18 @@
 
 			camera.updateMatrixWorld();
 
+			var stageParameters = device.stageParameters;
+
+			if ( this.standing && stageParameters ) {
+
+				standingMatrix.fromArray( stageParameters.sittingToStandingTransform );
+				standingMatrixInverse.getInverse( standingMatrix );
+
+				camera.matrixWorld.multiply( standingMatrix );
+				camera.matrixWorldInverse.multiply( standingMatrixInverse );
+
+			}
+
 			if ( device.isPresenting === false ) return camera;
 
 			//
@@ -19811,12 +19858,21 @@
 			cameraL.matrixWorldInverse.fromArray( frameData.leftViewMatrix );
 			cameraR.matrixWorldInverse.fromArray( frameData.rightViewMatrix );
 
+			if ( this.standing && stageParameters ) {
+
+				cameraL.matrixWorldInverse.multiply( standingMatrixInverse );
+				cameraR.matrixWorldInverse.multiply( standingMatrixInverse );
+
+			}
+
 			var parent = camera.parent;
 
 			if ( parent !== null ) {
 
-				cameraL.matrixWorldInverse.multiply( parent.matrixWorldInverse );
-				cameraR.matrixWorldInverse.multiply( parent.matrixWorldInverse );
+				matrixWorldInverse.getInverse( parent.matrixWorld );
+
+				cameraL.matrixWorldInverse.multiply( matrixWorldInverse );
+				cameraR.matrixWorldInverse.multiply( matrixWorldInverse );
 
 			}
 
@@ -19851,6 +19907,18 @@
 			}
 
 			return cameraVR;
+
+		};
+
+		this.getStandingMatrix = function () {
+
+			return standingMatrix;
+
+		};
+
+		this.submitFrame = function () {
+
+			if ( device && device.isPresenting ) device.submitFrame();
 
 		};
 
@@ -21162,8 +21230,6 @@
 
 			// update camera matrices and frustum
 
-			camera.onBeforeRender( _this );
-
 			if ( camera.parent === null ) camera.updateMatrixWorld();
 
 			if ( vr.enabled ) {
@@ -21348,7 +21414,11 @@
 
 			}
 
-			camera.onAfterRender( _this );
+			if ( vr.enabled ) {
+
+				vr.submitFrame();
+
+			}
 
 			// _gl.finish();
 

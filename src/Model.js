@@ -18,6 +18,7 @@ var Model = function ( type, meshs, morph ) {
         lightmap:1,
         shininess:60,
         opacity:1,
+        reflectivity:0.1,
 
     };
 
@@ -67,6 +68,8 @@ var Model = function ( type, meshs, morph ) {
     this.currentPlay = '';
 
     this.isPlay = false;
+
+    this.isMapReady = false;
 
     this.txt = null;
     this.type = type;
@@ -556,6 +559,7 @@ Model.prototype = {
         if( m.bumpScale !== undefined ) m.bumpScale = set.skinAlpha;
         if( m.opacity !== undefined ) m.opacity = set.opacity;
         if( m.transparent !== undefined ) m.transparent = true;
+        if( m.reflectivity !== undefined ) m.reflectivity = set.reflectivity;
         
         //if( m.alphaTest !== undefined ) m.alphaTest = 0.9;
         
@@ -568,6 +572,7 @@ Model.prototype = {
         if( m.normalScale !== undefined ) m.normalScale = new THREE.Vector2( 0.5, 0.5 );
         if( m.metalness !== undefined ) m.metalness = 0.5;
         if( m.roughness !== undefined ) m.roughness = 0.1;
+        if( m.reflectivity !== undefined ) m.reflectivity = 0.5;
 
         // apply material
         this.mesh.material = this.mats[0];
@@ -577,17 +582,19 @@ Model.prototype = {
         m = this.mats[2];
         m.skinning = true;
 
+        if(this.isMapReady) this.setTextures();
+
     },
 
     setTextures: function ( txt ) {
 
-        this.txt = txt;
+        if( txt !== undefined ) this.txt = txt;
 
         var m = this.mats[0];
 
         if( m.map !== undefined ) m.map = this.txt.avatar_c;
         if( m.envMap !== undefined ) m.envMap = view.getEnvmap();
-        if( m.alphaMap !== undefined ) m.alphaMap = this.type === 'man' ? this.txt.avatar_skin_n_m : this.txt.avatar_skin_n_w;
+        //if( m.alphaMap !== undefined ) m.alphaMap = this.type === 'man' ? this.txt.avatar_skin_n_m : this.txt.avatar_skin_n_w;
         if( m.normalMap !== undefined ) m.normalMap = this.type === 'man' ? this.txt.avatar_n_m : this.txt.avatar_n_w;
         if( m.lightMap !== undefined ) m.lightMap = this.type === 'man' ? this.txt.avatar_l_m : this.txt.avatar_l_w;
         if( m.aoMap !== undefined ) m.aoMap = this.txt.avatar_ao;
@@ -605,6 +612,8 @@ Model.prototype = {
 
         this.updateMaterial();
 
+        this.isMapReady = true;
+
     },
 
     updateSetting: function(){
@@ -620,6 +629,7 @@ Model.prototype = {
         if( m.bumpScale !== undefined ) m.bumpScale = set.skinAlpha;
         if( m.shininess !== undefined ) m.shininess = set.shininess;
         if( m.opacity !== undefined ) m.opacity = set.opacity;
+        if( m.reflectivity !== undefined ) m.reflectivity = set.reflectivity;
 
     },
 
