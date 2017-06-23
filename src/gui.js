@@ -2,6 +2,7 @@ var gui = ( function () {
 
 'use strict';
 
+var current = 'close';
 var ui;
 var content, mainMenu, menu, timebarre, topText;
 var gender, genderIM
@@ -10,8 +11,6 @@ var isOpen = false;
 var selectColor = '#db0bfa'
 
 var BB = [ 'X', 'VIEW', 'VIDEO', 'ANIMATION', 'MATERIAL', 'BONES' ];
-
-var current = 'none';
 
 var isMan = true;
 
@@ -22,6 +21,22 @@ var hc = '#929292';
 
 
 gui = {
+
+    update: function () {
+
+        if( current === 'bones' ) gui.setBones('none');
+
+        switch( current ){
+            //case 'close':  break;
+            case 'view': gui.select(1); break;
+            case 'video': gui.select(2); break;
+            case 'animation': gui.select(3); break;
+            case 'material': gui.select(4); break;
+            case 'bones': gui.select(5); break;
+           // case 5: gui.morph(); break;
+        }
+
+    },
 
     init: function ( container ) {
 
@@ -96,6 +111,8 @@ gui = {
 
         if(!isOpen) return;
 
+        current = 'close';
+
         mainMenu.style.display = 'none';
         isOpen = false;
 
@@ -134,6 +151,8 @@ gui = {
 
     view: function () {
 
+        current = 'view';
+
         var params = view.getSetting();
 
         ui.add('Bool', { name:'MID RESOLUTION', value:view.pixelRatio === 1 ? false : true, p:60, bColor:hc, inh:hb } ).onChange( view.setPixelRatio );
@@ -156,6 +175,8 @@ gui = {
 
     video: function () {
 
+        current = 'video';
+
         ui.add('Bool', { name:'CAPTURE MODE', value:view.getCaptueMode(), p:60, bColor:hc, inh:hb } ).onChange( function( b ){ view.captureMode( b ) } );
         ui.add('number', { name:'resolution', value:view.videoSize, precision:0, step:10 }).onChange( view.setVideoSize );
         ui.add('button', { name:'START', h:20, p:0 }).onChange( function( ){view.startCapture()} );
@@ -164,6 +185,8 @@ gui = {
     },
 
     material: function () {
+
+        current = 'material';
 
         var model = main.model;
         var settings = model.settings;
@@ -191,6 +214,8 @@ gui = {
     },
 
     bones: function () {
+
+        current = 'bones';
 
         view.setMode('bones');
 
@@ -233,9 +258,10 @@ gui = {
 
     animation: function () {
 
+        current = 'animation';
+
         ui.add('slide', { name:'framerate', min:24, max:60, value:60, precision:0, step:1, stype:1 }).onChange( view.setFramerate );
 
-        current = 'anim';
         ui.add('slide',  { name:'animation', min:-1, max:1, value:main.timescale, precision:2, stype:1 }).onChange( main.setTimescale );
         ui.add('Bool', { name:'LOCK HIP', value: main.model.isLockHip, p:60, bColor:hc, inh:hb } ).onChange( main.lockHip );
         ui.add('button', { name:'LOAD BVH', fontColor:'#D4B87B', h:40, drag:true, p:0 }).onChange( main.loadAnimation );
@@ -256,7 +282,7 @@ gui = {
 
     addAnim: function( name ){
 
-        if( current !== 'anim' ) return;
+        if( current !== 'animation' ) return;
         //ui.add( 'button', { name:name, p:0 }).onChange( avatar.play );
         ui.add( 'button', { name:name, p:0 }).onChange( function(n){ main.model.play( n ); } );
 

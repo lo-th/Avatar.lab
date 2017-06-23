@@ -267,7 +267,10 @@ view = {
 
     getWebGL: function ( force ) {
 
-        var canvas = document.createElement("canvas"), context;
+        // WebGLExtensions
+        // 
+
+        var canvas = document.createElement("canvas"), gl;
         canvas.style.cssText = 'position: absolute; top:0; left:0; width:100%; height:100%;'//pointer-events:auto;
 
         var isWebGL2 = false;
@@ -280,24 +283,31 @@ view = {
 
         if( !force ){
 
-            context = canvas.getContext( 'webgl2', options );
-            if (!context) context = canvas.getContext( 'experimental-webgl2', options );
-            isWebGL2 = !!context;
+            gl = canvas.getContext( 'webgl2', options );
+            if (!gl) gl = canvas.getContext( 'experimental-webgl2', options );
+            isWebGL2 = !!gl;
 
         }
 
         if(!isWebGL2) {
-            context = canvas.getContext( 'webgl', options );
-            if (!context) context = canvas.getContext( 'experimental-webgl', options );
+            gl = canvas.getContext( 'webgl', options );
+            if (!gl) gl = canvas.getContext( 'experimental-webgl', options );
         }
 
         options.canvas = canvas;
-        options.context = context;
+        options.context = gl;
         version = isWebGL2 ? 'GL2':'GL1';
 
         view.isGL2 = isWebGL2;
 
-        if(isWebGL2) shader.convertToV2();
+        if(isWebGL2){ 
+            gl.v2 = true;
+            shader.convertToV2();
+            var ext = gl.getExtension( 'OES_texture_float_linear' );//
+            var ext2 = gl.getExtension( 'EXT_color_buffer_float' );
+            console.log( ext )
+            console.log( ext2 )
+        }
 
 
         return options;
@@ -305,6 +315,8 @@ view = {
     },
 
     init: function ( container, forceGL1 ) {
+
+        //console.log(THREE.WebGLShader)
 
         mouse = new THREE.Vector2();
         mouseBase = new THREE.Vector2();
@@ -324,14 +336,13 @@ view = {
         t.then = ( typeof performance === 'undefined' ? Date : performance ).now();
         t.inter = 1000 / this.framerate;
 
-        this.testMobile();
+        view.testMobile();
 
         vs.w = window.innerWidth;
         vs.h = window.innerHeight;
 
         renderer = new THREE.WebGLRenderer( view.getWebGL( forceGL1 ) );
-        renderer.gl2 = view.isGL2;
-
+        
         view.pixelRatio = 1;//window.devicePixelRatio;//this.isMobile ? 0.5 : window.devicePixelRatio;
         renderer.setPixelRatio( view.pixelRatio );
         renderer.setSize( vs.w, vs.h );
@@ -745,14 +756,14 @@ view = {
 
     // CAMERA AUTO CONTROL
 
-    autoRotate: function ( obj, time, delay, callback ) {
+    autoRotate: function ( o, time, delay, callback ) {
 
         callback = callback || function(){};
 
         var c = view.getCurrentPosition();
         controler.enabled = false;
 
-        new TWEEN.Tween( c ).to( obj, time || 2000 )
+        new TWEEN.Tween( c ).to( o, time || 2000 )
         .delay( delay || 0 )
         .easing( TWEEN.Easing.Quadratic.Out )
         .onUpdate( function() { view.orbit( c ); } )
@@ -761,26 +772,28 @@ view = {
 
     },
 
-    orbit: function ( c ) {
+    orbit: function ( o ) {
 
-        var phi = c.polar * Math.torad;
-        var theta = c.azim * Math.torad;
+        var phi = o.polar * Math.torad;
+        var theta = o.azim * Math.torad;
 
-        controler.target.fromArray( c.target );
+        controler.target.set( o.x, o.y, o.z );
         camera.position.copy( controler.target );
-        camera.position.x += c.distance * Math.sin(phi) * Math.sin(theta);
-        camera.position.y += c.distance * Math.cos(phi);
-        camera.position.z += c.distance * Math.sin(phi) * Math.cos(theta);
+        camera.position.x += o.distance * Math.sin(phi) * Math.sin(theta);
+        camera.position.y += o.distance * Math.cos(phi);
+        camera.position.z += o.distance * Math.sin(phi) * Math.cos(theta);
         controler.update();
 
     },
 
     getCurrentPosition: function ( log ) {
 
-    	var p = {};
+        var p = {};
         var t = controler.target;
         var c = camera.position;
-        p.target = t.toArray();
+        p.x = t.x;
+        p.y = t.y;
+        p.z = t.z;
         p.distance = Math.floor( c.distanceTo( t ) );
         p.polar = Math.floor( controler.getPolarAngle() * Math.todeg );
         p.azim = Math.floor( controler.getAzimuthalAngle() * Math.todeg );

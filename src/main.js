@@ -2,7 +2,7 @@ var main = ( function () {
 
 'use strict';
 
-var modelName = 'avatar';
+var modelName = 'avatar.tjs';
 var envmame = 'studio';
 var path = './assets/'
 
@@ -163,7 +163,8 @@ main = {
 
         main.model.addTo( scene );
 
-        if( view.getMode() === 'bones' ) gui.setBones('none');
+        gui.update();
+
         if( currentPlay ) main.model.play( currentPlay );
 
     },

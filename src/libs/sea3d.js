@@ -1,15 +1,14 @@
-// variable undeclared 
+'use strict';
+
 var THREE, Ammo, TextDecoder, performance;
 /**
  * 	SEA3D SDK
  * 	@author Sunag / http://www.sunag.com.br/
  */
 
-
+//'use strict';
 
 var SEA3D = { VERSION: 18110 };
-
-//'use strict';
 
 SEA3D.getVersion = function () {
 
@@ -1841,6 +1840,18 @@ SEA3D.SkeletonAnimation = function ( name, data, sea3d ) {
 SEA3D.SkeletonAnimation.prototype.type = "skla";
 
 //
+//	UVW Animation
+//
+
+SEA3D.UVWAnimation = function ( name, data, sea3d ) {
+
+	SEA3D.Animation.call( this, name, data, sea3d );
+
+};
+
+SEA3D.UVWAnimation.prototype.type = "auvw";
+
+//
 //	Morph
 //
 
@@ -2330,13 +2341,6 @@ SEA3D.Material = function ( name, data, sea3d ) {
 				};
 				break;
 
-			
-				/*tech = {
-					texture: sea3d.getObject( data.readUInt() )
-				};
-				
-				break;*/
-
 			case SEA3D.Material.EMISSIVE:
 			
 				tech = {
@@ -2776,16 +2780,17 @@ SEA3D.File = function ( config ) {
 	this.addClass( SEA3D.DirectionalLight );
 	this.addClass( SEA3D.HemisphereLight );
 	this.addClass( SEA3D.AmbientLight );
+	this.addClass( SEA3D.Animation, true );
 	this.addClass( SEA3D.Skeleton, true );
 	this.addClass( SEA3D.SkeletonLocal, true );
 	this.addClass( SEA3D.SkeletonAnimation, true );
+	this.addClass( SEA3D.UVWAnimation, true );
 	this.addClass( SEA3D.JointObject );
 	this.addClass( SEA3D.Camera );
 	this.addClass( SEA3D.OrthographicCamera );
 	this.addClass( SEA3D.Morph, true );
 	this.addClass( SEA3D.VertexAnimation, true );
 	this.addClass( SEA3D.CubeMap, true );
-	this.addClass( SEA3D.Animation, true );
 	this.addClass( SEA3D.Dummy );
 	this.addClass( SEA3D.Line );
 	this.addClass( SEA3D.SoundPoint );
@@ -6082,7 +6087,7 @@ THREE.SEA3D.prototype.readSprite = function ( sea ) {
 
 THREE.SEA3D.prototype.readMesh = function ( sea ) {
 
-	var i, count, geo = sea.geometry.tag, mesh, mat, skeleton, skeletonAnimation, vertexAnimation, morpher;
+	var i, count, geo = sea.geometry.tag, mesh, mat, skeleton, skeletonAnimation, vertexAnimation, uvwAnimationClips, morpher;
 
 	for ( i = 0, count = sea.modifiers ? sea.modifiers.length : 0; i < count; i ++ ) {
 
@@ -6114,13 +6119,14 @@ THREE.SEA3D.prototype.readMesh = function ( sea ) {
 
 	for ( i = 0, count = sea.animations ? sea.animations.length : 0; i < count; i ++ ) {
 
-		var anm = sea.animations[ i ];
+		var anm = sea.animations[ i ],
+			anmTag = anm.tag;
 
-		switch ( anm.tag.type ) {
+		switch ( anmTag.type ) {
 
 			case SEA3D.SkeletonAnimation.prototype.type:
 
-				skeletonAnimation = anm.tag;
+				skeletonAnimation = anmTag;
 
 				geo.animations = skeletonAnimation.tag || this.getAnimationType( {
 					sea: skeletonAnimation,
@@ -6132,11 +6138,19 @@ THREE.SEA3D.prototype.readMesh = function ( sea ) {
 
 			case SEA3D.VertexAnimation.prototype.type:
 
-				vertexAnimation = anm.tag;
+				vertexAnimation = anmTag;
 
 				geo.morphAttributes = vertexAnimation.tag.attribs;
 				geo.morphTargets = vertexAnimation.tag.targets;
 				geo.animations = vertexAnimation.tag.animations;
+
+				break;
+
+			case SEA3D.UVWAnimation.prototype.type:
+
+				uvwAnimationClips = anmTag.tag || this.getAnimationType( {
+					sea: anmTag,
+				} );
 
 				break;
 
@@ -6207,6 +6221,17 @@ THREE.SEA3D.prototype.readMesh = function ( sea ) {
 
 	}
 
+	if ( uvwAnimationClips ) {
+
+		mesh.uvwAnimator = new THREE.SEA3D.Animator( uvwAnimationClips, new THREE.AnimationMixer( mat.map ) );
+
+		if ( this.config.autoPlay ) {
+
+			mesh.uvwAnimator.play( 0 );
+
+		}
+
+	}
 
 	mesh.name = sea.name;
 
@@ -7179,6 +7204,30 @@ THREE.SEA3D.prototype.readAnimation = function ( sea ) {
 
 					break;
 
+				case SEA3D.Animation.OFFSET_U:
+
+					name = '.offset[x]';
+
+					break;
+
+				case SEA3D.Animation.OFFSET_V:
+
+					name = '.offset[y]';
+
+					break;
+
+				case SEA3D.Animation.SCALE_U:
+
+					name = '.repeat[x]';
+
+					break;
+
+				case SEA3D.Animation.SCALE_V:
+
+					name = '.repeat[y]';
+
+					break;
+
 			}
 
 			if ( ! name ) continue;
@@ -7740,7 +7789,8 @@ THREE.SEA3D.prototype.setTypeRead = function () {
 	this.file.typeRead[ SEA3D.JointObject.prototype.type ] = this.readJointObject;
 	this.file.typeRead[ SEA3D.CubeMap.prototype.type ] = this.readCubeMap;
 	this.file.typeRead[ SEA3D.CubeRender.prototype.type ] = this.readCubeRender;
-	this.file.typeRead[ SEA3D.Animation.prototype.type ] = this.readAnimation;
+	this.file.typeRead[ SEA3D.Animation.prototype.type ] = 
+	this.file.typeRead[ SEA3D.UVWAnimation.prototype.type ] = this.readAnimation;
 	this.file.typeRead[ SEA3D.SoundPoint.prototype.type ] = this.readSoundPoint;
 	this.file.typeRead[ SEA3D.TextureURL.prototype.type ] = this.readTextureURL;
 	this.file.typeRead[ SEA3D.CubeMapURL.prototype.type ] = this.readCubeMapURL;
@@ -7861,9 +7911,7 @@ THREE.SEA3D.prototype.isLegacy = function ( sea ) {
 
 	var sea3d = sea.sea3d;
 
-	if ( sea3d.sign == 'S3D' && ! sea._legacy ) {
-
-		sea._legacy = sea3d.typeUnique[ sea.type ] == true;
+	if ( sea3d.sign === "S3D" ) {
 
 		return sea3d.config.legacy;
 
@@ -8235,7 +8283,9 @@ THREE.SEA3D.prototype.getAnimationType = function ( req ) {
 
 	var sea = req.sea;
 
-	if ( this.isLegacy( sea ) ) {
+	if ( this.isLegacy( sea ) && ! sea.done ) {
+
+		sea.done = true;
 
 		switch ( sea.type ) {
 
@@ -8248,6 +8298,7 @@ THREE.SEA3D.prototype.getAnimationType = function ( req ) {
 				break;
 
 			case SEA3D.Animation.prototype.type:
+			case SEA3D.UVWAnimation.prototype.type:
 
 				if ( req.scope instanceof THREE.Object3D ) {
 
