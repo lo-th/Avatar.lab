@@ -24,7 +24,7 @@ var Model = function ( type, meshs, morph ) {
 
     this.colorBonesName = {
 
-        '0x000000': 'root', '0x1600e3': 'hip', '0x2600d8': 'abdomen', '0x86005e': 'chest', '0x880053': 'neck', '0xcb001d': 'head',
+        /*'0x000000': 'root', '0x1600e3': 'hip', '0x2600d8': 'abdomen', '0x86005e': 'chest', '0x880053': 'neck', '0xcb001d': 'head',
         '0x0018ff': 'rThigh', '0x0014ff': 'rShin', '0x0015ff': 'rFoot', '0x0013ff': 'rToe',
         '0x1818e7': 'lThigh', '0x1414eb': 'lShin', '0x1515ec': 'lFoot', '0x1313ee': 'lToe',
         '0x0022ff': 'rCollar', '0x0020ff': 'rShldr', '0x001eff': 'rForeArm', '0x005dff': 'rHand',
@@ -39,7 +39,28 @@ var Model = function ( type, meshs, morph ) {
         '0x4848b7': 'lfinger30', '0x4a4ab5': 'lfinger31', '0x4c4cb3': 'lfinger32',
         '0x0048ff': 'rfinger30', '0x004aff': 'rfinger31', '0x004cff': 'rfinger32',
         '0x4242bd': 'lfinger40', '0x4444bb': 'lfinger41', '0x4646b9': 'lfinger42',
-        '0x0042ff': 'rfinger40', '0x0044ff': 'rfinger41', '0x0046ff': 'rfinger42',
+        '0x0042ff': 'rfinger40', '0x0044ff': 'rfinger41', '0x0046ff': 'rfinger42',*/
+
+        '0x000000': 'root', '0x2d00c8': 'hip', '0x5200b2': 'abdomen', '0xa3001c': 'chest', '0xa20015': 'neck', '0xb00002': 'head',
+        '0x0030ff': 'rThigh', '0x002bff': 'rShin', '0x0029ff': 'rFoot', '0x0022ff': 'rToe',
+        '0x3030cf': 'lThigh', '0x2b2bd6': 'lShin', '0x2929d8': 'lFoot', '0x2222dd': 'lToe',
+        '0x0044ff': 'rCollar', '0x0040ff': 'rShldr', '0x003dff': 'rForeArm', '0xff5f01': 'rHand',
+        '0x4444bb': 'lCollar', '0x4040bf': 'lShldr', '0x3d3dc4': 'lForeArm', '0x5f5fa1': 'lHand',
+        
+        '0x77778a': 'lfinger00', '0x7a7a85': 'lfinger01', '0x797988': 'lfinger02',
+        '0x0077ff': 'rfinger00', '0x007aff': 'rfinger01', '0x0079ff': 'rfinger02',
+
+        '0x666698': 'lfinger10', '0x65659b': 'lfinger11', '0x63639d': 'lfinger12',
+        '0xff6601': 'rfinger10', '0xff6501': 'rfinger11', '0xff6301': 'rfinger12',
+
+        '0x4e4eb1': 'lfinger20', '0xff6c01': 'lfinger21', '0xff6b01': 'rfinger22',
+        '0xff7101': 'rfinger20', '0x0050ff': 'rfinger21', '0x5252ad': 'lfinger22',
+
+        '0x787886': 'lfinger30', '0x74748a': 'lfinger31', '0x72728c': 'lfinger32',
+        '0xff7801': 'rfinger30', '0xff7401': 'rfinger31', '0xff7201': 'rfinger32',
+
+        '0x7c7c83': 'lfinger40', '0x7f7f81': 'lfinger41', '0x7d7d83': 'lfinger42',
+        '0x007cff': 'rfinger40', '0xff7e01': 'rfinger41', '0xff7d01': 'rfinger42',
         
     };
 
@@ -148,7 +169,10 @@ var Model = function ( type, meshs, morph ) {
     if( this.isWithMorph ) this.mesh.morphTargetInfluences[0] = 1;
 
     //console.log( this.hipPos )
-    this.headBoneRef = this.b.head.rotation;
+    //this.headBoneRef = this.b.head.rotation;
+
+    this.headBoneLook = new THREE.Euler();
+    //this.headBonequaternion = new THREE.Quaternion();
 
     this.eyeTarget = new THREE.Group();//AxisHelper(1);
     this.eyeTarget.position.set(-3.54, 0, -10);
@@ -449,7 +473,14 @@ Model.prototype = {
 
         var v = view.getMouse();
 
-        if( this.isPlay ) this.b.head.rotation.set( this.headBoneRef.x-(((v.x*6))*Math.torad), this.headBoneRef.y+(((v.y*6)+4)*Math.torad), this.headBoneRef.z);
+        if( this.isPlay ){ 
+
+            this.headBoneLook.set( -(v.x*20) * Math.torad, (v.y*20) * Math.torad, 0 );
+            this.b.head.quaternion.setFromEuler( this.headBoneLook, false );
+
+            //this.headBoneRef = this.b.head.rotation.clone();
+            //this.b.head.rotation.set( this.headBoneRef.x-(((v.x*6))*Math.torad), this.headBoneRef.y+(((v.y*6)+4)*Math.torad), this.headBoneRef.z);
+        }
         
         this.eyeTarget.position.set(-3.54+(-v.y*3), (-v.x*3), -10);
         this.eye_l.lookAt( this.eyeTarget.position.clone().add(new THREE.Vector3(0,-1.4,0)) );
@@ -582,6 +613,9 @@ Model.prototype = {
         m = this.mats[2];
         m.skinning = true;
 
+        // shader modification
+        shader.change( this.mats[0] );
+
         if(this.isMapReady) this.setTextures();
 
     },
@@ -665,6 +699,8 @@ Model.prototype = {
         var i, lng, n, n4, w0, w1, w2, w3, x, id, existe = false;
 
         var name = this.colorBonesName[ color ];
+
+        console.log(color, name)
 
         if( color === '0x1100e5' ){
             if( this.type === 'man' ) name = 'hip';

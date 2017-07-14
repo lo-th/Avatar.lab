@@ -235,6 +235,8 @@ gui = {
 
     setBones: function( name, id, v ){
 
+        //console.log(name)
+
         if(name === 'none'){
             bone.text( 'Select bone in view' );
             bone.text2( '' );

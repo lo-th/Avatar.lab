@@ -302,7 +302,7 @@ view = {
 
         if(isWebGL2){ 
             gl.v2 = true;
-            shader.convertToV2();
+            //shader.convertToV2();
             var ext = gl.getExtension( 'OES_texture_float_linear' );//
             var ext2 = gl.getExtension( 'EXT_color_buffer_float' );
             console.log( ext )

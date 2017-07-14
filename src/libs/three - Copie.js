@@ -16538,15 +16538,14 @@
 
 			var extension = extensions.get( 'ANGLE_instanced_arrays' );
 
-			if ( extension === null && !gl.v2 ) {
+			if ( extension === null ) {
 
 				console.error( 'THREE.WebGLIndexedBufferRenderer: using THREE.InstancedBufferGeometry but hardware does not support extension ANGLE_instanced_arrays.' );
 				return;
 
 			}
 
-			if( gl.v2 ) gl.drawArraysInstanced( mode, count, type, start * bytesPerElement, geometry.maxInstancedCount );
-			else extension.drawArraysInstancedANGLE( mode, count, type, start * bytesPerElement, geometry.maxInstancedCount );
+			extension.drawElementsInstancedANGLE( mode, count, type, start * bytesPerElement, geometry.maxInstancedCount );
 
 			infoRender.calls ++;
 			infoRender.vertices += count * geometry.maxInstancedCount;
@@ -16593,7 +16592,7 @@
 
 			var extension = extensions.get( 'ANGLE_instanced_arrays' );
 
-			if ( extension === null && !gl.v2 ) {
+			if ( extension === null ) {
 
 				console.error( 'THREE.WebGLBufferRenderer: using THREE.InstancedBufferGeometry but hardware does not support extension ANGLE_instanced_arrays.' );
 				return;
@@ -16606,13 +16605,11 @@
 
 				count = position.data.count;
 
-				if( gl.v2 ) gl.drawArraysInstanced( mode, 0, count, geometry.maxInstancedCount );
-				else extension.drawArraysInstancedANGLE( mode, 0, count, geometry.maxInstancedCount );
+				extension.drawArraysInstancedANGLE( mode, 0, count, geometry.maxInstancedCount );
 
 			} else {
 
-				if( gl.v2 ) gl.drawArraysInstanced( mode, start, count, geometry.maxInstancedCount );
-				else extension.drawArraysInstancedANGLE( mode, start, count, geometry.maxInstancedCount );
+				extension.drawArraysInstancedANGLE( mode, start, count, geometry.maxInstancedCount );
 
 			}
 
@@ -19248,8 +19245,7 @@
 
 				var extension = extensions.get( 'ANGLE_instanced_arrays' );
 
-				if( gl.v2 ) gl.vertexAttribDivisor( attribute, 0 );
-				else extension.vertexAttribDivisorANGLE( attribute, 0 );
+				extension.vertexAttribDivisorANGLE( attribute, 0 );
 				attributeDivisors[ attribute ] = 0;
 
 			}
@@ -19271,8 +19267,7 @@
 
 				var extension = extensions.get( 'ANGLE_instanced_arrays' );
 
-				if( gl.v2 ) gl.vertexAttribDivisor( attribute, meshPerAttribute );
-				else extension.vertexAttribDivisorANGLE( attribute, meshPerAttribute );
+				extension.vertexAttribDivisorANGLE( attribute, meshPerAttribute );
 				attributeDivisors[ attribute ] = meshPerAttribute;
 
 			}
@@ -21200,7 +21195,7 @@
 
 			if ( geometry && geometry.isInstancedBufferGeometry ) {
 
-				if ( extensions.get( 'ANGLE_instanced_arrays' ) === null && !_gl.v2 ) {
+				if ( extensions.get( 'ANGLE_instanced_arrays' ) === null ) {
 
 					console.error( 'THREE.WebGLRenderer.setupVertexAttributes: using THREE.InstancedBufferGeometry but hardware does not support extension ANGLE_instanced_arrays.' );
 					return;

@@ -49,7 +49,7 @@ main = {
 
         view.init( container );
         gui.init( container );
-        shader.init();
+        //shader.init();
 
         scene = view.getContent();
         bvhLoader = new THREE.BVHLoader();
