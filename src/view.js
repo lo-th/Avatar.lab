@@ -302,11 +302,12 @@ view = {
 
         if(isWebGL2){ 
             gl.v2 = true;
+
             //shader.convertToV2();
-            var ext = gl.getExtension( 'OES_texture_float_linear' );//
+            /*var ext = gl.getExtension( 'OES_texture_float_linear' );//
             var ext2 = gl.getExtension( 'EXT_color_buffer_float' );
             console.log( ext )
-            console.log( ext2 )
+            console.log( ext2 )*/
         }
 
 
@@ -346,6 +347,7 @@ view = {
         view.pixelRatio = 1;//window.devicePixelRatio;//this.isMobile ? 0.5 : window.devicePixelRatio;
         renderer.setPixelRatio( view.pixelRatio );
         renderer.setSize( vs.w, vs.h );
+        renderer.domElement.style.position = 'absolute';
         container.appendChild( renderer.domElement );
 
         scene = new THREE.Scene();
@@ -365,6 +367,8 @@ view = {
 
         //transformer = new THREE.TransformControls( camera, renderer.domElement );
         //scene.add( transformer );
+
+        // renderer.setClearColor( 0xff3333, 1 );
 
         if( this.isMobile ) renderer.setClearColor( 0x333333, 1 );
         else renderer.setClearColor( 0x000000, 0 );
@@ -503,12 +507,8 @@ view = {
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.soft = view.isMobile ? false : true;
             renderer.shadowMap.type = view.isMobile ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
-            renderer.shadowMap.renderReverseSided = false;
 
-            //materialShadow = new THREE.MeshLambertMaterial(  );
-
-            materialShadow = new THREE.ShaderMaterial( THREE.ShaderShadow );
-            plane = new THREE.Mesh( new THREE.PlaneBufferGeometry( 200, 200, 1, 1 ), materialShadow );
+            plane = new THREE.Mesh( new THREE.PlaneBufferGeometry( 200, 200, 1, 1 ), new THREE.ShadowMaterial({opacity:0.4}) );
             plane.geometry.applyMatrix( new THREE.Matrix4().makeRotationX( -Math.PI*0.5 ) );
             plane.position.y = 0.5;
             //plane.position.y = -62;
@@ -533,7 +533,7 @@ view = {
             light.castShadow = false;
 
             follow.remove( plane );
-            materialShadow.dispose();
+            plane.material.dispose();
             plane.geometry.dispose();
 
         }
@@ -663,6 +663,20 @@ view = {
 
     },
 
+    reversUV: function ( geometry ){
+
+        // correct inversion of normal map in symetrics mesh
+
+        var uv = geometry.attributes.uv.array;
+        var i = Math.floor(uv.length * 0.25);
+        while( i-- ) uv[ i * 2 ] *= -1;
+        geometry.attributes.uv.needsUpdate = true;
+
+        // for ao map
+        view.addUV2( geometry );
+
+    },
+
     addVertexColor: function( geometry ){
 
         var color = new THREE.Float32BufferAttribute( geometry.attributes.position.count*3, 3 );
@@ -698,24 +712,12 @@ view = {
 
     },
 
-    reversUV: function ( geometry ){
-
-        // correct inversion of normal map in symetrics mesh
-
-        var uv = geometry.attributes.uv.array;
-        var i = Math.floor(uv.length * 0.25);
-        while( i-- ) uv[ i * 2 ] *= -1;
-        geometry.attributes.uv.needsUpdate = true;
-
-        // for ao map
-        view.addUV2( geometry );
-
-    },
+    
 
 
     // SHADER HACK
 
-    uniformPush : function( type, name, value ){
+    /*uniformPush : function( type, name, value ){
 
         type = type || 'physical';
         THREE.ShaderLib[type].uniforms[name] = value;
@@ -752,7 +754,7 @@ view = {
         THREE.ShaderLib[type][shad+'Shader'] = THREE.ShaderLib[type][shad+'Shader'].substring( 0, THREE.ShaderLib[type][shad+'Shader'].length-2 );
         THREE.ShaderLib[type][shad+'Shader'] += add.join("\n");
 
-    },
+    },*/
 
     // CAMERA AUTO CONTROL
 
@@ -869,26 +871,30 @@ view = {
 
     	var s = 1;
 	    ballScene = new THREE.Scene();
-		ballCamera = new THREE.CubeCamera( s*0.5, s*1.2, 512 );
-		ballCamera.position.set(0,0,0);
+        ballCamera = new THREE.CubeCamera( 0.1, 10, 256 );
+        ballCamera.renderTarget.texture.minFilter = THREE.LinearMipMapLinearFilter
+		//ballCamera = new THREE.CubeCamera( s*0.5, s*1.2, 512 );
+		//ballCamera.position.set(0,0,0);
 		ballCamera.lookAt( new THREE.Vector3(0,0,5));
 		ballScene.add( ballCamera );
 	    
 	    ballTexture = new THREE.Texture( map );
 	    ballTexture.wrapS = ballTexture.wrapT = THREE.ClampToEdgeWrapping;
-		ball = new THREE.Mesh( new THREE.SphereGeometry( 1, 20, 12  ),  new THREE.MeshBasicMaterial({ map:ballTexture, depthWrite:false }) );
+        ballTexture.needsUpdate = true;
+		ball = new THREE.Mesh( new THREE.SphereGeometry( 2, 20, 12 ),  new THREE.MeshBasicMaterial({ map:ballTexture, depthWrite:false }) );
+        ball.geometry.scale( - 1, 1, 1 );
+        ballScene.add( ball );
 
-		sky = new THREE.Mesh( new THREE.SphereGeometry( 1, 20, 12  ),  ball.material );
-	    sky.scale.set(-1000,1000,1000);
+		sky = new THREE.Mesh( new THREE.SphereGeometry( 1000, 20, 12  ),  ball.material );
+	    sky.geometry.scale( - 1, 1, 1 );
 	    scene.add( sky );
 	    sky.visible = false;
 
-	    /*skymin = new THREE.Mesh( new THREE.SphereGeometry( 1, 20, 12  ),  new THREE.MeshBasicMaterial() );
+	    /*skymin = new THREE.Mesh( new THREE.SphereGeometry( 1, 20, 12  ),  new THREE.MeshBasicMaterial({envMap: ballCamera.renderTarget.texture}) );
 	    skymin.scale.set(3,3,3);
 	    scene.add( skymin );*/
 	    
-	    ball.scale.set(-s,s,s);
-		ballScene.add( ball );
+	    
 
 		view.renderEnvmap();
 
@@ -898,13 +904,15 @@ view = {
 
         view.disableTone();
 
-    	ballTexture.needsUpdate = true;
-    	ballCamera.updateCubeMap( renderer, ballScene );
+    	//
+    	ballCamera.update( renderer, ballScene );
         envmap = ballCamera.renderTarget.texture;
+
+       // skymin.material.envMap = envmap;
 
         view.setTone();
 
-        //skymin.material.envMap = envmap;
+        
 
     },
 

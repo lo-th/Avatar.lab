@@ -41,7 +41,7 @@ gui = {
     init: function ( container ) {
 
         content = document.createElement( 'div' );
-        content.style.cssText = 'position: absolute; top:0; left:0; pointer-events:none; width:100%; height:100%;';
+        content.style.cssText = 'position:absolute; top:0; left:0; pointer-events:none; width:100%; height:100%; overflow:hidden; ';
         container.appendChild( content );
 
         gender = document.createElement( 'div' );
@@ -67,22 +67,23 @@ gui = {
         }, false );
 
         gender.appendChild( genderIM );
-        content.appendChild( gender );
-        content.appendChild( topText );
-
+        
         mainMenu = document.createElement( 'div' );
-        mainMenu.style.cssText = 'position: absolute; top:40px; right:0; pointer-events:none; width:200px; height:100%; display:none;';
-        content.appendChild( mainMenu );
-
+        mainMenu.style.cssText = 'position:absolute; top:40px; right:0; pointer-events:none; width:200px;';
+        
         menu = document.createElement( 'div' );
         menu.style.cssText = 'position: absolute; top:0px; left:0px; height:40px; width:100%; pointer-events:none; ';
+
+        content.appendChild( gender );
+        content.appendChild( topText );
+        content.appendChild( mainMenu );
         content.appendChild( menu );
 
         timebarre = new Timebarre( content, selectColor );
 
         for(var i=0; i<BB.length; i++ ) this.addButton(i);
 
-        ui = new UIL.Gui( { w:200, bg:'rgba(23,23,23,0)', close:false, parent:mainMenu, top:50, css:'right:0; transition:none;' } );
+        ui = new UIL.Gui( { w:200, bg:'rgba(23,23,23,0)', close:false, parent:mainMenu, top:50, css:'right:0;' } );
 
     },
 
@@ -195,6 +196,7 @@ gui = {
 
         ui.add('list', { name:'type', width:100, list:mats, value:settings.type, full:true }).onChange( function( name ){ model.setMaterial( name ); } );
 
+        ui.add( settings, 'color', { type:'color', ctype:'hex', fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
         ui.add( settings, 'muscles', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
         ui.add( settings, 'oamap', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
         ui.add( settings, 'lightmap', { min:0, max:1, fontColor:'#D4B87B' } ).onChange( gui.applyMaterial );
@@ -346,7 +348,9 @@ gui = {
     },
 */
     inPlay:function(){
+
         if( timebarre ) timebarre.inPlay();
+
     }
 
 

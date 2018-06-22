@@ -1,12 +1,9 @@
-'use strict';
-
-var THREE, Ammo, TextDecoder, performance;
 /**
  * 	SEA3D SDK
  * 	@author Sunag / http://www.sunag.com.br/
  */
 
-//'use strict';
+'use strict';
 
 var SEA3D = { VERSION: 18110 };
 
@@ -1814,6 +1811,8 @@ SEA3D.Animation.ANGLE = 12;
 SEA3D.Animation.ALPHA = 13;
 SEA3D.Animation.VOLUME = 14;
 
+SEA3D.Animation.MORPH = 250;
+
 SEA3D.Animation.prototype = Object.create( SEA3D.AnimationBase.prototype );
 SEA3D.Animation.prototype.constructor = SEA3D.Animation;
 
@@ -1884,6 +1883,32 @@ SEA3D.Morph.prototype = Object.create( SEA3D.GeometryBase.prototype );
 SEA3D.Morph.prototype.constructor = SEA3D.Morph;
 
 SEA3D.Morph.prototype.type = "mph";
+
+//
+//	Morph Animation
+//
+
+SEA3D.MorphAnimation = function ( name, data, sea3d ) {
+
+	SEA3D.AnimationBase.call( this, name, data, sea3d );
+
+	this.dataList = [];
+
+	for ( var i = 0, l = data.readUByte(); i < l; i ++ ) {
+
+		this.dataList.push( {
+			kind: SEA3D.Animation.MORPH,
+			type: SEA3D.Stream.FLOAT,
+			name: data.readUTF8Tiny(),
+			blockSize: 1,
+			data: data.readVector( SEA3D.Stream.FLOAT, this.numFrames, 0 )
+		} );
+
+	}
+
+};
+
+SEA3D.MorphAnimation.prototype.type = "mpha";
 
 //
 //	Vertex Animation
@@ -2789,6 +2814,7 @@ SEA3D.File = function ( config ) {
 	this.addClass( SEA3D.Camera );
 	this.addClass( SEA3D.OrthographicCamera );
 	this.addClass( SEA3D.Morph, true );
+	this.addClass( SEA3D.MorphAnimation, true );
 	this.addClass( SEA3D.VertexAnimation, true );
 	this.addClass( SEA3D.CubeMap, true );
 	this.addClass( SEA3D.Dummy );
@@ -3317,7 +3343,7 @@ References:
   http://www.7-zip.org/sdk.html
 */
 
-//'use strict';
+'use strict';
 
 SEA3D.LZMA = function () {
 
@@ -4105,7 +4131,7 @@ SEA3D.File.setDecompressionEngine( 2, "lzma", SEA3D.File.LZMAUncompress );
  * 	@author Sunag / http://www.sunag.com.br/
  */
 
-//'use strict';
+'use strict';
 
 //
 //
@@ -4162,16 +4188,16 @@ THREE.SEA3D.HELPER_COLOR = 0x9AB9E5;
 THREE.SEA3D.RTT_SIZE = 512;
 
 THREE.SEA3D.identityMatrixScale = function () {
-		
+
 	var scl = new THREE.Vector3();
-	
+
 	return function identityMatrixScale( matrix ) {
-		
+
 		scl.setFromMatrixScale( matrix );
-		
+
 		return matrix.scale( scl.set( 1 / scl.x, 1 / scl.y, 1 / scl.z ) );
 
-	}
+	};
 
 }();
 
@@ -4717,7 +4743,7 @@ Object.defineProperties( THREE.SEA3D.Animation.prototype, {
 		}
 
 	},
-	
+
 	mixer: {
 
 		set: function ( val ) {
@@ -5567,39 +5593,39 @@ THREE.SEA3D.PointSound = function ( listener, sound ) {
 	THREE.PositionalAudio.call( this, listener );
 
 	this.setSound( sound );
-	
+
 };
 
 THREE.SEA3D.PointSound.prototype = Object.assign( Object.create( THREE.PositionalAudio.prototype ), THREE.SEA3D.Object3D.prototype, {
 
 	constructor: THREE.SEA3D.PointSound,
 
-	setSound: function( sound ) {
-		
+	setSound: function ( sound ) {
+
 		this.sound = sound;
-		
-		if (sound) {
-			
-			if (sound.buffer) {
-				
+
+		if ( sound ) {
+
+			if ( sound.buffer ) {
+
 				this.setBuffer( sound.buffer );
-				
+
 			} else {
-				
-				sound.addEventListener("complete", function(e) {
+
+				sound.addEventListener( "complete", function ( e ) {
 
 					this.setBuffer( sound.buffer );
-					
+
 				}.bind( this ) );
-				
+
 			}
-			
+
 		}
-		
+
 		return this;
-		
+
 	},
-	
+
 	copy: function ( source ) {
 
 		THREE.PositionalAudio.prototype.copy.call( this, source );
@@ -5666,8 +5692,8 @@ THREE.SEA3D.Sound = function ( src ) {
 	new THREE.AudioLoader().load( src, function ( buffer ) {
 
 		this.buffer = buffer;
-		
-		this.dispatchEvent( { type:"complete" } );
+
+		this.dispatchEvent( { type: "complete" } );
 
 	}.bind( this ) );
 
@@ -5899,7 +5925,7 @@ THREE.SEA3D.prototype.addDefaultAnimation = function ( sea, animatorClass ) {
 
 			case SEA3D.Animation.prototype.type:
 
-				var animation = anm.tag.tag || this.getAnimationType( {
+				var animation = anm.tag.tag || this.getModifier( {
 					sea: anm.tag,
 					scope: scope,
 					relative: anm.relative
@@ -5940,7 +5966,9 @@ THREE.SEA3D.prototype.readGeometryBuffer = function ( sea ) {
 
 	}
 
-	geo.setIndex( new THREE.BufferAttribute( sea.indexes, 1 ) );
+	// not indexes? use polygon soup
+	if ( sea.indexes ) geo.setIndex( new THREE.BufferAttribute( sea.indexes, 1 ) );
+
 	geo.addAttribute( 'position', new THREE.BufferAttribute( sea.vertex, 3 ) );
 
 	if ( sea.uv ) {
@@ -6057,14 +6085,24 @@ THREE.SEA3D.prototype.readSprite = function ( sea ) {
 
 			this.setBlending( mat, sea.blendMode );
 
-			mat.map = sea.material.tag.map;
-			mat.map.flipY = true;
+			var map = sea.material.tag.map;
+
+			if ( map ) {
+
+				map.flipY = true;
+				mat.map = map;
+
+			}
 
 			mat.color.set( sea.material.tag.color );
 			mat.opacity = sea.material.tag.opacity;
 			mat.fog = sea.material.receiveFog;
 
-		} else mat = sea.material.tag.sprite;
+		} else {
+
+			mat = sea.material.tag.sprite;
+
+		}
 
 	}
 
@@ -6087,7 +6125,7 @@ THREE.SEA3D.prototype.readSprite = function ( sea ) {
 
 THREE.SEA3D.prototype.readMesh = function ( sea ) {
 
-	var i, count, geo = sea.geometry.tag, mesh, mat, skeleton, skeletonAnimation, vertexAnimation, uvwAnimationClips, morpher;
+	var i, count, geo = sea.geometry.tag, mesh, mat, skeleton, morpher, skeletonAnimation, vertexAnimation, uvwAnimationClips, morphAnimation;
 
 	for ( i = 0, count = sea.modifiers ? sea.modifiers.length : 0; i < count; i ++ ) {
 
@@ -6106,10 +6144,13 @@ THREE.SEA3D.prototype.readMesh = function ( sea ) {
 
 			case SEA3D.Morph.prototype.type:
 
-				morpher = mod;
+				morpher = mod.tag || this.getModifier( {
+					sea: mod,
+					geometry: sea.geometry
+				} );
 
-				geo.morphAttributes = morpher.tag.attribs;
-				geo.morphTargets = morpher.tag.targets;
+				geo.morphAttributes = morpher.attribs;
+				geo.morphTargets = morpher.targets;
 
 				break;
 
@@ -6128,7 +6169,7 @@ THREE.SEA3D.prototype.readMesh = function ( sea ) {
 
 				skeletonAnimation = anmTag;
 
-				geo.animations = skeletonAnimation.tag || this.getAnimationType( {
+				geo.animations = skeletonAnimation.tag || this.getModifier( {
 					sea: skeletonAnimation,
 					skeleton: skeleton,
 					relative: true
@@ -6148,8 +6189,16 @@ THREE.SEA3D.prototype.readMesh = function ( sea ) {
 
 			case SEA3D.UVWAnimation.prototype.type:
 
-				uvwAnimationClips = anmTag.tag || this.getAnimationType( {
-					sea: anmTag,
+				uvwAnimationClips = anmTag.tag || this.getModifier( {
+					sea: anmTag
+				} );
+
+				break;
+
+			case SEA3D.MorphAnimation.prototype.type:
+
+				morphAnimation = anmTag.tag || this.getModifier( {
+					sea: anmTag
 				} );
 
 				break;
@@ -6158,10 +6207,10 @@ THREE.SEA3D.prototype.readMesh = function ( sea ) {
 
 	}
 
-	var uMorph = morpher != undefined || vertexAnimation != undefined,
-		uMorphNormal =
-					( morpher && morpher.tag.attribs.normal != undefined ) ||
-					( vertexAnimation && vertexAnimation.tag.attribs.normal != undefined );
+	var uMorph = morpher != undefined || vertexAnimation != undefined;
+	var uMorphNormal = morpher ? 
+					( morpher.attribs.normal != undefined ) ||
+					( vertexAnimation && vertexAnimation.tag.attribs.normal != undefined ) : false;
 
 	if ( sea.material ) {
 
@@ -6228,6 +6277,18 @@ THREE.SEA3D.prototype.readMesh = function ( sea ) {
 		if ( this.config.autoPlay ) {
 
 			mesh.uvwAnimator.play( 0 );
+
+		}
+
+	}
+
+	if ( morphAnimation ) {
+
+		mesh.morphAnimator = new THREE.SEA3D.Animator( morphAnimation, new THREE.AnimationMixer( mesh ) );
+
+		if ( this.config.autoPlay ) {
+
+			mesh.morphAnimator.play( 0 );
 
 		}
 
@@ -7038,11 +7099,11 @@ THREE.SEA3D.prototype.readOrthographicCamera = function ( sea ) {
 //	Skeleton
 //
 
-THREE.SEA3D.prototype.getSkeletonFromBones = function(bonesData) {
+THREE.SEA3D.prototype.getSkeletonFromBones = function ( bonesData ) {
 
 	var bones = [], bone, gbone;
 	var i, il;
-	
+
 	for ( i = 0, il = bonesData.length; i < il; i ++ ) {
 
 		gbone = bonesData[ i ];
@@ -7053,7 +7114,7 @@ THREE.SEA3D.prototype.getSkeletonFromBones = function(bonesData) {
 		bone.name = gbone.name;
 		bone.position.fromArray( gbone.pos );
 		bone.quaternion.fromArray( gbone.rotq );
-		
+
 		if ( gbone.scl !== undefined ) bone.scale.fromArray( gbone.scl );
 
 	}
@@ -7069,9 +7130,9 @@ THREE.SEA3D.prototype.getSkeletonFromBones = function(bonesData) {
 		}
 
 	}
-	
+
 	return new THREE.Skeleton( bones );
-	
+
 };
 
 THREE.SEA3D.prototype.readSkeletonLocal = function ( sea ) {
@@ -7111,10 +7172,10 @@ THREE.SEA3D.prototype.readJointObject = function ( sea ) {
 };
 
 //
-//	Morpher
+//	Morph
 //
 
-THREE.SEA3D.prototype.readMorpher = function ( sea ) {
+THREE.SEA3D.prototype.readMorph = function ( sea ) {
 
 	var attribs = { position: [] }, targets = [];
 
@@ -7123,6 +7184,7 @@ THREE.SEA3D.prototype.readMorpher = function ( sea ) {
 		var node = sea.node[ i ];
 
 		attribs.position[ i ] = new THREE.Float32BufferAttribute( node.vertex, 3 );
+		attribs.position[ i ].name = node.name;
 
 		if ( node.normal ) {
 
@@ -7228,6 +7290,12 @@ THREE.SEA3D.prototype.readAnimation = function ( sea ) {
 
 					break;
 
+				case SEA3D.Animation.MORPH:
+
+					name = '.morphTargetInfluences[' + anm.name + ']';
+
+					break;
+
 			}
 
 			if ( ! name ) continue;
@@ -7253,7 +7321,7 @@ THREE.SEA3D.prototype.readAnimation = function ( sea ) {
 
 					}
 
-					tracks.push( new THREE.VectorKeyframeTrack( name, times, values, intrpl ) );
+					tracks.push( new THREE.NumberKeyframeTrack( name, times, values, intrpl ) );
 
 					break;
 
@@ -7331,10 +7399,10 @@ THREE.SEA3D.prototype.readAnimation = function ( sea ) {
 
 THREE.SEA3D.prototype.readSkeletonAnimation = function ( sea, skl ) {
 
-	skl = !skl && sea.metadata && sea.metadata.skeleton ? sea.metadata.skeleton : skl;
+	skl = ! skl && sea.metadata && sea.metadata.skeleton ? sea.metadata.skeleton : skl;
 
-	if (!skl || sea.tag) return sea.tag;
-	
+	if ( ! skl || sea.tag ) return sea.tag;
+
 	var animations = [], delta = ( 1000 / sea.frameRate ) / 1000;
 
 	for ( var i = 0; i < sea.sequence.length; i ++ ) {
@@ -7441,10 +7509,10 @@ THREE.SEA3D.prototype.readVertexAnimation = function ( sea ) {
 };
 
 //
-//	Animation Selector
+//	Selector
 //
 
-THREE.SEA3D.prototype.getAnimationType = function ( req ) {
+THREE.SEA3D.prototype.getModifier = function ( req ) {
 
 	var sea = req.sea;
 
@@ -7453,6 +7521,20 @@ THREE.SEA3D.prototype.getAnimationType = function ( req ) {
 		case SEA3D.SkeletonAnimation.prototype.type:
 
 			this.readSkeletonAnimation( sea, req.skeleton );
+
+			break;
+
+		case SEA3D.Animation.prototype.type:
+		case SEA3D.MorphAnimation.prototype.type:
+		case SEA3D.UVWAnimation.prototype.type:
+
+			this.readAnimation( sea );
+
+			break;
+
+		case SEA3D.Morph.prototype.type:
+
+			this.readMorph( sea, req.geometry );
 
 			break;
 
@@ -7509,6 +7591,12 @@ THREE.SEA3D.prototype.readActions = function ( sea ) {
 
 				break;
 
+			case SEA3D.Actions.CAMERA:
+
+				this.domain.camera = this.camera = act.camera.tag;
+
+				break;
+
 			case SEA3D.Actions.ENVIRONMENT_COLOR:
 
 				this.domain.background = this.background = this.background || {};
@@ -7542,38 +7630,38 @@ THREE.SEA3D.prototype.readActions = function ( sea ) {
 //
 
 THREE.SEA3D.prototype.updatePropertiesAssets = function ( sea, props ) {
-	
-	for(var name in props) {
-		
-		switch(props.__type[name]) {
-			
+
+	for ( var name in props ) {
+
+		switch ( props.__type[ name ] ) {
+
 			case SEA3D.Stream.ASSET:
-			
-				if (!props.__asset) props.__asset = {};
-				if (!props.__asset[name]) props.__asset[name] = props[name];
-				
-				props[name] = props.__asset[name].tag;
-				
+
+				if ( ! props.__asset ) props.__asset = {};
+				if ( ! props.__asset[ name ] ) props.__asset[ name ] = props[ name ];
+
+				props[ name ] = props.__asset[ name ].tag;
+
 				break;
-			
+
 			case SEA3D.Stream.GROUP:
-			
-				props[name] = this.updatePropertiesAssets( sea, props[name] );
-				
+
+				props[ name ] = this.updatePropertiesAssets( sea, props[ name ] );
+
 				break;
-			
+
 		}
-		
+
 	}
-	
+
 	return props;
-	
+
 };
 
 THREE.SEA3D.prototype.readProperties = function ( sea ) {
 
 	var props = this.updatePropertiesAssets( sea, sea.props );
-	
+
 	this.domain.properties = this.properties = this.properties || [];
 	this.properties.push( this.objects[ "prop/" + sea.name ] = sea.tag = props );
 
@@ -7721,6 +7809,7 @@ THREE.SEA3D.prototype.parse = function ( onParseComplete, onParseProgress ) {
 	delete this.sounds;
 	delete this.glsl;
 	delete this.dummy;
+	delete this.camera;
 	delete this.background;
 	delete this.properties;
 	delete this.scriptTargets;
@@ -7789,13 +7878,14 @@ THREE.SEA3D.prototype.setTypeRead = function () {
 	this.file.typeRead[ SEA3D.JointObject.prototype.type ] = this.readJointObject;
 	this.file.typeRead[ SEA3D.CubeMap.prototype.type ] = this.readCubeMap;
 	this.file.typeRead[ SEA3D.CubeRender.prototype.type ] = this.readCubeRender;
-	this.file.typeRead[ SEA3D.Animation.prototype.type ] = 
+	this.file.typeRead[ SEA3D.Animation.prototype.type ] =
+	this.file.typeRead[ SEA3D.MorphAnimation.prototype.type ] =
 	this.file.typeRead[ SEA3D.UVWAnimation.prototype.type ] = this.readAnimation;
 	this.file.typeRead[ SEA3D.SoundPoint.prototype.type ] = this.readSoundPoint;
 	this.file.typeRead[ SEA3D.TextureURL.prototype.type ] = this.readTextureURL;
 	this.file.typeRead[ SEA3D.CubeMapURL.prototype.type ] = this.readCubeMapURL;
 	this.file.typeRead[ SEA3D.TextureUpdate.prototype.type ] = this.readTextureUpdate;
-	this.file.typeRead[ SEA3D.Morph.prototype.type ] = this.readMorpher;
+	this.file.typeRead[ SEA3D.Morph.prototype.type ] = this.readMorph;
 	this.file.typeRead[ SEA3D.VertexAnimation.prototype.type ] = this.readVertexAnimation;
 	this.file.typeRead[ SEA3D.Actions.prototype.type ] = this.readActions;
 	this.file.typeRead[ SEA3D.FileInfo.prototype.type ] = this.readFileInfo;
@@ -7880,12 +7970,900 @@ THREE.SEA3D.prototype.load = function ( data ) {
 
 };
 
+/*
+ * $Id: rawinflate.js,v 0.3 2013/04/09 14:25:38 dankogai Exp dankogai $
+ *
+ * GNU General Public License, version 2 (GPL-2.0)
+ *   http://opensource.org/licenses/GPL-2.0
+ * original:
+ *   http://www.onicos.com/staff/iz/amuse/javascript/expert/inflate.txt
+ */
+
+'use strict';
+
+SEA3D.Deflate = function () {
+
+	/* Copyright (C) 1999 Masanao Izumo <iz@onicos.co.jp>
+	 * Version: 1.0.0.1
+	 * LastModified: Dec 25 1999
+	 */
+
+	/* Interface:
+	 * data = zip_inflate(src);
+	 */
+
+	/* constant parameters */
+	var zip_WSIZE = 32768; // Sliding Window size
+	var zip_STORED_BLOCK = 0;
+	var zip_STATIC_TREES = 1;
+	var zip_DYN_TREES = 2;
+
+	/* for inflate */
+	var zip_lbits = 9; // bits in base literal/length lookup table
+	var zip_dbits = 6; // bits in base distance lookup table
+	var zip_INBUFSIZ = 32768;	// Input buffer size
+	var zip_INBUF_EXTRA = 64;	// Extra buffer
+
+	/* variables (inflate) */
+	var zip_slide;
+	var zip_wp; // current position in slide
+	var zip_fixed_tl = null;	// inflate static
+	var zip_fixed_td; // inflate static
+	var zip_fixed_bl, fixed_bd, zip_fixed_bd;	// inflate static
+	var zip_bit_buf; // bit buffer
+	var zip_bit_len; // bits in bit buffer
+	var zip_method;
+	var zip_eof;
+	var zip_copy_leng;
+	var zip_copy_dist;
+	var zip_tl, zip_td;	// literal/length and distance decoder tables
+	var zip_bl, zip_bd;	// number of bits decoded by tl and td
+
+	var zip_inflate_data;
+	var zip_inflate_pos;
+
+
+	/* constant tables (inflate) */
+	var zip_MASK_BITS = new Array(
+	0x0000,
+	0x0001, 0x0003, 0x0007, 0x000f, 0x001f, 0x003f, 0x007f, 0x00ff,
+	0x01ff, 0x03ff, 0x07ff, 0x0fff, 0x1fff, 0x3fff, 0x7fff, 0xffff );
+	// Tables for deflate from PKZIP's appnote.txt.
+	var zip_cplens = new Array( // Copy lengths for literal codes 257..285
+	3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31,
+	35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258, 0, 0 );
+	/* note: see note #13 above about the 258 in this list. */
+	var zip_cplext = new Array( // Extra bits for literal codes 257..285
+	0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2,
+	3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0, 99, 99 ); // 99==invalid
+	var zip_cpdist = new Array( // Copy offsets for distance codes 0..29
+	1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193,
+	257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145,
+	8193, 12289, 16385, 24577 );
+	var zip_cpdext = new Array( // Extra bits for distance codes
+	0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6,
+	7, 7, 8, 8, 9, 9, 10, 10, 11, 11,
+	12, 12, 13, 13 );
+	var zip_border = new Array( // Order of the bit length code lengths
+	16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15 );
+	/* objects (inflate) */
+
+	var zip_HuftList = function () {
+
+		this.next = null;
+		this.list = null;
+
+	}
+
+	var zip_HuftNode = function () {
+
+		this.e = 0; // number of extra bits or operation
+		this.b = 0; // number of bits in this code or subcode
+
+		// union
+		this.n = 0; // literal, length base, or distance base
+		this.t = null; // (zip_HuftNode) pointer to next level of table
+
+	}
+
+	var zip_HuftBuild = function ( b,	// code lengths in bits (all assumed <= BMAX)
+			n,	// number of codes (assumed <= N_MAX)
+			s,	// number of simple-valued codes (0..s-1)
+			d,	// list of base values for non-simple codes
+			e,	// list of extra bits for non-simple codes
+			mm	// maximum lookup bits
+			) {
+
+		this.BMAX = 16; // maximum bit length of any code
+		this.N_MAX = 288; // maximum number of codes in any set
+		this.status = 0;	// 0: success, 1: incomplete table, 2: bad input
+		this.root = null;	// (zip_HuftList) starting table
+		this.m = 0; // maximum lookup bits, returns actual
+
+		/* Given a list of code lengths and a maximum table size, make a set of
+		   tables to decode that set of codes.	Return zero on success, one if
+		   the given code set is incomplete (the tables are still built in this
+		   case), two if the input is invalid (all zero length codes or an
+		   oversubscribed set of lengths), and three if not enough memory.
+		   The code with value 256 is special, and the tables are constructed
+		   so that no bits beyond that code are fetched when that code is
+		   decoded. */
+		{
+
+			var a; // counter for codes of length k
+			var c = new Array( this.BMAX + 1 );	// bit length count table
+			var el; // length of EOB code (value 256)
+			var f; // i repeats in table every f entries
+			var g; // maximum code length
+			var h; // table level
+			var i; // counter, current code
+			var j; // counter
+			var k; // number of bits in current code
+			var lx = new Array( this.BMAX + 1 );	// stack of bits per table
+			var p; // pointer into c[], b[], or v[]
+			var pidx; // index of p
+			var q; // (zip_HuftNode) points to current table
+			var r = new zip_HuftNode(); // table entry for structure assignment
+			var u = new Array( this.BMAX ); // zip_HuftNode[BMAX][]  table stack
+			var v = new Array( this.N_MAX ); // values in order of bit length
+			var w;
+			var x = new Array( this.BMAX + 1 );// bit offsets, then code stack
+			var xp; // pointer into x or c
+			var y; // number of dummy codes added
+			var z; // number of entries in current table
+			var o;
+			var tail; // (zip_HuftList)
+
+			tail = this.root = null;
+			for ( i = 0; i < c.length; i ++ )
+			c[ i ] = 0;
+			for ( i = 0; i < lx.length; i ++ )
+			lx[ i ] = 0;
+			for ( i = 0; i < u.length; i ++ )
+			u[ i ] = null;
+			for ( i = 0; i < v.length; i ++ )
+			v[ i ] = 0;
+			for ( i = 0; i < x.length; i ++ )
+			x[ i ] = 0;
+
+			// Generate counts for each bit length
+			el = n > 256 ? b[ 256 ] : this.BMAX; // set length of EOB code, if any
+			p = b; pidx = 0;
+			i = n;
+			do {
+
+				c[ p[ pidx ]] ++;	// assume all entries <= BMAX
+				pidx ++;
+
+			} while ( -- i > 0 );
+			if ( c[ 0 ] == n ) {
+
+				// null input--all zero length codes
+				this.root = null;
+				this.m = 0;
+				this.status = 0;
+				return;
+
+			}
+
+			// Find minimum and maximum length, bound *m by those
+			for ( j = 1; j <= this.BMAX; j ++ )
+			if ( c[ j ] != 0 )
+				break;
+			k = j; // minimum code length
+			if ( mm < j )
+			mm = j;
+			for ( i = this.BMAX; i != 0; i -- )
+			if ( c[ i ] != 0 )
+				break;
+			g = i; // maximum code length
+			if ( mm > i )
+			mm = i;
+
+			// Adjust last length count to fill out codes, if needed
+			for ( y = 1 << j; j < i; j ++, y <<= 1 )
+	    if ( ( y -= c[ j ] ) < 0 ) {
+
+		this.status = 2;	// bad input: more codes than bits
+		this.m = mm;
+		return;
+
+	    }
+			if ( ( y -= c[ i ] ) < 0 ) {
+
+				this.status = 2;
+				this.m = mm;
+				return;
+
+			}
+			c[ i ] += y;
+
+			// Generate starting offsets into the value table for each length
+			x[ 1 ] = j = 0;
+			p = c;
+			pidx = 1;
+			xp = 2;
+			while ( -- i > 0 ) // note that i == g from above
+			x[ xp ++ ] = ( j += p[ pidx ++ ] );
+
+			// Make a table of values in order of bit lengths
+			p = b; pidx = 0;
+			i = 0;
+			do {
+
+				if ( ( j = p[ pidx ++ ] ) != 0 )
+					v[ x[ j ] ++ ] = i;
+
+			} while ( ++ i < n );
+			n = x[ g ]; // set n to length of v
+
+			// Generate the Huffman codes and for each, make the table entries
+			x[ 0 ] = i = 0; // first Huffman code is zero
+			p = v; pidx = 0; // grab values in bit order
+			h = - 1; // no tables yet--level -1
+			w = lx[ 0 ] = 0; // no bits decoded yet
+			q = null; // ditto
+			z = 0; // ditto
+
+			// go through the bit lengths (k already is bits in shortest code)
+			for ( ; k <= g; k ++ ) {
+
+				a = c[ k ];
+				while ( a -- > 0 ) {
+
+					// here i is the Huffman code of length k bits for value p[pidx]
+					// make tables up to required level
+					while ( k > w + lx[ 1 + h ] ) {
+
+						w += lx[ 1 + h ]; // add bits already decoded
+						h ++;
+
+						// compute minimum size table less than or equal to *m bits
+						z = ( z = g - w ) > mm ? mm : z; // upper limit
+						if ( ( f = 1 << ( j = k - w ) ) > a + 1 ) {
+
+							// try a k-w bit table
+							// too few codes for k-w bit table
+							f -= a + 1;	// deduct codes from patterns left
+							xp = k;
+							while ( ++ j < z ) {
+
+								// try smaller tables up to z bits
+								if ( ( f <<= 1 ) <= c[ ++ xp ] )
+									break;	// enough codes to use up j bits
+								f -= c[ xp ];	// else deduct codes from patterns
+
+							}
+
+						}
+						if ( w + j > el && w < el )
+							j = el - w;	// make EOB code end at table
+						z = 1 << j;	// table entries for j-bit table
+						lx[ 1 + h ] = j; // set table size in stack
+
+						// allocate and link in new table
+						q = new Array( z );
+						for ( o = 0; o < z; o ++ ) {
+
+							q[ o ] = new zip_HuftNode();
+
+						}
+
+						if ( tail == null )
+							tail = this.root = new zip_HuftList();
+						else
+							tail = tail.next = new zip_HuftList();
+						tail.next = null;
+						tail.list = q;
+						u[ h ] = q;	// table starts after link
+
+						/* connect to last table, if there is one */
+						if ( h > 0 ) {
+
+							x[ h ] = i; // save pattern for backing up
+							r.b = lx[ h ];	// bits to dump before this table
+							r.e = 16 + j;	// bits in this table
+							r.t = q; // pointer to this table
+							j = ( i & ( ( 1 << w ) - 1 ) ) >> ( w - lx[ h ] );
+							u[ h - 1 ][ j ].e = r.e;
+							u[ h - 1 ][ j ].b = r.b;
+							u[ h - 1 ][ j ].n = r.n;
+							u[ h - 1 ][ j ].t = r.t;
+
+						}
+
+					}
+
+					// set up table entry in r
+					r.b = k - w;
+					if ( pidx >= n )
+					r.e = 99; // out of values--invalid code
+					else if ( p[ pidx ] < s ) {
+
+						r.e = ( p[ pidx ] < 256 ? 16 : 15 ); // 256 is end-of-block code
+						r.n = p[ pidx ++ ];	// simple code is just the value
+
+					} else {
+
+						r.e = e[ p[ pidx ] - s ];	// non-simple--look up in lists
+						r.n = d[ p[ pidx ++ ] - s ];
+
+					}
+
+					// fill code-like entries with r //
+					f = 1 << ( k - w );
+					for ( j = i >> w; j < z; j += f ) {
+
+						q[ j ].e = r.e;
+						q[ j ].b = r.b;
+						q[ j ].n = r.n;
+						q[ j ].t = r.t;
+
+					}
+
+					// backwards increment the k-bit code i
+					for ( j = 1 << ( k - 1 ); ( i & j ) != 0; j >>= 1 )
+					i ^= j;
+					i ^= j;
+
+					// backup over finished tables
+					while ( ( i & ( ( 1 << w ) - 1 ) ) != x[ h ] ) {
+
+						w -= lx[ h ]; // don't need to update q
+						h --;
+
+					}
+
+				}
+
+			}
+
+			/* return actual size of base table */
+			this.m = lx[ 1 ];
+
+			/* Return true (1) if we were given an incomplete table */
+			this.status = ( ( y != 0 && g != 1 ) ? 1 : 0 );
+
+		} /* end of constructor */
+
+	}
+
+
+	/* routines (inflate) */
+
+	var zip_GET_BYTE = function () {
+
+		if ( zip_inflate_data.length == zip_inflate_pos )
+			return - 1;
+		return zip_inflate_data[ zip_inflate_pos ++ ];
+
+	}
+
+	var zip_NEEDBITS = function ( n ) {
+
+		while ( zip_bit_len < n ) {
+
+			zip_bit_buf |= zip_GET_BYTE() << zip_bit_len;
+			zip_bit_len += 8;
+
+		}
+
+	}
+
+	var zip_GETBITS = function ( n ) {
+
+		return zip_bit_buf & zip_MASK_BITS[ n ];
+
+	}
+
+	var zip_DUMPBITS = function ( n ) {
+
+		zip_bit_buf >>= n;
+		zip_bit_len -= n;
+
+	}
+
+	var zip_inflate_codes = function ( buff, off, size ) {
+
+		/* inflate (decompress) the codes in a deflated (compressed) block.
+		       Return an error code or zero if it all goes ok. */
+		var e; // table entry flag/number of extra bits
+		var t; // (zip_HuftNode) pointer to table entry
+		var n;
+
+		if ( size == 0 )
+		return 0;
+
+		// inflate the coded data
+		n = 0;
+		for ( ;; ) {
+
+			// do until end of block
+			zip_NEEDBITS( zip_bl );
+			t = zip_tl.list[ zip_GETBITS( zip_bl ) ];
+			e = t.e;
+			while ( e > 16 ) {
+
+				if ( e == 99 )
+					return - 1;
+				zip_DUMPBITS( t.b );
+				e -= 16;
+				zip_NEEDBITS( e );
+				t = t.t[ zip_GETBITS( e ) ];
+				e = t.e;
+
+			}
+			zip_DUMPBITS( t.b );
+
+			if ( e == 16 ) {
+
+				// then it's a literal
+				zip_wp &= zip_WSIZE - 1;
+				buff[ off + n ++ ] = zip_slide[ zip_wp ++ ] = t.n;
+				if ( n == size )
+					return size;
+				continue;
+
+			}
+
+			// exit if end of block
+			if ( e == 15 )
+			break;
+
+			// it's an EOB or a length
+
+			// get length of block to copy
+			zip_NEEDBITS( e );
+			zip_copy_leng = t.n + zip_GETBITS( e );
+			zip_DUMPBITS( e );
+
+			// decode distance of block to copy
+			zip_NEEDBITS( zip_bd );
+			t = zip_td.list[ zip_GETBITS( zip_bd ) ];
+			e = t.e;
+
+			while ( e > 16 ) {
+
+				if ( e == 99 )
+					return - 1;
+				zip_DUMPBITS( t.b );
+				e -= 16;
+				zip_NEEDBITS( e );
+				t = t.t[ zip_GETBITS( e ) ];
+				e = t.e;
+
+			}
+			zip_DUMPBITS( t.b );
+			zip_NEEDBITS( e );
+			zip_copy_dist = zip_wp - t.n - zip_GETBITS( e );
+			zip_DUMPBITS( e );
+
+			// do the copy
+			while ( zip_copy_leng > 0 && n < size ) {
+
+				zip_copy_leng --;
+				zip_copy_dist &= zip_WSIZE - 1;
+				zip_wp &= zip_WSIZE - 1;
+				buff[ off + n ++ ] = zip_slide[ zip_wp ++ ]
+					= zip_slide[ zip_copy_dist ++ ];
+
+			}
+
+			if ( n == size )
+			return size;
+
+		}
+
+		zip_method = - 1; // done
+		return n;
+
+	}
+
+	var zip_inflate_stored = function ( buff, off, size ) {
+
+		/* "decompress" an inflated type 0 (stored) block. */
+		var n;
+
+		// go to byte boundary
+		n = zip_bit_len & 7;
+		zip_DUMPBITS( n );
+
+		// get the length and its complement
+		zip_NEEDBITS( 16 );
+		n = zip_GETBITS( 16 );
+		zip_DUMPBITS( 16 );
+		zip_NEEDBITS( 16 );
+		if ( n != ( ( ~ zip_bit_buf ) & 0xffff ) )
+			return - 1; // error in compressed data
+		zip_DUMPBITS( 16 );
+
+		// read and output the compressed data
+		zip_copy_leng = n;
+
+		n = 0;
+		while ( zip_copy_leng > 0 && n < size ) {
+
+			zip_copy_leng --;
+			zip_wp &= zip_WSIZE - 1;
+			zip_NEEDBITS( 8 );
+			buff[ off + n ++ ] = zip_slide[ zip_wp ++ ] =
+			zip_GETBITS( 8 );
+			zip_DUMPBITS( 8 );
+
+		}
+
+		if ( zip_copy_leng == 0 )
+		zip_method = - 1; // done
+		return n;
+
+	}
+
+	var zip_inflate_fixed = function ( buff, off, size ) {
+
+		/* decompress an inflated type 1 (fixed Huffman codes) block.  We should
+		       either replace this with a custom decoder, or at least precompute the
+		       Huffman tables. */
+
+		// if first time, set up tables for fixed blocks
+		if ( zip_fixed_tl == null ) {
+
+			var i; // temporary variable
+			var l = new Array( 288 );	// length list for huft_build
+			var h;	// zip_HuftBuild
+
+			// literal table
+			for ( i = 0; i < 144; i ++ )
+			l[ i ] = 8;
+			for ( ; i < 256; i ++ )
+			l[ i ] = 9;
+			for ( ; i < 280; i ++ )
+			l[ i ] = 7;
+			for ( ; i < 288; i ++ )	// make a complete, but wrong code set
+			l[ i ] = 8;
+			zip_fixed_bl = 7;
+
+			h = new zip_HuftBuild( l, 288, 257, zip_cplens, zip_cplext,
+					zip_fixed_bl );
+			if ( h.status != 0 ) {
+
+				alert( "HufBuild error: " + h.status );
+				return - 1;
+
+			}
+			zip_fixed_tl = h.root;
+			zip_fixed_bl = h.m;
+
+			// distance table
+			for ( i = 0; i < 30; i ++ )	// make an incomplete code set
+			l[ i ] = 5;
+			zip_fixed_bd = 5;
+
+			h = new zip_HuftBuild( l, 30, 0, zip_cpdist, zip_cpdext, zip_fixed_bd );
+			if ( h.status > 1 ) {
+
+				zip_fixed_tl = null;
+				alert( "HufBuild error: " + h.status );
+				return - 1;
+
+			}
+			zip_fixed_td = h.root;
+			zip_fixed_bd = h.m;
+
+		}
+
+		zip_tl = zip_fixed_tl;
+		zip_td = zip_fixed_td;
+		zip_bl = zip_fixed_bl;
+		zip_bd = zip_fixed_bd;
+		return zip_inflate_codes( buff, off, size );
+
+	}
+
+	var zip_inflate_dynamic = function ( buff, off, size ) {
+
+		// decompress an inflated type 2 (dynamic Huffman codes) block.
+		var i; // temporary variables
+		var j;
+		var l; // last length
+		var n; // number of lengths to get
+		var t; // (zip_HuftNode) literal/length code table
+		var nb; // number of bit length codes
+		var nl; // number of literal/length codes
+		var nd; // number of distance codes
+		var ll = new Array( 286 + 30 ); // literal/length and distance code lengths
+		var h; // (zip_HuftBuild)
+
+		for ( i = 0; i < ll.length; i ++ )
+			ll[ i ] = 0;
+
+		// read in table lengths
+		zip_NEEDBITS( 5 );
+		nl = 257 + zip_GETBITS( 5 );	// number of literal/length codes
+		zip_DUMPBITS( 5 );
+		zip_NEEDBITS( 5 );
+		nd = 1 + zip_GETBITS( 5 );	// number of distance codes
+		zip_DUMPBITS( 5 );
+		zip_NEEDBITS( 4 );
+		nb = 4 + zip_GETBITS( 4 );	// number of bit length codes
+		zip_DUMPBITS( 4 );
+		if ( nl > 286 || nd > 30 )
+		return - 1; // bad lengths
+
+		// read in bit-length-code lengths
+		for ( j = 0; j < nb; j ++ )
+		{
+
+			zip_NEEDBITS( 3 );
+			ll[ zip_border[ j ]] = zip_GETBITS( 3 );
+			zip_DUMPBITS( 3 );
+
+		}
+		for ( ; j < 19; j ++ )
+			ll[ zip_border[ j ]] = 0;
+
+		// build decoding table for trees--single level, 7 bit lookup
+		zip_bl = 7;
+		h = new zip_HuftBuild( ll, 19, 19, null, null, zip_bl );
+		if ( h.status != 0 )
+			return - 1;	// incomplete code set
+
+		zip_tl = h.root;
+		zip_bl = h.m;
+
+		// read in literal and distance code lengths
+		n = nl + nd;
+		i = l = 0;
+		while ( i < n ) {
+
+			zip_NEEDBITS( zip_bl );
+			t = zip_tl.list[ zip_GETBITS( zip_bl ) ];
+			j = t.b;
+			zip_DUMPBITS( j );
+			j = t.n;
+			if ( j < 16 ) // length of code in bits (0..15)
+			ll[ i ++ ] = l = j;	// save last length in l
+			else if ( j == 16 ) {
+
+				// repeat last length 3 to 6 times
+				zip_NEEDBITS( 2 );
+				j = 3 + zip_GETBITS( 2 );
+				zip_DUMPBITS( 2 );
+				if ( i + j > n )
+					return - 1;
+				while ( j -- > 0 )
+					ll[ i ++ ] = l;
+
+			} else if ( j == 17 ) {
+
+				// 3 to 10 zero length codes
+				zip_NEEDBITS( 3 );
+				j = 3 + zip_GETBITS( 3 );
+				zip_DUMPBITS( 3 );
+				if ( i + j > n )
+					return - 1;
+				while ( j -- > 0 )
+					ll[ i ++ ] = 0;
+				l = 0;
+
+			} else {
+
+				// j == 18: 11 to 138 zero length codes
+				zip_NEEDBITS( 7 );
+				j = 11 + zip_GETBITS( 7 );
+				zip_DUMPBITS( 7 );
+				if ( i + j > n )
+					return - 1;
+				while ( j -- > 0 )
+					ll[ i ++ ] = 0;
+				l = 0;
+
+			}
+
+		}
+
+		// build the decoding tables for literal/length and distance codes
+		zip_bl = zip_lbits;
+		h = new zip_HuftBuild( ll, nl, 257, zip_cplens, zip_cplext, zip_bl );
+		if ( zip_bl == 0 )	// no literals or lengths
+			h.status = 1;
+		if ( h.status != 0 ) {
+
+			/*if(h.status == 1)
+			    ;// **incomplete literal tree** */
+			return - 1; // incomplete code set
+
+		}
+		zip_tl = h.root;
+		zip_bl = h.m;
+
+		for ( i = 0; i < nd; i ++ )
+			ll[ i ] = ll[ i + nl ];
+		zip_bd = zip_dbits;
+		h = new zip_HuftBuild( ll, nd, 0, zip_cpdist, zip_cpdext, zip_bd );
+		zip_td = h.root;
+		zip_bd = h.m;
+
+		if ( zip_bd == 0 && nl > 257 ) {
+
+			// lengths but no distances
+			// **incomplete distance tree**
+			return - 1;
+
+		}
+
+		/*if(h.status == 1) {
+			;// **incomplete distance tree**
+		    }*/
+		if ( h.status != 0 )
+			return - 1;
+
+		// decompress until an end-of-block code
+		return zip_inflate_codes( buff, off, size );
+
+	}
+
+	var zip_inflate_start = function () {
+
+		var i;
+
+		if ( zip_slide == null )
+			zip_slide = new Array( 2 * zip_WSIZE );
+		zip_wp = 0;
+		zip_bit_buf = 0;
+		zip_bit_len = 0;
+		zip_method = - 1;
+		zip_eof = false;
+		zip_copy_leng = zip_copy_dist = 0;
+		zip_tl = null;
+
+	}
+
+	var zip_inflate_internal = function ( buff, off, size ) {
+
+		// decompress an inflated entry
+		var n, i;
+
+		n = 0;
+		while ( n < size ) {
+
+			if ( zip_eof && zip_method == - 1 )
+			return n;
+
+			if ( zip_copy_leng > 0 ) {
+
+				if ( zip_method != zip_STORED_BLOCK ) {
+
+					// STATIC_TREES or DYN_TREES
+					while ( zip_copy_leng > 0 && n < size ) {
+
+						zip_copy_leng --;
+						zip_copy_dist &= zip_WSIZE - 1;
+						zip_wp &= zip_WSIZE - 1;
+						buff[ off + n ++ ] = zip_slide[ zip_wp ++ ] =
+							zip_slide[ zip_copy_dist ++ ];
+
+					}
+
+				} else {
+
+					while ( zip_copy_leng > 0 && n < size ) {
+
+						zip_copy_leng --;
+						zip_wp &= zip_WSIZE - 1;
+						zip_NEEDBITS( 8 );
+						buff[ off + n ++ ] = zip_slide[ zip_wp ++ ] = zip_GETBITS( 8 );
+						zip_DUMPBITS( 8 );
+
+					}
+					if ( zip_copy_leng == 0 )
+					zip_method = - 1; // done
+
+				}
+				if ( n == size )
+					return n;
+
+			}
+
+			if ( zip_method == - 1 ) {
+
+				if ( zip_eof )
+					break;
+
+				// read in last block bit
+				zip_NEEDBITS( 1 );
+				if ( zip_GETBITS( 1 ) != 0 )
+					zip_eof = true;
+				zip_DUMPBITS( 1 );
+
+				// read in block type
+				zip_NEEDBITS( 2 );
+				zip_method = zip_GETBITS( 2 );
+				zip_DUMPBITS( 2 );
+				zip_tl = null;
+				zip_copy_leng = 0;
+
+			}
+
+			switch ( zip_method ) {
+				case 0: // zip_STORED_BLOCK
+					i = zip_inflate_stored( buff, off + n, size - n );
+					break;
+
+				case 1: // zip_STATIC_TREES
+					if ( zip_tl != null )
+						i = zip_inflate_codes( buff, off + n, size - n );
+					else
+						i = zip_inflate_fixed( buff, off + n, size - n );
+					break;
+
+				case 2: // zip_DYN_TREES
+					if ( zip_tl != null )
+						i = zip_inflate_codes( buff, off + n, size - n );
+					else
+						i = zip_inflate_dynamic( buff, off + n, size - n );
+					break;
+
+				default: // error
+					i = - 1;
+			}
+
+			if ( i == - 1 ) {
+
+				if ( zip_eof )
+					return 0;
+				return - 1;
+
+			}
+			n += i;
+
+		}
+		return n;
+
+	}
+
+	var zip_inflate = function ( data ) {
+
+		var i, j, pos = 0;
+
+		zip_inflate_start();
+		zip_inflate_data = new Uint8Array( data );
+		zip_inflate_pos = 0;
+
+		var buff = new Uint8Array( 1024 );
+
+		var out = [];
+		while ( ( i = zip_inflate_internal( buff, 0, buff.length ) ) > 0 )
+				for ( j = 0; j < i; j ++ )
+					out[ pos ++ ] = buff[ j ];
+
+		zip_inflate_data = null; // G.C.
+		return new Uint8Array( out ).buffer;
+
+	}
+
+	return { inflate: zip_inflate };
+
+}();
+
+/**
+ * 	SEA3D Deflate
+ * 	@author Sunag / http://www.sunag.com.br/
+ */
+
+SEA3D.File.DeflateUncompress = function ( data ) {
+
+	return SEA3D.Deflate.inflate( data );
+
+};
+
+SEA3D.File.setDecompressionEngine( 1, "deflate", SEA3D.File.DeflateUncompress );
+
 /**
  * 	SEA3D Legacy for Three.JS
  * 	@author Sunag / http://www.sunag.com.br/
  */
 
-//'use strict';
+'use strict';
 
 //
 //	Header
@@ -7895,10 +8873,11 @@ Object.assign( THREE.SEA3D.prototype, {
 
 	_onHead: THREE.SEA3D.prototype.onHead,
 	_updateTransform: THREE.SEA3D.prototype.updateTransform,
+	_readMorph: THREE.SEA3D.prototype.readMorph,
 	_readVertexAnimation: THREE.SEA3D.prototype.readVertexAnimation,
 	_readGeometryBuffer: THREE.SEA3D.prototype.readGeometryBuffer,
 	_readLine: THREE.SEA3D.prototype.readLine,
-	_getAnimationType: THREE.SEA3D.prototype.getAnimationType,
+	_getModifier: THREE.SEA3D.prototype.getModifier,
 	_readAnimation: THREE.SEA3D.prototype.readAnimation
 
 } );
@@ -7932,6 +8911,20 @@ THREE.SEA3D.prototype.flipVec3 = function ( v ) {
 		v[ i ] = - v[ i ];
 
 		i += 3;
+
+	}
+
+	return v;
+
+};
+
+THREE.SEA3D.prototype.addVector = function ( v, t ) {
+
+	if ( ! v ) return;
+
+	for ( var i = 0; i < v.length; i ++ ) {
+
+		v[ i ] += t[ i ];
 
 	}
 
@@ -8279,7 +9272,7 @@ THREE.SEA3D.prototype.readAnimation = function ( sea ) {
 
 };
 
-THREE.SEA3D.prototype.getAnimationType = function ( req ) {
+THREE.SEA3D.prototype.getModifier = function ( req ) {
 
 	var sea = req.sea;
 
@@ -8298,6 +9291,7 @@ THREE.SEA3D.prototype.getAnimationType = function ( req ) {
 				break;
 
 			case SEA3D.Animation.prototype.type:
+			case SEA3D.MorphAnimation.prototype.type:
 			case SEA3D.UVWAnimation.prototype.type:
 
 				if ( req.scope instanceof THREE.Object3D ) {
@@ -8312,11 +9306,17 @@ THREE.SEA3D.prototype.getAnimationType = function ( req ) {
 
 				break;
 
+			case SEA3D.Morph.prototype.type:
+
+				this.readMorphLegacy( sea, req.geometry );
+
+				break;
+
 		}
 
 	}
 
-	return this._getAnimationType( req );
+	return this._getModifier( req );
 
 };
 
@@ -8536,6 +9536,34 @@ THREE.SEA3D.prototype.readSkeletonAnimationLegacy = function () {
 
 }();
 
+THREE.SEA3D.prototype.readMorphLegacy = function ( sea, geo ) {
+
+	for ( var i = 0; i < sea.node.length; i ++ ) {
+
+		var node = sea.node[ i ];
+
+		this.flipVec3( node.vertex );
+		this.flipVec3( node.normal );
+
+		this.addVector( node.vertex, geo.vertex );
+		this.addVector( node.normal, geo.normal );
+
+	}
+
+	this._readMorph( sea );
+
+};
+
+THREE.SEA3D.prototype.readMorph = function ( sea ) {
+
+	if ( ! this.isLegacy( sea ) ) {
+
+		this._readMorph( sea );
+
+	}
+
+};
+
 THREE.SEA3D.prototype.readVertexAnimation = function ( sea ) {
 
 	if ( this.isLegacy( sea ) ) {
@@ -8559,8 +9587,8 @@ THREE.SEA3D.prototype.readGeometryBuffer = function ( sea ) {
 
 	if ( this.isLegacy( sea ) ) {
 
-		this.flipVec3( sea.vertex, true );
-		this.flipVec3( sea.normal, true );
+		this.flipVec3( sea.vertex );
+		this.flipVec3( sea.normal );
 
 		this.flipIndexes( sea.indexes );
 
@@ -8604,3108 +9632,4 @@ THREE.SEA3D.EXTENSIONS_LOADER.push( { setTypeRead: function () {
 	this.file.typeRead[ SEA3D.Skeleton.prototype.type ] = this.readSkeleton;
 
 } } );
-
-/*global ArrayBuffer, Uint32Array, Int32Array, Float32Array, Int8Array, Uint8Array, window, performance, Console*/
-
-/*
-Copyright (c) 2013 Khaled Mammou - Advanced Micro Devices, Inc.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-*/
-
-var o3dgc = (function () {
-    "use strict";
-    var module, local;
-    module = {};
-    local = {};
-    local.O3DGC_BINARY_STREAM_BITS_PER_SYMBOL0 = 7;
-    local.O3DGC_BINARY_STREAM_MAX_SYMBOL0 = 127; // ((1 << O3DGC_BINARY_STREAM_BITS_PER_SYMBOL0) >>> 0) - 1;
-    local.O3DGC_BINARY_STREAM_BITS_PER_SYMBOL1 = 6;
-    local.O3DGC_BINARY_STREAM_MAX_SYMBOL1 = 63; // ((1 << O3DGC_BINARY_STREAM_BITS_PER_SYMBOL1) >>> 0) - 1;
-    local.O3DGC_BINARY_STREAM_NUM_SYMBOLS_UINT32 = 5; // Math.floor((32 + O3DGC_BINARY_STREAM_BITS_PER_SYMBOL0 - 1) / O3DGC_BINARY_STREAM_BITS_PER_SYMBOL0);
-    local.O3DGC_BIG_ENDIAN = 0;
-    local.O3DGC_LITTLE_ENDIAN = 1;
-    local.O3DGC_MAX_DOUBLE = 1.79769e+308;
-    local.O3DGC_MIN_LONG = -2147483647;
-    local.O3DGC_MAX_LONG = 2147483647;
-    local.O3DGC_MAX_UCHAR8 = 255;
-    local.O3DGC_MAX_TFAN_SIZE = 256;
-    local.O3DGC_MAX_ULONG = 4294967295;
-    local.O3DGC_SC3DMC_START_CODE = 0x00001F1;
-    local.O3DGC_DV_START_CODE = 0x00001F2;
-    local.O3DGC_SC3DMC_MAX_NUM_FLOAT_ATTRIBUTES = 256;
-    local.O3DGC_SC3DMC_MAX_NUM_INT_ATTRIBUTES = 256;
-    local.O3DGC_SC3DMC_MAX_DIM_ATTRIBUTES = 32;
-    local.O3DGC_SC3DMC_MAX_PREDICTION_NEIGHBORS = 2;
-    local.O3DGC_SC3DMC_BINARIZATION_FL = 0; // Fixed Length (not supported)
-    local.O3DGC_SC3DMC_BINARIZATION_BP = 1; // BPC (not supported)
-    local.O3DGC_SC3DMC_BINARIZATION_FC = 2; // 4 bits Coding (not supported)
-    local.O3DGC_SC3DMC_BINARIZATION_AC = 3; // Arithmetic Coding (not supported)
-    local.O3DGC_SC3DMC_BINARIZATION_AC_EGC = 4; // Arithmetic Coding & EGCk
-    local.O3DGC_SC3DMC_BINARIZATION_ASCII = 5; // Arithmetic Coding & EGCk
-    local.O3DGC_STREAM_TYPE_UNKOWN = 0;
-    local.O3DGC_STREAM_TYPE_ASCII = 1;
-    local.O3DGC_STREAM_TYPE_BINARY = 2;
-    local.O3DGC_SC3DMC_NO_PREDICTION = 0; // supported
-    local.O3DGC_SC3DMC_DIFFERENTIAL_PREDICTION = 1; // supported
-    local.O3DGC_SC3DMC_XOR_PREDICTION = 2; // not supported
-    local.O3DGC_SC3DMC_ADAPTIVE_DIFFERENTIAL_PREDICTION = 3; // not supported
-    local.O3DGC_SC3DMC_CIRCULAR_DIFFERENTIAL_PREDICTION = 4; // not supported
-    local.O3DGC_SC3DMC_PARALLELOGRAM_PREDICTION = 5; // supported
-    local.O3DGC_SC3DMC_SURF_NORMALS_PREDICTION = 6; // supported
-    local.O3DGC_SC3DMC_ENCODE_MODE_QBCR = 0; // not supported
-    local.O3DGC_SC3DMC_ENCODE_MODE_SVA = 1; // not supported
-    local.O3DGC_SC3DMC_ENCODE_MODE_TFAN = 2; // supported
-    local.O3DGC_DYNAMIC_VECTOR_ENCODE_MODE_LIFT = 0;
-    local.O3DGC_MIN_NEIGHBORS_SIZE = 128;
-    local.O3DGC_MIN_NUM_NEIGHBORS_SIZE = 16;
-    local.O3DGC_TFANS_MIN_SIZE_ALLOCATED_VERTICES_BUFFER = 128;
-    local.O3DGC_TFANS_MIN_SIZE_TFAN_SIZE_BUFFER = 8;
-    local.O3DGC_DEFAULT_VECTOR_SIZE = 32;
-
-    module.O3DGC_IFS_FLOAT_ATTRIBUTE_TYPE_UNKOWN = 0;
-    module.O3DGC_IFS_FLOAT_ATTRIBUTE_TYPE_POSITION = 1;
-    module.O3DGC_IFS_FLOAT_ATTRIBUTE_TYPE_NORMAL = 2;
-    module.O3DGC_IFS_FLOAT_ATTRIBUTE_TYPE_COLOR = 3;
-    module.O3DGC_IFS_FLOAT_ATTRIBUTE_TYPE_TEXCOORD = 4;
-    module.O3DGC_IFS_FLOAT_ATTRIBUTE_TYPE_WEIGHT = 5;
-    module.O3DGC_IFS_INT_ATTRIBUTE_TYPE_UNKOWN = 0;
-    module.O3DGC_IFS_INT_ATTRIBUTE_TYPE_INDEX = 1;
-    module.O3DGC_IFS_INT_ATTRIBUTE_TYPE_JOINT_ID = 2;
-    module.O3DGC_IFS_INT_ATTRIBUTE_TYPE_INDEX_BUFFER_ID = 3;
-
-    module.O3DGC_OK = 0;
-    module.O3DGC_ERROR_BUFFER_FULL = 1;
-    module.O3DGC_ERROR_CORRUPTED_STREAM = 5;
-    module.O3DGC_ERROR_NON_SUPPORTED_FEATURE = 6;
-    module.O3DGC_ERROR_AC = 7;
-
-    function SystemEndianness() {
-        var a, b, c;
-        b = new ArrayBuffer(4);
-        a = new Uint32Array(b);
-        c = new Uint8Array(b);
-        a[0] = 1;
-        if (c[0] === 1) {
-            return local.O3DGC_LITTLE_ENDIAN;
-        }
-        return local.O3DGC_BIG_ENDIAN;
-    }
-    // SC3DMCStats class
-    module.SC3DMCStats = function () {
-        this.m_timeCoord = 0;
-        this.m_timeNormal = 0;
-        this.m_timeCoordIndex = 0;
-        this.m_timeFloatAttribute = new Float32Array(local.O3DGC_SC3DMC_MAX_NUM_FLOAT_ATTRIBUTES);
-        this.m_timeIntAttribute = new Float32Array(local.O3DGC_SC3DMC_MAX_NUM_INT_ATTRIBUTES);
-        this.m_timeReorder = 0;
-        this.m_streamSizeCoord = 0;
-        this.m_streamSizeNormal = 0;
-        this.m_streamSizeCoordIndex = 0;
-        this.m_streamSizeFloatAttribute = new Uint32Array(local.O3DGC_SC3DMC_MAX_NUM_FLOAT_ATTRIBUTES);
-        this.m_streamSizeIntAttribute = new Uint32Array(local.O3DGC_SC3DMC_MAX_NUM_INT_ATTRIBUTES);
-    };
-    // SC3DMCTriplet class
-    module.SC3DMCTriplet = function (a, b, c) {
-        this.m_a = a;
-        this.m_b = b;
-        this.m_c = c;
-    };
-    module.SC3DMCTriplet.prototype.Less = function (rhs) {
-        var res;
-        if (this.m_c !== rhs.m_c) {
-            res = (this.m_c < rhs.m_c);
-        } else if (this.m_b !== rhs.m_b) {
-            res = (this.m_b < rhs.m_b);
-        } else {
-            res = (this.m_a < rhs.m_a);
-        }
-        return res;
-    };
-    module.SC3DMCTriplet.prototype.Equal = function (rhs) {
-        return (this.m_c === rhs.m_c && this.m_b === rhs.m_b && this.m_a === rhs.m_a);
-    };
-    // SC3DMCPredictor class
-    module.SC3DMCPredictor = function () {
-        this.m_id = new module.SC3DMCTriplet(-1, -1, -1);
-        this.m_pred = new Float32Array(local.O3DGC_SC3DMC_MAX_DIM_ATTRIBUTES);
-    };
-    // fix me: optimize this function (e.g., binary search)
-    function InsertPredictor(e, nPred, list, dimFloatArray) {
-        var pos, foundOrInserted, j, j1, j0, h, i;
-        pos = -1;
-        foundOrInserted = false;
-        j1 = nPred.m_value;
-        j0 = 0;
-        for (j = j0; j < j1; ++j) {
-            if (e.Equal(list[j].m_id)) {
-                foundOrInserted = true;
-                break;
-            } else if (e.Less(list[j].m_id)) {
-                if (nPred.m_value < local.O3DGC_SC3DMC_MAX_PREDICTION_NEIGHBORS) {
-                    ++nPred.m_value;
-                }
-                for (h = nPred.m_value - 1; h > j; --h) {
-                    list[h].m_id.m_a = list[h - 1].m_id.m_a;
-                    list[h].m_id.m_b = list[h - 1].m_id.m_b;
-                    list[h].m_id.m_c = list[h - 1].m_id.m_c;
-                    for (i = 0; i < dimFloatArray; ++i) {
-                        list[h].m_pred[i] = list[h - 1].m_pred[i];
-                    }
-                }
-                list[j].m_id.m_a = e.m_a;
-                list[j].m_id.m_b = e.m_b;
-                list[j].m_id.m_c = e.m_c;
-                pos = j;
-                foundOrInserted = true;
-                break;
-            }
-        }
-        if (!foundOrInserted && nPred.m_value < local.O3DGC_SC3DMC_MAX_PREDICTION_NEIGHBORS) {
-            pos = nPred.m_value++;
-            list[pos].m_id.m_a = e.m_a;
-            list[pos].m_id.m_b = e.m_b;
-            list[pos].m_id.m_c = e.m_c;
-        }
-        return pos;
-    }
-    // Timer class
-    if (typeof window.performance === 'undefined') {
-        window.performance = {};
-    }
-    if (!window.performance.now) {
-        local.nowOffset = Date.now();
-        if (performance.timing && performance.timing.navigationStart) {
-            local.nowOffset = performance.timing.navigationStart;
-        }
-        window.performance.now = function now() {
-            return Date.now() - local.nowOffset;
-        };
-    }
-    module.Timer = function () {
-        this.m_start = 0;
-        this.m_end = 0;
-    };
-    module.Timer.prototype.Tic = function () {
-        this.m_start = window.performance.now();
-    };
-    module.Timer.prototype.Toc = function () {
-        this.m_end = window.performance.now();
-    };
-    module.Timer.prototype.GetElapsedTime = function () {
-        return this.m_end - this.m_start;
-    };
-    // Vec3 class
-    module.Vec3 = function (x, y, z) {
-        this.m_x = x;
-        this.m_y = y;
-        this.m_z = z;
-    };
-    module.Vec3.prototype.Set = function (x, y, z) {
-        this.m_x = x;
-        this.m_y = y;
-        this.m_z = z;
-    };
-    module.Vec3.prototype.Sub = function (lhs, rhs) {
-        this.m_x = lhs.m_x - rhs.m_x;
-        this.m_y = lhs.m_y - rhs.m_y;
-        this.m_z = lhs.m_z - rhs.m_z;
-    };
-    module.Vec3.prototype.Add = function (lhs, rhs) {
-        this.m_x = lhs.m_x + rhs.m_x;
-        this.m_y = lhs.m_y + rhs.m_y;
-        this.m_z = lhs.m_z + rhs.m_z;
-    };
-    module.Vec3.prototype.SelfAdd = function (v) {
-        this.m_x += v.m_x;
-        this.m_y += v.m_y;
-        this.m_z += v.m_z;
-    };
-    module.Vec3.prototype.Cross = function (lhs, rhs) {
-        this.m_x = lhs.m_y * rhs.m_z - lhs.m_z * rhs.m_y;
-        this.m_y = lhs.m_z * rhs.m_x - lhs.m_x * rhs.m_z;
-        this.m_z = lhs.m_x * rhs.m_y - lhs.m_y * rhs.m_x;
-    };
-    module.Vec3.prototype.GetNorm = function () {
-        return Math.sqrt(this.m_x * this.m_x + this.m_y * this.m_y + this.m_z * this.m_z);
-    };
-    function SphereToCube(vin, vout) {
-        var ax, ay, az;
-        ax = Math.abs(vin.m_x);
-        ay = Math.abs(vin.m_y);
-        az = Math.abs(vin.m_z);
-        if (az >= ax && az >= ay) {
-            if (vin.m_z >= 0) {
-                vout.m_z = 0;
-                vout.m_x = vin.m_x;
-                vout.m_y = vin.m_y;
-            } else {
-                vout.m_z = 1;
-                vout.m_x = -vin.m_x;
-                vout.m_y = -vin.m_y;
-            }
-        } else if (ay >= ax && ay >= az) {
-            if (vin.m_y >= 0) {
-                vout.m_z = 2;
-                vout.m_x = vin.m_z;
-                vout.m_y = vin.m_x;
-            } else {
-                vout.m_z = 3;
-                vout.m_x = -vin.m_z;
-                vout.m_y = -vin.m_x;
-            }
-        } else {
-            if (vin.m_x >= 0) {
-                vout.m_z = 4;
-                vout.m_x = vin.m_y;
-                vout.m_y = vin.m_z;
-            } else {
-                vout.m_z = 5;
-                vout.m_x = -vin.m_y;
-                vout.m_y = -vin.m_z;
-            }
-        }
-    }
-    local.CubeToSphere = {
-        0: function (vin, vout) {
-            vout.m_x = vin.m_x;
-            vout.m_y = vin.m_y;
-            vout.m_z = Math.sqrt(Math.max(0.0, 1.0 - vout.m_x * vout.m_x - vout.m_y * vout.m_y));
-        },
-        1: function (vin, vout) {
-            vout.m_x = -vin.m_x;
-            vout.m_y = -vin.m_y;
-            vout.m_z = -Math.sqrt(Math.max(0.0, 1.0 - vout.m_x * vout.m_x - vout.m_y * vout.m_y));
-        },
-        2: function (vin, vout) {
-            vout.m_z = vin.m_x;
-            vout.m_x = vin.m_y;
-            vout.m_y = Math.sqrt(Math.max(0.0, 1.0 - vout.m_x * vout.m_x - vout.m_z * vout.m_z));
-        },
-        3: function (vin, vout) {
-            vout.m_z = -vin.m_x;
-            vout.m_x = -vin.m_y;
-            vout.m_y = -Math.sqrt(Math.max(0.0, 1.0 - vout.m_x * vout.m_x - vout.m_z * vout.m_z));
-        },
-        4: function (vin, vout) {
-            vout.m_y = vin.m_x;
-            vout.m_z = vin.m_y;
-            vout.m_x = Math.sqrt(Math.max(0.0, 1.0 - vout.m_y * vout.m_y - vout.m_z * vout.m_z));
-        },
-        5: function (vin, vout) {
-            vout.m_y = -vin.m_x;
-            vout.m_z = -vin.m_y;
-            vout.m_x = -Math.sqrt(Math.max(0.0, 1.0 - vout.m_y * vout.m_y - vout.m_z * vout.m_z));
-        }
-    };
-    function IntToUInt(value) {
-        return (value < 0) ? (-1 - (2 * value)) : (2 * value);
-    }
-    function UIntToInt(uiValue) {
-        return (uiValue & 1) ? -((uiValue + 1) >>> 1) : ((uiValue >>> 1));
-    }
-    module.Iterator = function () {
-        this.m_count = 0;
-    };
-    module.NumberRef = function () {
-        this.m_value = 0;
-    };
-    // BinaryStream class
-    module.BinaryStream = function (buffer) {
-        this.m_endianness = SystemEndianness();
-        this.m_buffer = buffer;
-        this.m_stream = new Uint8Array(this.m_buffer);
-        this.m_localBuffer = new ArrayBuffer(4);
-        this.m_localBufferViewUChar8 = new Uint8Array(this.m_localBuffer);
-        this.m_localBufferViewFloat32 = new Float32Array(this.m_localBuffer);
-        this.m_localBufferViewUInt32 = new Uint32Array(this.m_localBuffer);
-    };
-    module.BinaryStream.prototype.ReadFloat32Bin = function (bsIterator) {
-        if (this.m_endianness === local.O3DGC_BIG_ENDIAN) {
-            this.m_localBufferViewUChar8[3] = this.m_stream[bsIterator.m_count++];
-            this.m_localBufferViewUChar8[2] = this.m_stream[bsIterator.m_count++];
-            this.m_localBufferViewUChar8[1] = this.m_stream[bsIterator.m_count++];
-            this.m_localBufferViewUChar8[0] = this.m_stream[bsIterator.m_count++];
-        } else {
-            this.m_localBufferViewUChar8[0] = this.m_stream[bsIterator.m_count++];
-            this.m_localBufferViewUChar8[1] = this.m_stream[bsIterator.m_count++];
-            this.m_localBufferViewUChar8[2] = this.m_stream[bsIterator.m_count++];
-            this.m_localBufferViewUChar8[3] = this.m_stream[bsIterator.m_count++];
-        }
-        return this.m_localBufferViewFloat32[0];
-    };
-    module.BinaryStream.prototype.ReadUInt32Bin = function (bsIterator) {
-        if (this.m_endianness === local.O3DGC_BIG_ENDIAN) {
-            this.m_localBufferViewUChar8[3] = this.m_stream[bsIterator.m_count++];
-            this.m_localBufferViewUChar8[2] = this.m_stream[bsIterator.m_count++];
-            this.m_localBufferViewUChar8[1] = this.m_stream[bsIterator.m_count++];
-            this.m_localBufferViewUChar8[0] = this.m_stream[bsIterator.m_count++];
-        } else {
-            this.m_localBufferViewUChar8[0] = this.m_stream[bsIterator.m_count++];
-            this.m_localBufferViewUChar8[1] = this.m_stream[bsIterator.m_count++];
-            this.m_localBufferViewUChar8[2] = this.m_stream[bsIterator.m_count++];
-            this.m_localBufferViewUChar8[3] = this.m_stream[bsIterator.m_count++];
-        }
-        return this.m_localBufferViewUInt32[0];
-    };
-    module.BinaryStream.prototype.ReadUChar8Bin = function (bsIterator) {
-        return this.m_stream[bsIterator.m_count++];
-    };
-    module.BinaryStream.prototype.ReadUInt32ASCII = function (bsIterator) {
-        var value, shift, i;
-        value = 0;
-        shift = 0;
-        for (i = 0; i < local.O3DGC_BINARY_STREAM_NUM_SYMBOLS_UINT32; ++i) {
-            value += (this.m_stream[bsIterator.m_count++] << shift) >>> 0;
-            shift += local.O3DGC_BINARY_STREAM_BITS_PER_SYMBOL0;
-        }
-        return value;
-    };
-    module.BinaryStream.prototype.ReadFloat32ASCII = function (bsIterator) {
-        var value = this.ReadUInt32ASCII(bsIterator);
-        if (this.m_endianness === local.O3DGC_BIG_ENDIAN) {
-            this.m_localBufferViewUChar8[3] = value & local.O3DGC_MAX_UCHAR8;
-            value >>>= 8;
-            this.m_localBufferViewUChar8[2] = value & local.O3DGC_MAX_UCHAR8;
-            value >>>= 8;
-            this.m_localBufferViewUChar8[1] = value & local.O3DGC_MAX_UCHAR8;
-            value >>>= 8;
-            this.m_localBufferViewUChar8[0] = value & local.O3DGC_MAX_UCHAR8;
-        } else {
-            this.m_localBufferViewUChar8[0] = value & local.O3DGC_MAX_UCHAR8;
-            value >>>= 8;
-            this.m_localBufferViewUChar8[1] = value & local.O3DGC_MAX_UCHAR8;
-            value >>>= 8;
-            this.m_localBufferViewUChar8[2] = value & local.O3DGC_MAX_UCHAR8;
-            value >>>= 8;
-            this.m_localBufferViewUChar8[3] = value & local.O3DGC_MAX_UCHAR8;
-        }
-        return this.m_localBufferViewFloat32[0];
-    };
-    module.BinaryStream.prototype.ReadIntASCII = function (bsIterator) {
-        return UIntToInt(this.ReadUIntASCII(bsIterator));
-    };
-    module.BinaryStream.prototype.ReadUIntASCII = function (bsIterator) {
-        var i, x, value;
-        value = this.m_stream[bsIterator.m_count++];
-        if (value === local.O3DGC_BINARY_STREAM_MAX_SYMBOL0) {
-            i = 0;
-            do {
-                x = this.m_stream[bsIterator.m_count++];
-                value += ((x >>> 1) << i) >>> 0;
-                i += local.O3DGC_BINARY_STREAM_BITS_PER_SYMBOL1;
-            } while (x & 1);
-        }
-        return value;
-    };
-    module.BinaryStream.prototype.ReadUCharASCII = function (bsIterator) {
-        return this.m_stream[bsIterator.m_count++];
-    };
-    module.BinaryStream.prototype.ReadFloat32 = function (bsIterator, streamType) {
-        if (streamType === local.O3DGC_STREAM_TYPE_ASCII) {
-            return this.ReadFloat32ASCII(bsIterator);
-        }
-        return this.ReadFloat32Bin(bsIterator);
-    };
-    module.BinaryStream.prototype.ReadUInt32 = function (bsIterator, streamType) {
-        if (streamType === local.O3DGC_STREAM_TYPE_ASCII) {
-            return this.ReadUInt32ASCII(bsIterator);
-        }
-        return this.ReadUInt32Bin(bsIterator);
-    };
-    module.BinaryStream.prototype.ReadUChar = function (bsIterator, streamType) {
-        if (streamType === local.O3DGC_STREAM_TYPE_ASCII) {
-            return this.ReadUCharASCII(bsIterator);
-        }
-        return this.ReadUChar8Bin(bsIterator);
-    };
-    module.BinaryStream.prototype.GetBuffer = function (bsIterator, size) {
-        return new Uint8Array(this.m_buffer, bsIterator.m_count, size);
-    };
-
-    // Copyright (c) 2004 Amir Said (said@ieee.org) & William A. Pearlman (pearlw@ecse.rpi.edu)
-    // All rights reserved.
-
-    local.O3DGC_AC_MIN_LENGTH = 0x01000000;   // threshold for renormalization
-    local.O3DGC_AC_MAX_LENGTH = 0xFFFFFFFF;      // maximum AC interval length
-    local.O3DGC_AC_BM_LENGTH_SHIFT = 13;     // Maximum values for binary models length bits discarded before mult.
-    local.O3DGC_AC_BM_MAX_COUNT = (1 << local.O3DGC_AC_BM_LENGTH_SHIFT) >>> 0;  // for adaptive models
-    local.O3DGC_AC_DM_LENGTH_SHIFT = 15; // Maximum values for general models length bits discarded before mult.
-    local.O3DGC_AC_DM_MAX_COUNT = (1 << local.O3DGC_AC_DM_LENGTH_SHIFT) >>> 0;  // for adaptive models
-    // StaticBitModel class 
-    module.StaticBitModel = function () {
-        this.m_bit0Prob = (1 << (local.O3DGC_AC_BM_LENGTH_SHIFT - 1)) >>> 0; // p0 = 0.5
-    };
-    module.StaticBitModel.prototype.SetProbability = function (p) {
-        this.m_bit0Prob = Math.floor(p * ((1 << local.O3DGC_AC_BM_LENGTH_SHIFT) >>> 0));
-    };
-    // AdaptiveBitModel class 
-    module.AdaptiveBitModel = function () {
-        // initialization to equiprobable model
-        this.m_updateCycle = 4;
-        this.m_bitsUntilUpdate = 4;
-        this.m_bit0Prob = (1 << (local.O3DGC_AC_BM_LENGTH_SHIFT - 1)) >>> 0;
-        this.m_bit0Count = 1;
-        this.m_bitCount = 2;
-    };
-    module.AdaptiveBitModel.prototype.Reset = function () {
-        this.m_updateCycle = 4;
-        this.m_bitsUntilUpdate = 4;
-        this.m_bit0Prob = (1 << (local.O3DGC_AC_BM_LENGTH_SHIFT - 1)) >>> 0;
-        this.m_bit0Count = 1;
-        this.m_bitCount = 2;
-    };
-    module.AdaptiveBitModel.prototype.Update = function () {
-        // halve counts when a threshold is reached
-        if ((this.m_bitCount += this.m_updateCycle) > local.O3DGC_AC_BM_MAX_COUNT) {
-            this.m_bitCount = (this.m_bitCount + 1) >>> 1;
-            this.m_bit0Count = (this.m_bit0Count + 1) >>> 1;
-            if (this.m_bit0Count === this.m_bitCount) {
-                ++this.m_bitCount;
-            }
-        }
-        // compute scaled bit 0 probability
-        var scale = Math.floor(0x80000000 / this.m_bitCount);
-        this.m_bit0Prob = (this.m_bit0Count * scale) >>> (31 - local.O3DGC_AC_BM_LENGTH_SHIFT);
-        // set frequency of model updates
-        this.m_updateCycle = (5 * this.m_updateCycle) >>> 2;
-        if (this.m_updateCycle > 64) {
-            this.m_updateCycle = 64;
-        }
-        this.m_bitsUntilUpdate = this.m_updateCycle;
-    };
-    // AdaptiveDataModel class 
-    module.AdaptiveDataModel = function () {
-        this.m_buffer = {};
-        this.m_distribution = {};
-        this.m_symbolCount = {};
-        this.m_decoderTable = {};
-        this.m_totalCount = 0;
-        this.m_updateCycle = 0;
-        this.m_symbolsUntilUpdate = 0;
-        this.m_dataSymbols = 0;
-        this.m_lastSymbol = 0;
-        this.m_tableSize = 0;
-        this.m_tableShift = 0;
-    };
-    module.AdaptiveDataModel.prototype.Update = function () {
-        var n, sum, s, scale, k, max_cycle, w;
-        // halve counts when a threshold is reached
-        if ((this.m_totalCount += this.m_updateCycle) > local.O3DGC_AC_DM_MAX_COUNT) {
-            this.m_totalCount = 0;
-            for (n = 0; n < this.m_dataSymbols; ++n) {
-                this.m_totalCount += (this.m_symbolCount[n] = (this.m_symbolCount[n] + 1) >>> 1);
-            }
-        }
-        // compute cumulative distribution, decoder table
-        sum = 0;
-        s = 0;
-        scale = Math.floor(0x80000000 / this.m_totalCount);
-        if (this.m_tableSize === 0) {
-            for (k = 0; k < this.m_dataSymbols; ++k) {
-                this.m_distribution[k] = (scale * sum) >>> (31 - local.O3DGC_AC_DM_LENGTH_SHIFT);
-                sum += this.m_symbolCount[k];
-            }
-        } else {
-            for (k = 0; k < this.m_dataSymbols; ++k) {
-                this.m_distribution[k] = (scale * sum) >>> (31 - local.O3DGC_AC_DM_LENGTH_SHIFT);
-                sum += this.m_symbolCount[k];
-                w = this.m_distribution[k] >>> this.m_tableShift;
-                while (s < w) {
-                    this.m_decoderTable[++s] = k - 1;
-                }
-            }
-            this.m_decoderTable[0] = 0;
-            while (s <= this.m_tableSize) {
-                this.m_decoderTable[++s] = this.m_dataSymbols - 1;
-            }
-        }
-        // set frequency of model updates
-        this.m_updateCycle = (5 * this.m_updateCycle) >>> 2;
-        max_cycle = ((this.m_dataSymbols + 6) << 3) >>> 0;
-        if (this.m_updateCycle > max_cycle) {
-            this.m_updateCycle = max_cycle;
-        }
-        this.m_symbolsUntilUpdate = this.m_updateCycle;
-    };
-    module.AdaptiveDataModel.prototype.Reset = function () {
-        var k;
-        if (this.m_dataSymbols === 0) {
-            return;
-        }
-        // restore probability estimates to uniform distribution
-        this.m_totalCount = 0;
-        this.m_updateCycle = this.m_dataSymbols;
-        for (k = 0; k < this.m_dataSymbols; ++k) {
-            this.m_symbolCount[k] = 1;
-        }
-        this.Update();
-        this.m_symbolsUntilUpdate = this.m_updateCycle = (this.m_dataSymbols + 6) >>> 1;
-    };
-    module.AdaptiveDataModel.prototype.SetAlphabet = function (number_of_symbols) {
-        if ((number_of_symbols < 2) || (number_of_symbols > (1 << 11))) {
-            Console.log("invalid number of data symbols");
-            return module.O3DGC_ERROR_AC;
-        }
-        if (this.m_dataSymbols !== number_of_symbols) { // assign memory for data model
-            this.m_dataSymbols = number_of_symbols;
-            this.m_lastSymbol = this.m_dataSymbols - 1;
-            // define size of table for fast decoding
-            if (this.m_dataSymbols > 16) {
-                var table_bits = 3;
-                while (this.m_dataSymbols > ((1 << (table_bits + 2)) >>> 0)) {
-                    ++table_bits;
-                }
-                this.m_tableSize = (1 << table_bits) >>> 0;
-                this.m_tableShift = local.O3DGC_AC_DM_LENGTH_SHIFT - table_bits;
-                this.m_buffer = new ArrayBuffer(4 * (2 * this.m_dataSymbols + this.m_tableSize + 2));
-                this.m_distribution = new Uint32Array(this.m_buffer, 0, this.m_dataSymbols);
-                this.m_symbolCount = new Uint32Array(this.m_buffer, 4 * this.m_dataSymbols, this.m_dataSymbols);
-                this.m_decoderTable = new Uint32Array(this.m_buffer, 8 * this.m_dataSymbols, this.m_tableSize + 2);
-            } else {// small alphabet: no table needed
-                this.m_tableSize = this.m_tableShift = 0;
-                this.m_buffer = new ArrayBuffer(4 * 2 * this.m_dataSymbols);
-                this.m_distribution = new Uint32Array(this.m_buffer, 0, this.m_dataSymbols);
-                this.m_symbolCount = new Uint32Array(this.m_buffer, 4 * this.m_dataSymbols, this.m_dataSymbols);
-                this.m_decoderTable = {};
-            }
-        }
-        this.Reset(); // initialize model
-        return module.O3DGC_OK;
-    };
-    // ArithmeticDecoder class
-    module.ArithmeticDecoder = function () {
-        this.m_codeBuffer = {};
-        this.m_acShift = 0;
-        this.m_base = 0;
-        this.m_value = 0;
-        this.m_length = 0; // arithmetic coding state
-        this.m_bufferSize = 0;
-        this.m_mode = 0; // mode: 0 = undef, 1 = encoder, 2 = decoder
-    };
-    module.ArithmeticDecoder.prototype.SetBuffer = function (max_code_bytes, user_buffer) {
-        if (max_code_bytes === 0) {
-            Console.log("invalid codec buffer size");
-            return module.O3DGC_ERROR_AC;
-        }
-        if (this.m_mode !== 0) {
-            Console.log("cannot set buffer while encoding or decoding");
-            return module.O3DGC_ERROR_AC;
-        }
-        this.m_bufferSize = max_code_bytes;
-        this.m_codeBuffer = user_buffer;
-    };
-    module.ArithmeticDecoder.prototype.StartDecoder = function () {
-        if (this.m_mode !== 0) {
-            Console.log("cannot start decoder");
-            return module.O3DGC_ERROR_AC;
-        }
-        if (this.m_bufferSize === 0) {
-            Console.log("no code buffer set");
-            return module.O3DGC_ERROR_AC;
-        }
-        // initialize decoder: interval, pointer, initial code value
-        this.m_mode = 2;
-        this.m_length = local.O3DGC_AC_MAX_LENGTH;
-        this.m_acShift = 3;
-        this.m_value = ((this.m_codeBuffer[0] << 24) | (this.m_codeBuffer[1] << 16) | (this.m_codeBuffer[2] << 8) | (this.m_codeBuffer[3])) >>> 0;
-    };
-    module.ArithmeticDecoder.prototype.StopDecoder = function () {
-        if (this.m_mode !== 2) {
-            Console.log("invalid to stop decoder");
-            return module.O3DGC_ERROR_AC;
-        }
-        this.m_mode = 0;
-    };
-    module.ArithmeticDecoder.prototype.GetBit = function () {
-        this.m_length >>>= 1; // halve interval
-        var bit = (this.m_value >= this.m_length); // decode bit
-        if (bit) {
-            this.m_value -= this.m_length; // move base
-        }
-        if (this.m_length < local.O3DGC_AC_MIN_LENGTH) {
-            this.RenormDecInterval(); // renormalization
-        }
-        return bit;
-    };
-    module.ArithmeticDecoder.prototype.GetBits = function (bits) {
-        var s = Math.floor(this.m_value / (this.m_length >>>= bits)); // decode symbol, change length
-        this.m_value -= this.m_length * s; // update interval
-        if (this.m_length < local.O3DGC_AC_MIN_LENGTH) {
-            this.RenormDecInterval(); // renormalization
-        }
-        return s;
-    };
-    module.ArithmeticDecoder.prototype.DecodeStaticBitModel = function (M) {
-        var x, bit;
-        x = M.m_bit0Prob * (this.m_length >>> local.O3DGC_AC_BM_LENGTH_SHIFT); // product l x p0
-        bit = (this.m_value >= x); // decision
-        // update & shift interval
-        if (!bit) {
-            this.m_length = x;
-        } else {
-            this.m_value -= x; // shifted interval base = 0
-            this.m_length -= x;
-        }
-        if (this.m_length < local.O3DGC_AC_MIN_LENGTH) {
-            this.RenormDecInterval(); // renormalization
-        }
-        return bit; // return data bit value
-    };
-    module.ArithmeticDecoder.prototype.DecodeAdaptiveBitModel = function (M) {
-        var x, bit;
-        x = M.m_bit0Prob * (this.m_length >>> local.O3DGC_AC_BM_LENGTH_SHIFT);   // product l x p0
-        bit = (this.m_value >= x); // decision
-        // update interval
-        if (!bit) {
-            this.m_length = x;
-            ++M.m_bit0Count;
-        } else {
-            this.m_value -= x;
-            this.m_length -= x;
-        }
-        if (this.m_length < local.O3DGC_AC_MIN_LENGTH) {
-            this.RenormDecInterval(); // renormalization
-        }
-        if (--M.m_bitsUntilUpdate === 0) {
-            M.Update(); // periodic model update
-        }
-        return bit; // return data bit value
-    };
-    module.ArithmeticDecoder.prototype.DecodeAdaptiveDataModel = function (M) {
-        var n, s, x, y, t, dv, z, m;
-        y = this.m_length;
-        if (M.m_tableSize > 0) { // use table look-up for faster decoding
-            dv = Math.floor(this.m_value / (this.m_length >>>= local.O3DGC_AC_DM_LENGTH_SHIFT));
-            t = dv >>> M.m_tableShift;
-            s = M.m_decoderTable[t];         // initial decision based on table look-up
-            n = M.m_decoderTable[t + 1] + 1;
-            while (n > s + 1) { // finish with bisection search
-                m = (s + n) >>> 1;
-                if (M.m_distribution[m] > dv) {
-                    n = m;
-                } else {
-                    s = m;
-                }
-            }
-            // compute products
-            x = M.m_distribution[s] * this.m_length;
-            if (s !== M.m_lastSymbol) {
-                y = M.m_distribution[s + 1] * this.m_length;
-            }
-        } else { // decode using only multiplications
-            x = s = 0;
-            this.m_length >>>= local.O3DGC_AC_DM_LENGTH_SHIFT;
-            m = (n = M.m_dataSymbols) >>> 1;
-            // decode via bisection search
-            do {
-                z = this.m_length * M.m_distribution[m];
-                if (z > this.m_value) {
-                    n = m;
-                    y = z; // value is smaller
-                } else {
-                    s = m;
-                    x = z; // value is larger or equal
-                }
-            } while ((m = (s + n) >>> 1) !== s);
-        }
-        this.m_value -= x; // update interval
-        this.m_length = y - x;
-        if (this.m_length < local.O3DGC_AC_MIN_LENGTH) {
-            this.RenormDecInterval(); // renormalization
-        }
-        ++M.m_symbolCount[s];
-        if (--M.m_symbolsUntilUpdate === 0) {
-            M.Update(false); // periodic model update
-        }
-        return s;
-    };
-    module.ArithmeticDecoder.prototype.ExpGolombDecode = function (k, bModel0, bModel1) {
-        var symbol, binary_symbol, l;
-        symbol = 0;
-        binary_symbol = 0;
-        do {
-            l = this.DecodeAdaptiveBitModel(bModel1);
-            if (l) {
-                symbol += (1 << k) >>> 0;
-                k++;
-            }
-        } while (l);
-        while (k--) { //next binary part
-            if (this.DecodeStaticBitModel(bModel0)) {
-                binary_symbol = (binary_symbol | (1 << k)) >>> 0;
-            }
-        }
-        return (symbol + binary_symbol);
-    };
-    module.ArithmeticDecoder.prototype.RenormDecInterval = function () {
-        do { // read least-significant byte
-            this.m_value = ((this.m_value << 8) | this.m_codeBuffer[++this.m_acShift]) >>> 0;
-            this.m_length = (this.m_length << 8) >>> 0;
-        } while (this.m_length < local.O3DGC_AC_MIN_LENGTH); // length multiplied by 256
-    };
-    module.ArithmeticDecoder.prototype.DecodeIntACEGC = function (mModelValues, bModel0, bModel1, exp_k, M) {
-        var uiValue = this.DecodeAdaptiveDataModel(mModelValues);
-        if (uiValue === M) {
-            uiValue += this.ExpGolombDecode(exp_k, bModel0, bModel1);
-        }
-        return UIntToInt(uiValue);
-    };
-    module.ArithmeticDecoder.prototype.DecodeUIntACEGC = function (mModelValues, bModel0, bModel1, exp_k, M) {
-        var uiValue = this.DecodeAdaptiveDataModel(mModelValues);
-        if (uiValue === M) {
-            uiValue += this.ExpGolombDecode(exp_k, bModel0, bModel1);
-        }
-        return uiValue;
-    };
-
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -    
-    // FIFO class
-    module.FIFO = function () {
-        this.m_data = {};
-        this.m_allocated = 0;
-        this.m_size = 0;
-        this.m_start = 0;
-        this.m_end = 0;
-    };
-    module.FIFO.prototype.Clear = function () {
-        this.m_start = this.m_end = this.m_size = 0;
-    };
-    module.FIFO.prototype.GetAllocatedSize = function () {
-        return this.m_allocated;
-    };
-    module.FIFO.prototype.GetSize = function () {
-        return this.m_size;
-    };
-    module.FIFO.prototype.Allocate = function (size) {
-        if (size > this.m_allocated) {
-            this.m_allocated = size;
-            this.m_data = new Int32Array(this.m_allocated);
-        }
-        this.Clear();
-        return module.O3DGC_OK;
-    };
-    module.FIFO.prototype.PopFirst = function () {
-        --this.m_size;
-        var current = this.m_start++;
-        if (this.m_start === this.m_allocated) {
-            this.m_end = 0;
-        }
-        return this.m_data[current];
-    };
-    module.FIFO.prototype.PushBack = function (value) {
-        --this.m_size;
-        this.m_data[this.m_end] = value;
-        ++this.m_size;
-        ++this.m_end;
-        if (this.m_end === this.m_allocated) {
-            this.m_end = 0;
-        }
-    };
-    // IndexedFaceSet class
-    module.IndexedFaceSet = function () {
-        this.m_nCoordIndex = 0;
-        this.m_nCoord = 0;
-        this.m_nNormal = 0;
-        this.m_numFloatAttributes = 0;
-        this.m_numIntAttributes = 0;
-        this.m_creaseAngle = 30.0;
-        this.m_ccw = true;
-        this.m_solid = true;
-        this.m_convex = true;
-        this.m_isTriangularMesh = true;
-        this.m_coordMin = new Float32Array(3);
-        this.m_coordMax = new Float32Array(3);
-        this.m_normalMin = new Float32Array(3);
-        this.m_normalMax = new Float32Array(3);
-        this.m_nFloatAttribute = new Uint32Array(local.O3DGC_SC3DMC_MAX_NUM_FLOAT_ATTRIBUTES);
-        this.m_nIntAttribute = new Uint32Array(local.O3DGC_SC3DMC_MAX_NUM_INT_ATTRIBUTES);
-        this.m_dimFloatAttribute = new Uint32Array(local.O3DGC_SC3DMC_MAX_NUM_FLOAT_ATTRIBUTES);
-        this.m_dimIntAttribute = new Uint32Array(local.O3DGC_SC3DMC_MAX_NUM_INT_ATTRIBUTES);
-        this.m_typeFloatAttribute = new Uint32Array(local.O3DGC_SC3DMC_MAX_NUM_FLOAT_ATTRIBUTES);
-        this.m_typeIntAttribute = new Uint32Array(local.O3DGC_SC3DMC_MAX_NUM_INT_ATTRIBUTES);
-        this.m_minFloatAttributeBuffer = new ArrayBuffer(4 * local.O3DGC_SC3DMC_MAX_NUM_FLOAT_ATTRIBUTES * local.O3DGC_SC3DMC_MAX_DIM_ATTRIBUTES);
-        this.m_minFloatAttribute = new Float32Array(this.m_minFloatAttributeBuffer);
-        this.m_maxFloatAttributeBuffer = new ArrayBuffer(4 * local.O3DGC_SC3DMC_MAX_NUM_FLOAT_ATTRIBUTES * local.O3DGC_SC3DMC_MAX_DIM_ATTRIBUTES);
-        this.m_maxFloatAttribute = new Float32Array(this.m_maxFloatAttributeBuffer);
-        this.m_coordIndex = {};
-        this.m_coord = {};
-        this.m_normal = {};
-        this.m_floatAttribute = [];
-        this.m_intAttribute = [];
-    };
-    module.IndexedFaceSet.prototype.GetNCoordIndex = function () {
-        return this.m_nCoordIndex;
-    };
-    module.IndexedFaceSet.prototype.GetNCoordIndex = function () {
-        return this.m_nCoordIndex;
-    };
-    module.IndexedFaceSet.prototype.GetNCoord = function () {
-        return this.m_nCoord;
-    };
-    module.IndexedFaceSet.prototype.GetNNormal = function () {
-        return this.m_nNormal;
-    };
-    module.IndexedFaceSet.prototype.GetNFloatAttribute = function (a) {
-        return this.m_nFloatAttribute[a];
-    };
-    module.IndexedFaceSet.prototype.GetNIntAttribute = function (a) {
-        return this.m_nIntAttribute[a];
-    };
-    module.IndexedFaceSet.prototype.GetNumFloatAttributes = function () {
-        return this.m_numFloatAttributes;
-    };
-    module.IndexedFaceSet.prototype.GetNumIntAttributes = function () {
-        return this.m_numIntAttributes;
-    };
-    module.IndexedFaceSet.prototype.GetCoordMinArray = function () {
-        return this.m_coordMin;
-    };
-    module.IndexedFaceSet.prototype.GetCoordMaxArray = function () {
-        return this.m_coordMax;
-    };
-    module.IndexedFaceSet.prototype.GetNormalMinArray = function () {
-        return this.m_normalMin;
-    };
-    module.IndexedFaceSet.prototype.GetNormalMaxArray = function () {
-        return this.m_normalMax;
-    };
-    module.IndexedFaceSet.prototype.GetFloatAttributeMinArray = function (a) {
-        return (new Float32Array(this.m_minFloatAttributeBuffer, a * local.O3DGC_SC3DMC_MAX_DIM_ATTRIBUTES * 4, this.GetFloatAttributeDim(a)));
-    };
-    module.IndexedFaceSet.prototype.GetFloatAttributeMaxArray = function (a) {
-        return (new Float32Array(this.m_maxFloatAttributeBuffer, a * local.O3DGC_SC3DMC_MAX_DIM_ATTRIBUTES * 4, this.GetFloatAttributeDim(a)));
-    };
-    module.IndexedFaceSet.prototype.GetFloatAttributeDim = function (a) {
-        return this.m_dimFloatAttribute[a];
-    };
-    module.IndexedFaceSet.prototype.GetIntAttributeDim = function (a) {
-        return this.m_dimIntAttribute[a];
-    };
-    module.IndexedFaceSet.prototype.GetFloatAttributeType = function (a) {
-        return this.m_typeFloatAttribute[a];
-    };
-    module.IndexedFaceSet.prototype.GetIntAttributeType = function (a) {
-        return this.m_typeIntAttribute[a];
-    };
-    module.IndexedFaceSet.prototype.GetFloatAttributeMax = function (a, dim) {
-        return this.m_maxFloatAttribute[a * local.O3DGC_SC3DMC_MAX_DIM_ATTRIBUTES + dim];
-    };
-    module.IndexedFaceSet.prototype.GetCreaseAngle = function () {
-        return this.m_creaseAngle;
-    };
-    module.IndexedFaceSet.prototype.GetCreaseAngle = function () {
-        return this.m_creaseAngle;
-    };
-    module.IndexedFaceSet.prototype.GetCCW = function () {
-        return this.m_ccw;
-    };
-    module.IndexedFaceSet.prototype.GetSolid = function () {
-        return this.m_solid;
-    };
-    module.IndexedFaceSet.prototype.GetConvex = function () {
-        return this.m_convex;
-    };
-    module.IndexedFaceSet.prototype.GetIsTriangularMesh = function () {
-        return this.m_isTriangularMesh;
-    };
-    module.IndexedFaceSet.prototype.GetCoordIndex = function () {
-        return this.m_coordIndex;
-    };
-    module.IndexedFaceSet.prototype.GetCoordIndex = function () {
-        return this.m_coordIndex;
-    };
-    module.IndexedFaceSet.prototype.GetCoord = function () {
-        return this.m_coord;
-    };
-    module.IndexedFaceSet.prototype.GetNormal = function () {
-        return this.m_normal;
-    };
-    module.IndexedFaceSet.prototype.GetFloatAttribute = function (a) {
-        return this.m_floatAttribute[a];
-    };
-    module.IndexedFaceSet.prototype.GetIntAttribute = function (a) {
-        return this.m_intAttribute[a];
-    };
-    module.IndexedFaceSet.prototype.SetNCoordIndex = function (nCoordIndex) {
-        this.m_nCoordIndex = nCoordIndex;
-    };
-    module.IndexedFaceSet.prototype.SetNNormalIndex = function (nNormalIndex) {
-    };
-    module.IndexedFaceSet.prototype.SetNormalPerVertex = function (perVertex) {
-    };
-    module.IndexedFaceSet.prototype.SetNFloatAttributeIndex = function (nFloatAttributeIndex) {
-    };
-    module.IndexedFaceSet.prototype.SetNIntAttributeIndex = function (nIntAttributeIndex) {
-    };
-    module.IndexedFaceSet.prototype.SetFloatAttributePerVertex = function (perVertex) {
-    };
-    module.IndexedFaceSet.prototype.SetIntAttributePerVertex = function (perVertex) {
-    };
-    module.IndexedFaceSet.prototype.SetNCoord = function (nCoord) {
-        this.m_nCoord = nCoord;
-    };
-    module.IndexedFaceSet.prototype.SetNNormal = function (nNormal) {
-        this.m_nNormal = nNormal;
-    };
-    module.IndexedFaceSet.prototype.SetNumFloatAttributes = function (numFloatAttributes) {
-        this.m_numFloatAttributes = numFloatAttributes;
-    };
-    module.IndexedFaceSet.prototype.SetNumIntAttributes = function (numIntAttributes) {
-        this.m_numIntAttributes = numIntAttributes;
-    };
-    module.IndexedFaceSet.prototype.SetCreaseAngle = function (creaseAngle) {
-        this.m_creaseAngle = creaseAngle;
-    };
-    module.IndexedFaceSet.prototype.SetCCW = function (ccw) {
-        this.m_ccw = ccw;
-    };
-    module.IndexedFaceSet.prototype.SetSolid = function (solid) {
-        this.m_solid = solid;
-    };
-    module.IndexedFaceSet.prototype.SetConvex = function (convex) {
-        this.m_convex = convex;
-    };
-    module.IndexedFaceSet.prototype.SetIsTriangularMesh = function (isTriangularMesh) {
-        this.m_isTriangularMesh = isTriangularMesh;
-    };
-    module.IndexedFaceSet.prototype.SetCoordMin = function (j, min) {
-        this.m_coordMin[j] = min;
-    };
-    module.IndexedFaceSet.prototype.SetCoordMax = function (j, max) {
-        this.m_coordMax[j] = max;
-    };
-    module.IndexedFaceSet.prototype.SetNormalMin = function (j, min) {
-        this.m_normalMin[j] = min;
-    };
-    module.IndexedFaceSet.prototype.SetNormalMax = function (j, max) {
-        this.m_normalMax[j] = max;
-    };
-    module.IndexedFaceSet.prototype.SetNFloatAttribute = function (a, nFloatAttribute) {
-        this.m_nFloatAttribute[a] = nFloatAttribute;
-    };
-    module.IndexedFaceSet.prototype.SetNIntAttribute = function (a, nIntAttribute) {
-        this.m_nIntAttribute[a] = nIntAttribute;
-    };
-    module.IndexedFaceSet.prototype.SetFloatAttributeDim = function (a, d) {
-        this.m_dimFloatAttribute[a] = d;
-    };
-    module.IndexedFaceSet.prototype.SetIntAttributeDim = function (a, d) {
-        this.m_dimIntAttribute[a] = d;
-    };
-    module.IndexedFaceSet.prototype.SetFloatAttributeType = function (a, d) {
-        this.m_typeFloatAttribute[a] = d;
-    };
-    module.IndexedFaceSet.prototype.SetIntAttributeType = function (a, d) {
-        this.m_typeIntAttribute[a] = d;
-    };
-    module.IndexedFaceSet.prototype.SetFloatAttributeMin = function (a, dim, min) {
-        this.m_minFloatAttribute[a * local.O3DGC_SC3DMC_MAX_DIM_ATTRIBUTES + dim] = min;
-    };
-    module.IndexedFaceSet.prototype.SetFloatAttributeMax = function (a, dim, max) {
-        this.m_maxFloatAttribute[a * local.O3DGC_SC3DMC_MAX_DIM_ATTRIBUTES + dim] = max;
-    };
-    module.IndexedFaceSet.prototype.SetCoordIndex = function (coordIndex) {
-        this.m_coordIndex = coordIndex;
-    };
-    module.IndexedFaceSet.prototype.SetCoord = function (coord) {
-        this.m_coord = coord;
-    };
-    module.IndexedFaceSet.prototype.SetNormal = function (normal) {
-        this.m_normal = normal;
-    };
-    module.IndexedFaceSet.prototype.SetFloatAttribute = function (a, floatAttribute) {
-        this.m_floatAttribute[a] = floatAttribute;
-    };
-    module.IndexedFaceSet.prototype.SetIntAttribute = function (a, intAttribute) {
-        this.m_intAttribute[a] = intAttribute;
-    };
-
-    // SC3DMCEncodeParams class
-    module.SC3DMCEncodeParams = function () {
-        var a;
-        this.m_numFloatAttributes = 0;
-        this.m_numIntAttributes = 0;
-        this.m_floatAttributeQuantBits = new Uint32Array(local.O3DGC_SC3DMC_MAX_NUM_FLOAT_ATTRIBUTES);
-        this.m_floatAttributePredMode = new Uint32Array(local.O3DGC_SC3DMC_MAX_NUM_FLOAT_ATTRIBUTES);
-        this.m_intAttributePredMode = new Uint32Array(local.O3DGC_SC3DMC_MAX_NUM_INT_ATTRIBUTES);
-        this.m_encodeMode = local.O3DGC_SC3DMC_ENCODE_MODE_TFAN;
-        this.m_streamTypeMode = local.O3DGC_STREAM_TYPE_ASCII;
-        this.m_coordQuantBits = 14;
-        this.m_normalQuantBits = 8;
-        this.m_coordPredMode = local.O3DGC_SC3DMC_PARALLELOGRAM_PREDICTION;
-        this.m_normalPredMode = local.O3DGC_SC3DMC_SURF_NORMALS_PREDICTION;
-        for (a = 0; a < local.O3DGC_SC3DMC_MAX_NUM_FLOAT_ATTRIBUTES; ++a) {
-            this.m_floatAttributePredMode[a] = local.O3DGC_SC3DMC_PARALLELOGRAM_PREDICTION;
-        }
-        for (a = 0; a < local.O3DGC_SC3DMC_MAX_NUM_INT_ATTRIBUTES; ++a) {
-            this.m_intAttributePredMode[a] = local.O3DGC_SC3DMC_DIFFERENTIAL_PREDICTION;
-        }
-    };
-    module.SC3DMCEncodeParams.prototype.GetStreamType = function () {
-        return this.m_streamTypeMode;
-    };
-    module.SC3DMCEncodeParams.prototype.GetEncodeMode = function () {
-        return this.m_encodeMode;
-    };
-    module.SC3DMCEncodeParams.prototype.GetNumFloatAttributes = function () {
-        return this.m_numFloatAttributes;
-    };
-    module.SC3DMCEncodeParams.prototype.GetNumIntAttributes = function () {
-        return this.m_numIntAttributes;
-    };
-    module.SC3DMCEncodeParams.prototype.GetCoordQuantBits = function () {
-        return this.m_coordQuantBits;
-    };
-    module.SC3DMCEncodeParams.prototype.GetNormalQuantBits = function () {
-        return this.m_normalQuantBits;
-    };
-    module.SC3DMCEncodeParams.prototype.GetFloatAttributeQuantBits = function (a) {
-        return this.m_floatAttributeQuantBits[a];
-    };
-    module.SC3DMCEncodeParams.prototype.GetCoordPredMode = function () {
-        return this.m_coordPredMode;
-    };
-    module.SC3DMCEncodeParams.prototype.GetNormalPredMode = function () {
-        return this.m_normalPredMode;
-    };
-    module.SC3DMCEncodeParams.prototype.GetFloatAttributePredMode = function (a) {
-        return this.m_floatAttributePredMode[a];
-    };
-    module.SC3DMCEncodeParams.prototype.GetIntAttributePredMode = function (a) {
-        return this.m_intAttributePredMode[a];
-    };
-    module.SC3DMCEncodeParams.prototype.GetCoordPredMode = function () {
-        return this.m_coordPredMode;
-    };
-    module.SC3DMCEncodeParams.prototype.GetNormalPredMode = function () {
-        return this.m_normalPredMode;
-    };
-    module.SC3DMCEncodeParams.prototype.GetFloatAttributePredMode = function (a) {
-        return this.m_floatAttributePredMode[a];
-    };
-    module.SC3DMCEncodeParams.prototype.GetIntAttributePredMode = function (a) {
-        return this.m_intAttributePredMode[a];
-    };
-    module.SC3DMCEncodeParams.prototype.SetStreamType = function (streamTypeMode) {
-        this.m_streamTypeMode = streamTypeMode;
-    };
-    module.SC3DMCEncodeParams.prototype.SetEncodeMode = function (encodeMode) {
-        this.m_encodeMode = encodeMode;
-    };
-    module.SC3DMCEncodeParams.prototype.SetNumFloatAttributes = function (numFloatAttributes) {
-        this.m_numFloatAttributes = numFloatAttributes;
-    };
-    module.SC3DMCEncodeParams.prototype.SetNumIntAttributes = function (numIntAttributes) {
-        this.m_numIntAttributes = numIntAttributes;
-    };
-    module.SC3DMCEncodeParams.prototype.SetCoordQuantBits = function (coordQuantBits) {
-        this.m_coordQuantBits = coordQuantBits;
-    };
-    module.SC3DMCEncodeParams.prototype.SetNormalQuantBits = function (normalQuantBits) {
-        this.m_normalQuantBits = normalQuantBits;
-    };
-    module.SC3DMCEncodeParams.prototype.SetFloatAttributeQuantBits = function (a, q) {
-        this.m_floatAttributeQuantBits[a] = q;
-    };
-    module.SC3DMCEncodeParams.prototype.SetCoordPredMode = function (coordPredMode) {
-        this.m_coordPredMode = coordPredMode;
-    };
-    module.SC3DMCEncodeParams.prototype.SetNormalPredMode = function (normalPredMode) {
-        this.m_normalPredMode = normalPredMode;
-    };
-    module.SC3DMCEncodeParams.prototype.SetFloatAttributePredMode = function (a, p) {
-        this.m_floatAttributePredMode[a] = p;
-    };
-    module.SC3DMCEncodeParams.prototype.SetIntAttributePredMode = function (a, p) {
-        this.m_intAttributePredMode[a] = p;
-    };
-    // AdjacencyInfo class
-    module.AdjacencyInfo = function () {
-        this.m_neighborsSize = 0;    // actual allocated size for m_neighbors
-        this.m_numNeighborsSize = 0; // actual allocated size for m_numNeighbors
-        this.m_numElements = 0;      // number of elements 
-        this.m_neighbors = {};
-        this.m_numNeighbors = {};
-    };
-    module.AdjacencyInfo.prototype.Allocate = function (numNeighborsSize, neighborsSize) {
-        this.m_numElements = numNeighborsSize;
-        if (neighborsSize > this.m_neighborsSize) {
-            this.m_neighborsSize = neighborsSize;
-            this.m_neighbors = new Int32Array(this.m_neighborsSize);
-        }
-        if (numNeighborsSize > this.m_numNeighborsSize) {
-            this.m_numNeighborsSize = numNeighborsSize;
-            this.m_numNeighbors = new Int32Array(this.m_numNeighborsSize);
-        }
-        return module.O3DGC_OK;
-    };
-    module.AdjacencyInfo.prototype.AllocateNumNeighborsArray = function (numElements) {
-        if (numElements > this.m_numNeighborsSize) {
-            this.m_numNeighborsSize = numElements;
-            this.m_numNeighbors = new Int32Array(this.m_numNeighborsSize);
-        }
-        this.m_numElements = numElements;
-        return module.O3DGC_OK;
-    };
-    module.AdjacencyInfo.prototype.AllocateNeighborsArray = function () {
-        var i;
-        for (i = 1; i < this.m_numElements; ++i) {
-            this.m_numNeighbors[i] += this.m_numNeighbors[i - 1];
-        }
-        if (this.m_numNeighbors[this.m_numElements - 1] > this.m_neighborsSize) {
-            this.m_neighborsSize = this.m_numNeighbors[this.m_numElements - 1];
-            this.m_neighbors = new Int32Array(this.m_neighborsSize);
-        }
-        return module.O3DGC_OK;
-    };
-    module.AdjacencyInfo.prototype.ClearNumNeighborsArray = function () {
-        var i;
-        for (i = 0; i < this.m_numElements; ++i) {
-            this.m_numNeighbors[i] = 0;
-        }
-        return module.O3DGC_OK;
-    };
-    module.AdjacencyInfo.prototype.ClearNeighborsArray = function () {
-        var i;
-        for (i = 0; i < this.m_neighborsSize; ++i) {
-            this.m_neighbors[i] = -1;
-        }
-        return module.O3DGC_OK;
-    };
-    module.AdjacencyInfo.prototype.Begin = function (element) {
-        return (element > 0) ? this.m_numNeighbors[element - 1] : 0;
-    };
-    module.AdjacencyInfo.prototype.End = function (element) {
-        return this.m_numNeighbors[element];
-    };
-    module.AdjacencyInfo.prototype.AddNeighbor = function (element, neighbor) {
-        var p, p0, p1;
-        p0 = this.Begin(element);
-        p1 = this.End(element);
-        for (p = p0; p < p1; ++p) {
-            if (this.m_neighbors[p] === -1) {
-                this.m_neighbors[p] = neighbor;
-                return module.O3DGC_OK;
-            }
-        }
-        return module.O3DGC_ERROR_BUFFER_FULL;
-    };
-    module.AdjacencyInfo.prototype.GetNeighbor = function (element) {
-        return this.m_neighbors[element];
-    };
-    module.AdjacencyInfo.prototype.GetNumNeighbors = function (element) {
-        return this.End(element) - this.Begin(element);
-    };
-    module.AdjacencyInfo.prototype.GetNumNeighborsBuffer = function () {
-        return this.m_numNeighbors;
-    };
-    module.AdjacencyInfo.prototype.GetNeighborsBuffer = function () {
-        return this.m_neighbors;
-    };
-    // Vector class
-    module.Vector = function () {
-        this.m_data = {};
-        this.m_allocated = 0;
-        this.m_size = 0;
-    };
-    module.Vector.prototype.Clear = function () {
-        this.m_size = 0;
-    };
-    module.Vector.prototype.Get = function (i) {
-        return this.m_data[i];
-    };
-    module.Vector.prototype.GetAllocatedSize = function () {
-        return this.m_allocated;
-    };
-    module.Vector.prototype.GetSize = function () {
-        return this.m_size;
-    };
-    module.Vector.prototype.GetBuffer = function () {
-        return this.m_data;
-    };
-    module.Vector.prototype.SetSize = function (size) {
-        this.m_size = size;
-    };
-    module.Vector.prototype.Allocate = function (size) {
-        var i, tmp_data;
-        if (size > this.m_allocated) {
-            this.m_allocated = size;
-            tmp_data = new Int32Array(this.m_allocated);
-            if (this.m_size > 0) {
-                for (i = 0; i < this.m_size; ++i) {
-                    tmp_data[i] = this.m_data[i];
-                }
-            }
-            this.m_data = tmp_data;
-        }
-    };
-    module.Vector.prototype.PushBack = function (value) {
-        var i, tmp_data;
-        if (this.m_size === this.m_allocated) {
-            this.m_allocated *= 2;
-            if (this.m_allocated < local.O3DGC_DEFAULT_VECTOR_SIZE) {
-                this.m_allocated = local.O3DGC_DEFAULT_VECTOR_SIZE;
-            }
-            tmp_data = new Int32Array(this.m_allocated);
-            if (this.m_size > 0) {
-                for (i = 0; i < this.m_size; ++i) {
-                    tmp_data[i] = this.m_data[i];
-                }
-            }
-            this.m_data = tmp_data;
-        }
-        this.m_data[this.m_size++] = value;
-    };
-    // CompressedTriangleFans class
-    module.CompressedTriangleFans = function () {
-        this.m_numTFANs = new module.Vector();
-        this.m_degrees = new module.Vector();
-        this.m_configs = new module.Vector();
-        this.m_operations = new module.Vector();
-        this.m_indices = new module.Vector();
-        this.m_trianglesOrder = new module.Vector();
-        this.m_streamType = local.O3DGC_STREAM_TYPE_UNKOWN;
-    };
-    module.CompressedTriangleFans.prototype.GetStreamType = function () {
-        return this.m_streamType;
-    };
-    module.CompressedTriangleFans.prototype.SetStreamType = function (streamType) {
-        this.m_streamType = streamType;
-    };
-    module.CompressedTriangleFans.prototype.Clear = function () {
-        this.m_numTFANs.Clear();
-        this.m_degrees.Clear();
-        this.m_configs.Clear();
-        this.m_operations.Clear();
-        this.m_indices.Clear();
-        return module.O3DGC_OK;
-    };
-    module.CompressedTriangleFans.prototype.Allocate = function (numVertices, numTriangles) {
-        this.m_numTFANs.Allocate(numVertices);
-        this.m_degrees.Allocate(2 * numVertices);
-        this.m_configs.Allocate(2 * numVertices);
-        this.m_operations.Allocate(2 * numVertices);
-        this.m_indices.Allocate(2 * numVertices);
-        this.m_trianglesOrder.Allocate(numTriangles);
-        this.Clear();
-        return module.O3DGC_OK;
-    };
-    module.CompressedTriangleFans.prototype.PushNumTFans = function (numTFans) {
-        this.m_numTFANs.PushBack(numTFans);
-    };
-    module.CompressedTriangleFans.prototype.ReadNumTFans = function (it) {
-        return this.m_numTFANs.Get(it.m_count++);
-    };
-    module.CompressedTriangleFans.prototype.PushDegree = function (degree) {
-        this.m_degrees.PushBack(degree);
-    };
-    module.CompressedTriangleFans.prototype.ReadDegree = function (it) {
-        return this.m_degrees.Get(it.m_count++);
-    };
-    module.CompressedTriangleFans.prototype.PushConfig = function (config) {
-        this.m_configs.PushBack(config);
-    };
-    module.CompressedTriangleFans.prototype.ReadConfig = function (it) {
-        return this.m_configs.Get(it.m_count++);
-    };
-    module.CompressedTriangleFans.prototype.PushOperation = function (op) {
-        this.m_operations.PushBack(op);
-    };
-    module.CompressedTriangleFans.prototype.ReadOperation = function (it) {
-        return this.m_operations.Get(it.m_count++);
-    };
-    module.CompressedTriangleFans.prototype.PushIndex = function (index) {
-        this.m_indices.PushBack(index);
-    };
-    module.CompressedTriangleFans.prototype.ReadIndex = function (it) {
-        return this.m_indices.Get(it.m_count++);
-    };
-    module.CompressedTriangleFans.prototype.PushTriangleIndex = function (index) {
-        this.m_trianglesOrder.PushBack(IntToUInt(index));
-    };
-    module.CompressedTriangleFans.prototype.ReadTriangleIndex = function (it) {
-        return UIntToInt(this.m_trianglesOrder.Get(it.m_count++));
-    };
-    module.CompressedTriangleFans.prototype.LoadUIntData = function (data, bstream, it) {
-        var size, i;
-        bstream.ReadUInt32ASCII(it);
-        size = bstream.ReadUInt32ASCII(it);
-        data.Allocate(size);
-        data.Clear();
-        for (i = 0; i < size; ++i) {
-            data.PushBack(bstream.ReadUIntASCII(it));
-        }
-        return module.O3DGC_OK;
-    };
-    module.CompressedTriangleFans.prototype.LoadIntData = function (data, bstream, it) {
-        var size, i;
-        bstream.ReadUInt32ASCII(it);
-        size = bstream.ReadUInt32ASCII(it);
-        data.Allocate(size);
-        data.Clear();
-        for (i = 0; i < size; ++i) {
-            data.PushBack(bstream.ReadIntASCII(it));
-        }
-        return module.O3DGC_OK;
-    };
-    module.CompressedTriangleFans.prototype.LoadBinData = function (data, bstream, it) {
-        var size, symbol, i, h;
-        bstream.ReadUInt32ASCII(it);
-        size = bstream.ReadUInt32ASCII(it);
-        data.Allocate(size * local.O3DGC_BINARY_STREAM_BITS_PER_SYMBOL0);
-        data.Clear();
-        i = 0;
-        while (i < size) {
-            symbol = bstream.ReadUCharASCII(it);
-            for (h = 0; h < local.O3DGC_BINARY_STREAM_BITS_PER_SYMBOL0; ++h) {
-                data.PushBack(symbol & 1);
-                symbol >>>= 1;
-                ++i;
-            }
-        }
-        return module.O3DGC_OK;
-    };
-    module.CompressedTriangleFans.prototype.LoadUIntAC = function (data, M, bstream, it) {
-
-        var sizeSize, size, minValue, buffer, acd, mModelValues, i;
-        sizeSize = bstream.ReadUInt32Bin(it) - 12;
-        size = bstream.ReadUInt32Bin(it);
-        if (size === 0) {
-            return module.O3DGC_OK;
-        }
-        minValue = bstream.ReadUInt32Bin(it);
-        buffer = bstream.GetBuffer(it, sizeSize);
-        it.m_count += sizeSize;
-        data.Allocate(size);
-        acd = new module.ArithmeticDecoder();
-        acd.SetBuffer(sizeSize, buffer);
-        acd.StartDecoder();
-        mModelValues = new module.AdaptiveDataModel();
-        mModelValues.SetAlphabet(M + 1);
-        for (i = 0; i < size; ++i) {
-            data.PushBack(acd.DecodeAdaptiveDataModel(mModelValues) + minValue);
-        }
-        return module.O3DGC_OK;
-    };
-    module.CompressedTriangleFans.prototype.LoadIntACEGC = function (data, M, bstream, it) {
-        var sizeSize, size, minValue, buffer, acd, mModelValues, bModel0, bModel1, value, i;
-        sizeSize = bstream.ReadUInt32Bin(it) - 12;
-        size = bstream.ReadUInt32Bin(it);
-        if (size === 0) {
-            return module.O3DGC_OK;
-        }
-        minValue = bstream.ReadUInt32Bin(it) - local.O3DGC_MAX_LONG;
-        buffer = bstream.GetBuffer(it, sizeSize);
-        it.m_count += sizeSize;
-        data.Allocate(size);
-        acd = new module.ArithmeticDecoder();
-        acd.SetBuffer(sizeSize, buffer);
-        acd.StartDecoder();
-        mModelValues = new module.AdaptiveDataModel();
-        mModelValues.SetAlphabet(M + 2);
-        bModel0 = new module.StaticBitModel();
-        bModel1 = new module.AdaptiveBitModel();
-        for (i = 0; i < size; ++i) {
-            value = acd.DecodeAdaptiveDataModel(mModelValues);
-            if (value === M) {
-                value += acd.ExpGolombDecode(0, bModel0, bModel1);
-            }
-            data.PushBack(value + minValue);
-        }
-        return module.O3DGC_OK;
-    };
-    module.CompressedTriangleFans.prototype.LoadBinAC = function (data, bstream, it) {
-        var sizeSize, size, buffer, acd, bModel, i;
-        sizeSize = bstream.ReadUInt32Bin(it) - 8;
-        size = bstream.ReadUInt32Bin(it);
-        if (size === 0) {
-            return module.O3DGC_OK;
-        }
-        buffer = bstream.GetBuffer(it, sizeSize);
-        it.m_count += sizeSize;
-        data.Allocate(size);
-        acd = new module.ArithmeticDecoder();
-        acd.SetBuffer(sizeSize, buffer);
-        acd.StartDecoder();
-        bModel = new module.AdaptiveBitModel();
-        for (i = 0; i < size; ++i) {
-            data.PushBack(acd.DecodeAdaptiveBitModel(bModel));
-        }
-        return module.O3DGC_OK;
-    };
-    module.CompressedTriangleFans.prototype.Load = function (bstream, iterator, decodeTrianglesOrder, streamType) {
-        if (streamType === local.O3DGC_STREAM_TYPE_ASCII) {
-            this.LoadUIntData(this.m_numTFANs, bstream, iterator);
-            this.LoadUIntData(this.m_degrees, bstream, iterator);
-            this.LoadUIntData(this.m_configs, bstream, iterator);
-            this.LoadBinData(this.m_operations, bstream, iterator);
-            this.LoadIntData(this.m_indices, bstream, iterator);
-            if (decodeTrianglesOrder) {
-                this.LoadUIntData(this.m_trianglesOrder, bstream, iterator);
-            }
-        } else {
-            this.LoadIntACEGC(this.m_numTFANs, 4, bstream, iterator);
-            this.LoadIntACEGC(this.m_degrees, 16, bstream, iterator);
-            this.LoadUIntAC(this.m_configs, 10, bstream, iterator);
-            this.LoadBinAC(this.m_operations, bstream, iterator);
-            this.LoadIntACEGC(this.m_indices, 8, bstream, iterator);
-            if (decodeTrianglesOrder) {
-                this.LoadIntACEGC(this.m_trianglesOrder, 16, bstream, iterator);
-            }
-        }
-        return module.O3DGC_OK;
-    };
-    // TriangleFans class
-    module.TriangleFans = function () {
-        this.m_verticesAllocatedSize = 0;
-        this.m_sizeTFANAllocatedSize = 0;
-        this.m_numTFANs = 0;
-        this.m_numVertices = 0;
-        this.m_sizeTFAN = {};
-        this.m_vertices = {};
-    };
-    module.TriangleFans.prototype.Allocate = function (sizeTFAN, verticesSize) {
-        this.m_numTFANs = 0;
-        this.m_numVertices = 0;
-        if (this.m_verticesAllocatedSize < verticesSize) {
-            this.m_verticesAllocatedSize = verticesSize;
-            this.m_vertices = new Int32Array(this.m_verticesAllocatedSize);
-        }
-        if (this.m_sizeTFANAllocatedSize < sizeTFAN) {
-            this.m_sizeTFANAllocatedSize = sizeTFAN;
-            this.m_sizeTFAN = new Int32Array(this.m_sizeTFANAllocatedSize);
-        }
-        return module.O3DGC_OK;
-    };
-    module.TriangleFans.prototype.Clear = function () {
-        this.m_numTFANs = 0;
-        this.m_numVertices = 0;
-        return module.O3DGC_OK;
-    };
-    module.TriangleFans.prototype.AddVertex = function (vertex) {
-        var i, tmp_vertices;
-        ++this.m_numVertices;
-        if (this.m_numVertices > this.m_verticesAllocatedSize) {
-            this.m_verticesAllocatedSize *= 2;
-            tmp_vertices = new Int32Array(this.m_verticesAllocatedSize);
-            for (i = 0; i < this.m_numVertices; ++i) {
-                tmp_vertices[i] = this.m_vertices[i];
-            }
-            this.m_vertices = tmp_vertices;
-        }
-        this.m_vertices[this.m_numVertices - 1] = vertex;
-        ++this.m_sizeTFAN[this.m_numTFANs - 1];
-        return module.O3DGC_OK;
-    };
-    module.TriangleFans.prototype.AddTFAN = function () {
-        var i, tmp_sizeTFAN;
-        ++this.m_numTFANs;
-        if (this.m_numTFANs > this.m_sizeTFANAllocatedSize) {
-            this.m_sizeTFANAllocatedSize *= 2;
-            tmp_sizeTFAN = new Int32Array(this.m_sizeTFANAllocatedSize);
-            for (i = 0; i < this.m_numTFANs; ++i) {
-                tmp_sizeTFAN[i] = this.m_sizeTFAN[i];
-            }
-            this.m_sizeTFAN = tmp_sizeTFAN;
-        }
-        this.m_sizeTFAN[this.m_numTFANs - 1] = (this.m_numTFANs > 1) ? this.m_sizeTFAN[this.m_numTFANs - 2] : 0;
-        return module.O3DGC_OK;
-    };
-    module.TriangleFans.prototype.Begin = function (tfan) {
-        return (tfan > 0) ? this.m_sizeTFAN[tfan - 1] : 0;
-    };
-    module.TriangleFans.prototype.End = function (tfan) {
-        return this.m_sizeTFAN[tfan];
-    };
-    module.TriangleFans.prototype.GetVertex = function (vertex) {
-        return this.m_vertices[vertex];
-    };
-    module.TriangleFans.prototype.GetTFANSize = function (tfan) {
-        return this.End(tfan) - this.Begin(tfan);
-    };
-    module.TriangleFans.prototype.GetNumTFANs = function () {
-        return this.m_numTFANs;
-    };
-    module.TriangleFans.prototype.GetNumVertices = function () {
-        return this.m_numVertices;
-    };
-    // TriangleListDecoder class
-    module.TriangleListDecoder = function () {
-        this.m_itNumTFans = new module.Iterator();
-        this.m_itDegree = new module.Iterator();
-        this.m_itConfig = new module.Iterator();
-        this.m_itOperation = new module.Iterator();
-        this.m_itIndex = new module.Iterator();
-        this.m_maxNumVertices = 0;
-        this.m_maxNumTriangles = 0;
-        this.m_numTriangles = 0;
-        this.m_numVertices = 0;
-        this.m_tempTrianglesSize = 0;
-        this.m_vertexCount = 0;
-        this.m_triangleCount = 0;
-        this.m_numConqueredTriangles = 0;
-        this.m_numVisitedVertices = 0;
-        this.m_triangles = {};
-        this.m_tempTriangles = {};
-        this.m_visitedVertices = {};
-        this.m_visitedVerticesValence = {};
-        this.m_vertexToTriangle = new module.AdjacencyInfo();
-        this.m_ctfans = new module.CompressedTriangleFans();
-        this.m_tfans = new module.TriangleFans();
-        this.m_streamType = local.O3DGC_STREAM_TYPE_ASCII;
-        this.m_decodeTrianglesOrder = false;
-        this.m_decodeVerticesOrder = false;
-        this.m_processConfig = {
-            0: function (decoder, degree) { // ops: 1000001 vertices: -1 -2
-                var u;
-                decoder.m_tfans.AddVertex(decoder.m_visitedVertices[0]);
-                for (u = 1; u < degree - 1; ++u) {
-                    decoder.m_visitedVertices[decoder.m_numVisitedVertices++] = decoder.m_vertexCount;
-                    decoder.m_tfans.AddVertex(decoder.m_vertexCount++);
-                }
-                decoder.m_tfans.AddVertex(decoder.m_visitedVertices[1]);
-            },
-            1: function (decoder, degree, focusVertex) { // ops: 1xxxxxx1 vertices: -1 x x x x x -2
-                var u, op, index;
-                decoder.m_tfans.AddVertex(decoder.m_visitedVertices[0]);
-                for (u = 1; u < degree - 1; ++u) {
-                    op = decoder.m_ctfans.ReadOperation(decoder.m_itOperation);
-                    if (op === 1) {
-                        index = decoder.m_ctfans.ReadIndex(decoder.m_itIndex);
-                        if (index < 0) {
-                            decoder.m_tfans.AddVertex(decoder.m_visitedVertices[-index - 1]);
-                        } else {
-                            decoder.m_tfans.AddVertex(index + focusVertex);
-                        }
-                    } else {
-                        decoder.m_visitedVertices[decoder.m_numVisitedVertices++] = decoder.m_vertexCount;
-                        decoder.m_tfans.AddVertex(decoder.m_vertexCount++);
-                    }
-                }
-                decoder.m_tfans.AddVertex(decoder.m_visitedVertices[1]);
-            },
-            2: function (decoder, degree) { // ops: 00000001 vertices: -1
-                var u;
-                for (u = 0; u < degree - 1; ++u) {
-                    decoder.m_visitedVertices[decoder.m_numVisitedVertices++] = decoder.m_vertexCount;
-                    decoder.m_tfans.AddVertex(decoder.m_vertexCount++);
-                }
-                decoder.m_tfans.AddVertex(decoder.m_visitedVertices[0]);
-            },
-            3: function (decoder, degree) { // ops: 00000001 vertices: -2
-                var u;
-                for (u = 0; u < degree - 1; ++u) {
-                    decoder.m_visitedVertices[decoder.m_numVisitedVertices++] = decoder.m_vertexCount;
-                    decoder.m_tfans.AddVertex(decoder.m_vertexCount++);
-                }
-                decoder.m_tfans.AddVertex(decoder.m_visitedVertices[1]);
-            },
-            4: function (decoder, degree) {// ops: 10000000 vertices: -1
-                var u;
-                decoder.m_tfans.AddVertex(decoder.m_visitedVertices[0]);
-                for (u = 1; u < degree; ++u) {
-                    decoder.m_visitedVertices[decoder.m_numVisitedVertices++] = decoder.m_vertexCount;
-                    decoder.m_tfans.AddVertex(decoder.m_vertexCount++);
-                }
-            },
-            5: function (decoder, degree) { // ops: 10000000 vertices: -2
-                var u;
-                decoder.m_tfans.AddVertex(decoder.m_visitedVertices[1]);
-                for (u = 1; u < degree; ++u) {
-                    decoder.m_visitedVertices[decoder.m_numVisitedVertices++] = decoder.m_vertexCount;
-                    decoder.m_tfans.AddVertex(decoder.m_vertexCount++);
-                }
-            },
-            6: function (decoder, degree) { // ops: 00000000 vertices:
-                var u;
-                for (u = 0; u < degree; ++u) {
-                    decoder.m_visitedVertices[decoder.m_numVisitedVertices++] = decoder.m_vertexCount;
-                    decoder.m_tfans.AddVertex(decoder.m_vertexCount++);
-                }
-            },
-            7: function (decoder, degree) { // ops: 1000001 vertices: -2 -1
-                var u;
-                decoder.m_tfans.AddVertex(decoder.m_visitedVertices[1]);
-                for (u = 1; u < degree - 1; ++u) {
-                    decoder.m_visitedVertices[decoder.m_numVisitedVertices++] = decoder.m_vertexCount;
-                    decoder.m_tfans.AddVertex(decoder.m_vertexCount++);
-                }
-                decoder.m_tfans.AddVertex(decoder.m_visitedVertices[0]);
-            },
-            8: function (decoder, degree, focusVertex) { // ops: 1xxxxxx1 vertices: -2 x x x x x -1
-                var u, op, index;
-                decoder.m_tfans.AddVertex(decoder.m_visitedVertices[1]);
-                for (u = 1; u < degree - 1; ++u) {
-                    op = decoder.m_ctfans.ReadOperation(decoder.m_itOperation);
-                    if (op === 1) {
-                        index = decoder.m_ctfans.ReadIndex(decoder.m_itIndex);
-                        if (index < 0) {
-                            decoder.m_tfans.AddVertex(decoder.m_visitedVertices[-index - 1]);
-                        } else {
-                            decoder.m_tfans.AddVertex(index + focusVertex);
-                        }
-                    } else {
-                        decoder.m_visitedVertices[decoder.m_numVisitedVertices++] = decoder.m_vertexCount;
-                        decoder.m_tfans.AddVertex(decoder.m_vertexCount++);
-                    }
-                }
-                decoder.m_tfans.AddVertex(decoder.m_visitedVertices[0]);
-            },
-            9: function (decoder, degree, focusVertex) { // general case
-                var u, op, index;
-                for (u = 0; u < degree; ++u) {
-                    op = decoder.m_ctfans.ReadOperation(decoder.m_itOperation);
-                    if (op === 1) {
-                        index = decoder.m_ctfans.ReadIndex(decoder.m_itIndex);
-                        if (index < 0) {
-                            decoder.m_tfans.AddVertex(decoder.m_visitedVertices[-index - 1]);
-                        } else {
-                            decoder.m_tfans.AddVertex(index + focusVertex);
-                        }
-                    } else {
-                        decoder.m_visitedVertices[decoder.m_numVisitedVertices++] = decoder.m_vertexCount;
-                        decoder.m_tfans.AddVertex(decoder.m_vertexCount++);
-                    }
-                }
-            }
-        };
-    };
-    module.TriangleListDecoder.prototype.GetStreamType = function () {
-        return this.m_streamType;
-    };
-    module.TriangleListDecoder.prototype.GetReorderTriangles = function () {
-        return this.m_decodeTrianglesOrder;
-    };
-    module.TriangleListDecoder.prototype.GetReorderVertices = function () {
-        return this.m_decodeVerticesOrder;
-    };
-    module.TriangleListDecoder.prototype.SetStreamType = function (streamType) {
-        this.m_streamType = streamType;
-    };
-    module.TriangleListDecoder.prototype.GetVertexToTriangle = function () {
-        return this.m_vertexToTriangle;
-    };
-    module.TriangleListDecoder.prototype.Reorder = function () {
-        var triangles, numTriangles, order, it, prevTriangleIndex, tempTriangles, t, i;
-        if (this.m_decodeTrianglesOrder) {
-            triangles = this.m_triangles;
-            numTriangles = this.m_numTriangles;
-            order = this.m_ctfans.m_trianglesOrder.m_data;
-            tempTriangles = this.m_tempTriangles;
-            tempTriangles.set(triangles);
-            it = 0;
-            prevTriangleIndex = 0;
-            for (i = 0; i < numTriangles; ++i) {
-                t = UIntToInt(order[it++]) + prevTriangleIndex;
-                triangles[3 * t] = tempTriangles[3 * i];
-                triangles[3 * t + 1] = tempTriangles[3 * i + 1];
-                triangles[3 * t + 2] = tempTriangles[3 * i + 2];
-                prevTriangleIndex = t + 1;
-            }
-        }
-        return module.O3DGC_OK;
-    };
-    module.TriangleListDecoder.prototype.CompueLocalConnectivityInfo = function (focusVertex) {
-        var visitedVertices, visitedVerticesValence, triangles, vertexToTriangle, beginV2T, endV2T, numConqueredTriangles, foundOrInserted, numVisitedVertices, tmp, i, j, k, h, x, y, t, p, v;
-        visitedVertices = this.m_visitedVertices;
-        visitedVerticesValence = this.m_visitedVerticesValence;
-        triangles = this.m_triangles;
-        vertexToTriangle = this.m_vertexToTriangle;
-        beginV2T = vertexToTriangle.Begin(focusVertex);
-        endV2T = vertexToTriangle.End(focusVertex);
-        numConqueredTriangles = 0;
-        numVisitedVertices = 0;
-        t = 0;
-        for (i = beginV2T; (t >= 0) && (i < endV2T); ++i) {
-            t = vertexToTriangle.GetNeighbor(i);
-            if (t >= 0) {
-                ++numConqueredTriangles;
-                p = 3 * t;
-                // extract visited vertices
-                for (k = 0; k < 3; ++k) {
-                    v = triangles[p + k];
-                    if (v > focusVertex) { // vertices are insertices by increasing traversal order
-                        foundOrInserted = false;
-                        for (j = 0; j < numVisitedVertices; ++j) {
-                            if (v === visitedVertices[j]) {
-                                visitedVerticesValence[j]++;
-                                foundOrInserted = true;
-                                break;
-                            } else if (v < visitedVertices[j]) {
-                                ++numVisitedVertices;
-                                for (h = numVisitedVertices - 1; h > j; --h) {
-                                    visitedVertices[h] = visitedVertices[h - 1];
-                                    visitedVerticesValence[h] = visitedVerticesValence[h - 1];
-                                }
-                                visitedVertices[j] = v;
-                                visitedVerticesValence[j] = 1;
-                                foundOrInserted = true;
-                                break;
-                            }
-                        }
-                        if (!foundOrInserted) {
-                            visitedVertices[numVisitedVertices] = v;
-                            visitedVerticesValence[numVisitedVertices] = 1;
-                            numVisitedVertices++;
-                        }
-                    }
-                }
-            }
-        }
-        // re-order visited vertices by taking into account their valence (i.e., # of conquered triangles incident to each vertex)
-        // in order to avoid config. 9
-        if (numVisitedVertices > 2) {
-            for (x = 1; x < numVisitedVertices; ++x) {
-                if (visitedVerticesValence[x] === 1) {
-                    y = x;
-                    while ((y > 0) && (visitedVerticesValence[y] < visitedVerticesValence[y - 1])) {
-                        tmp = visitedVerticesValence[y];
-                        visitedVerticesValence[y] = visitedVerticesValence[y - 1];
-                        visitedVerticesValence[y - 1] = tmp;
-                        tmp = visitedVertices[y];
-                        visitedVertices[y] = visitedVertices[y - 1];
-                        visitedVertices[y - 1] = tmp;
-                        --y;
-                    }
-                }
-            }
-        }
-        this.m_numConqueredTriangles = numConqueredTriangles;
-        this.m_numVisitedVertices = numVisitedVertices;
-        return module.O3DGC_OK;
-    };
-    module.TriangleListDecoder.prototype.DecompressTFAN = function (focusVertex) {
-        var vertexToTriangle, triangles, itDegree, itConfig, tfans, ntfans, processConfig, ctfans, triangleCount, numConqueredTriangles, degree, config, k0, k1, b, c, t, f, k;
-        vertexToTriangle = this.m_vertexToTriangle;
-        triangles = this.m_triangles;
-        itDegree = this.m_itDegree;
-        itConfig = this.m_itConfig;
-        tfans = this.m_tfans;
-        processConfig = this.m_processConfig;
-        ctfans = this.m_ctfans;
-        triangleCount = this.m_triangleCount;
-        numConqueredTriangles = this.m_numConqueredTriangles;
-        ntfans = ctfans.ReadNumTFans(this.m_itNumTFans);
-        if (ntfans > 0) {
-            for (f = 0; f < ntfans; ++f) {
-                tfans.AddTFAN();
-                degree = ctfans.ReadDegree(itDegree) + 2 - numConqueredTriangles;
-                config = ctfans.ReadConfig(itConfig);
-                k0 = tfans.GetNumVertices();
-                tfans.AddVertex(focusVertex);
-                processConfig[config](this, degree, focusVertex);
-                k1 = tfans.GetNumVertices();
-                b = tfans.GetVertex(k0 + 1);
-                for (k = k0 + 2; k < k1; ++k) {
-                    c = tfans.GetVertex(k);
-                    t = triangleCount * 3;
-                    triangles[t++] = focusVertex;
-                    triangles[t++] = b;
-                    triangles[t] = c;
-                    vertexToTriangle.AddNeighbor(focusVertex, triangleCount);
-                    vertexToTriangle.AddNeighbor(b, triangleCount);
-                    vertexToTriangle.AddNeighbor(c, triangleCount);
-                    b = c;
-                    triangleCount++;
-                }
-            }
-        }
-        this.m_triangleCount = triangleCount;
-        return module.O3DGC_OK;
-    };
-    module.TriangleListDecoder.prototype.Decompress = function () {
-        var focusVertex;
-        for (focusVertex = 0; focusVertex < this.m_numVertices; ++focusVertex) {
-            if (focusVertex === this.m_vertexCount) {
-                this.m_vertexCount++; // insert focusVertex
-            }
-            this.CompueLocalConnectivityInfo(focusVertex);
-            this.DecompressTFAN(focusVertex);
-        }
-        return module.O3DGC_OK;
-    };
-    module.TriangleListDecoder.prototype.Init = function (triangles, numTriangles, numVertices, maxSizeV2T) {
-        var i, numNeighbors;
-        this.m_numTriangles = numTriangles;
-        this.m_numVertices = numVertices;
-        this.m_triangles = triangles;
-        this.m_vertexCount = 0;
-        this.m_triangleCount = 0;
-        this.m_itNumTFans.m_count = 0;
-        this.m_itDegree.m_count = 0;
-        this.m_itConfig.m_count = 0;
-        this.m_itOperation.m_count = 0;
-        this.m_itIndex.m_count = 0;
-        if (this.m_numVertices > this.m_maxNumVertices) {
-            this.m_maxNumVertices = this.m_numVertices;
-            this.m_visitedVerticesValence = new Int32Array(this.m_numVertices);
-            this.m_visitedVertices = new Int32Array(this.m_numVertices);
-        }
-        if (this.m_decodeTrianglesOrder && this.m_tempTrianglesSize < this.m_numTriangles) {
-            this.m_tempTrianglesSize = this.m_numTriangles;
-            this.m_tempTriangles = new Int32Array(3 * this.m_tempTrianglesSize);
-        }
-        this.m_ctfans.SetStreamType(this.m_streamType);
-        this.m_ctfans.Allocate(this.m_numVertices, this.m_numTriangles);
-        this.m_tfans.Allocate(2 * this.m_numVertices, 8 * this.m_numVertices);
-        // compute vertex-to-triangle adjacency information
-        this.m_vertexToTriangle.AllocateNumNeighborsArray(numVertices);
-        numNeighbors = this.m_vertexToTriangle.GetNumNeighborsBuffer();
-        for (i = 0; i < numVertices; ++i) {
-            numNeighbors[i] = maxSizeV2T;
-        }
-        this.m_vertexToTriangle.AllocateNeighborsArray();
-        this.m_vertexToTriangle.ClearNeighborsArray();
-        return module.O3DGC_OK;
-    };
-    module.TriangleListDecoder.prototype.Decode = function (triangles, numTriangles, numVertices, bstream, it) {
-        var compressionMask, maxSizeV2T;
-        compressionMask = bstream.ReadUChar(it, this.m_streamType);
-        this.m_decodeTrianglesOrder = ((compressionMask & 2) !== 0);
-        this.m_decodeVerticesOrder = ((compressionMask & 1) !== 0);
-        if (this.m_decodeVerticesOrder) { // vertices reordering not supported
-            return module.O3DGC_ERROR_NON_SUPPORTED_FEATURE;
-        }
-        maxSizeV2T = bstream.ReadUInt32(it, this.m_streamType);
-        this.Init(triangles, numTriangles, numVertices, maxSizeV2T);
-        this.m_ctfans.Load(bstream, it, this.m_decodeTrianglesOrder, this.m_streamType);
-        this.Decompress();
-        return module.O3DGC_OK;
-    };
-    // SC3DMCDecoder class
-    module.SC3DMCDecoder = function () {
-        var i;
-        this.m_iterator = new module.Iterator();
-        this.m_streamSize = 0;
-        this.m_params = new module.SC3DMCEncodeParams();
-        this.m_triangleListDecoder = new module.TriangleListDecoder();
-        this.m_quantFloatArray = {};
-        this.m_orientation = {};
-        this.m_normals = {};
-        this.m_quantFloatArraySize = 0;
-        this.m_normalsSize = 0;
-        this.m_orientationSize = 0;
-        this.m_stats = new module.SC3DMCStats();
-        this.m_streamType = local.O3DGC_STREAM_TYPE_UNKOWN;
-        this.m_neighbors = [];
-        this.m_idelta = new Float32Array(local.O3DGC_SC3DMC_MAX_DIM_ATTRIBUTES);
-        this.m_minNormal = new Float32Array(2);
-        this.m_maxNormal = new Float32Array(2);
-        this.m_minNormal[0] = this.m_minNormal[1] = -2;
-        this.m_maxNormal[0] = this.m_maxNormal[1] = 2;
-        for (i = 0; i < local.O3DGC_SC3DMC_MAX_DIM_ATTRIBUTES; ++i) {
-            this.m_neighbors[i] = new module.SC3DMCPredictor();
-        }
-    };
-    module.SC3DMCDecoder.prototype.GetStats = function () {
-        return this.m_stats;
-    };
-    module.SC3DMCDecoder.prototype.DecodeHeader = function (ifs, bstream) {
-        var c0, start_code, mask, j, a, d;
-        c0 = this.m_iterator.m_count;
-        start_code = bstream.ReadUInt32(this.m_iterator, local.O3DGC_STREAM_TYPE_BINARY);
-        if (start_code !== local.O3DGC_SC3DMC_START_CODE) {
-            this.m_iterator.m_count = c0;
-            start_code = bstream.ReadUInt32(this.m_iterator, local.O3DGC_STREAM_TYPE_ASCII);
-            if (start_code !== local.O3DGC_SC3DMC_START_CODE) {
-                return module.O3DGC_ERROR_CORRUPTED_STREAM;
-            }
-            this.m_streamType = local.O3DGC_STREAM_TYPE_ASCII;
-        } else {
-            this.m_streamType = local.O3DGC_STREAM_TYPE_BINARY;
-        }
-        this.m_streamSize = bstream.ReadUInt32(this.m_iterator, this.m_streamType);
-        this.m_params.SetEncodeMode(bstream.ReadUChar(this.m_iterator, this.m_streamType));
-
-        ifs.SetCreaseAngle(bstream.ReadFloat32(this.m_iterator, this.m_streamType));
-        mask = bstream.ReadUChar(this.m_iterator, this.m_streamType);
-        ifs.SetCCW((mask & 1) === 1);
-        ifs.SetSolid((mask & 2) === 1);
-        ifs.SetConvex((mask & 4) === 1);
-        ifs.SetIsTriangularMesh((mask & 8) === 1);
-
-        ifs.SetNCoord(bstream.ReadUInt32(this.m_iterator, this.m_streamType));
-        ifs.SetNNormal(bstream.ReadUInt32(this.m_iterator, this.m_streamType));
-        ifs.SetNumFloatAttributes(bstream.ReadUInt32(this.m_iterator, this.m_streamType));
-        ifs.SetNumIntAttributes(bstream.ReadUInt32(this.m_iterator, this.m_streamType));
-
-        if (ifs.GetNCoord() > 0) {
-            ifs.SetNCoordIndex(bstream.ReadUInt32(this.m_iterator, this.m_streamType));
-            for (j = 0; j < 3; ++j) {
-                ifs.SetCoordMin(j, bstream.ReadFloat32(this.m_iterator, this.m_streamType));
-                ifs.SetCoordMax(j, bstream.ReadFloat32(this.m_iterator, this.m_streamType));
-            }
-            this.m_params.SetCoordQuantBits(bstream.ReadUChar(this.m_iterator, this.m_streamType));
-        }
-        if (ifs.GetNNormal() > 0) {
-            ifs.SetNNormalIndex(bstream.ReadUInt32(this.m_iterator, this.m_streamType));
-            for (j = 0; j < 3; ++j) {
-                ifs.SetNormalMin(j, bstream.ReadFloat32(this.m_iterator, this.m_streamType));
-                ifs.SetNormalMax(j, bstream.ReadFloat32(this.m_iterator, this.m_streamType));
-            }
-            ifs.SetNormalPerVertex(bstream.ReadUChar(this.m_iterator, this.m_streamType) === 1);
-            this.m_params.SetNormalQuantBits(bstream.ReadUChar(this.m_iterator, this.m_streamType));
-        }
-        for (a = 0; a < ifs.GetNumFloatAttributes(); ++a) {
-            ifs.SetNFloatAttribute(a, bstream.ReadUInt32(this.m_iterator, this.m_streamType));
-            if (ifs.GetNFloatAttribute(a) > 0) {
-                ifs.SetNFloatAttributeIndex(a, bstream.ReadUInt32(this.m_iterator, this.m_streamType));
-                d = bstream.ReadUChar(this.m_iterator, this.m_streamType);
-                ifs.SetFloatAttributeDim(a, d);
-                for (j = 0; j < d; ++j) {
-                    ifs.SetFloatAttributeMin(a, j, bstream.ReadFloat32(this.m_iterator, this.m_streamType));
-                    ifs.SetFloatAttributeMax(a, j, bstream.ReadFloat32(this.m_iterator, this.m_streamType));
-                }
-                ifs.SetFloatAttributePerVertex(a, bstream.ReadUChar(this.m_iterator, this.m_streamType) === 1);
-                ifs.SetFloatAttributeType(a, bstream.ReadUChar(this.m_iterator, this.m_streamType));
-                this.m_params.SetFloatAttributeQuantBits(a, bstream.ReadUChar(this.m_iterator, this.m_streamType));
-            }
-        }
-        for (a = 0; a < ifs.GetNumIntAttributes(); ++a) {
-            ifs.SetNIntAttribute(a, bstream.ReadUInt32(this.m_iterator, this.m_streamType));
-            if (ifs.GetNIntAttribute(a) > 0) {
-                ifs.SetNIntAttributeIndex(a, bstream.ReadUInt32(this.m_iterator, this.m_streamType));
-                ifs.SetIntAttributeDim(a, bstream.ReadUChar(this.m_iterator, this.m_streamType));
-                ifs.SetIntAttributePerVertex(a, bstream.ReadUChar(this.m_iterator, this.m_streamType) === 1);
-                ifs.SetIntAttributeType(a, bstream.ReadUChar(this.m_iterator, this.m_streamType));
-            }
-        }
-        return module.O3DGC_OK;
-    };
-    function DeltaPredictors(triangles, ta, v, nPred, neighbors, dimFloatArray, quantFloatArray, stride) {
-        var ws, k, p, w, i, id;
-        id = new module.SC3DMCTriplet(-1, -1, -1);
-        for (k = 0; k < 3; ++k) {
-            w = triangles[ta * 3 + k];
-            if (w < v) {
-                id.m_a = -1;
-                id.m_b = -1;
-                id.m_c = w;
-                p = InsertPredictor(id, nPred, neighbors, dimFloatArray);
-                if (p !== -1) {
-                    ws = w * stride;
-                    for (i = 0; i < dimFloatArray; ++i) {
-                        neighbors[p].m_pred[i] = quantFloatArray[ws + i];
-                    }
-                }
-            }
-        }
-    }
-    function ParallelogramPredictors(triangles, ta, v, nPred, neighbors, dimFloatArray, quantFloatArray, stride, v2T, v2TNeighbors) {
-        var ta3, tb3, as, bs, cs, a, b, c, x, i, k, u1_begin, u1_end, u1, tb, foundB, p, id;
-        ta3 = ta * 3;
-        id = new module.SC3DMCTriplet(-1, -1, -1);
-        if (triangles[ta3] === v) {
-            a = triangles[ta3 + 1];
-            b = triangles[ta3 + 2];
-        } else if (triangles[ta3 + 1] === v) {
-            a = triangles[ta3];
-            b = triangles[ta3 + 2];
-        } else {
-            a = triangles[ta3];
-            b = triangles[ta3 + 1];
-        }
-        if (a < v && b < v) {
-            u1_begin = v2T.Begin(a);
-            u1_end = v2T.End(a);
-            for (u1 = u1_begin; u1 < u1_end; ++u1) {
-                tb = v2TNeighbors[u1];
-                if (tb < 0) {
-                    break;
-                }
-                tb3 = tb * 3;
-                c = -1;
-                foundB = false;
-                for (k = 0; k < 3; ++k) {
-                    x = triangles[tb3 + k];
-                    if (x === b) {
-                        foundB = true;
-                    } else if (x < v && x !== a) {
-                        c = x;
-                    }
-                }
-                if (c !== -1 && foundB) {
-                    if (a < b) {
-                        id.m_a = a;
-                        id.m_b = b;
-                    } else {
-                        id.m_a = b;
-                        id.m_b = a;
-                    }
-                    id.m_c = (-c - 1);
-                    p = InsertPredictor(id, nPred, neighbors, dimFloatArray);
-                    if (p !== -1) {
-                        as = a * stride;
-                        bs = b * stride;
-                        cs = c * stride;
-                        for (i = 0; i < dimFloatArray; ++i) {
-                            neighbors[p].m_pred[i] = quantFloatArray[as + i] + quantFloatArray[bs + i] - quantFloatArray[cs + i];
-                        }
-                    }
-                }
-            }
-        }
-    }
-    module.SC3DMCDecoder.prototype.DecodeIntArrayBinary = function (intArray,
-                                                                    numIntArray,
-                                                                    dimIntArray,
-                                                                    stride,
-                                                                    ifs,
-                                                                    predMode,
-                                                                    bstream) {
-        var testPredEnabled, bestPred, i, u, ta, u_begin, u_end, buffer, iterator, streamType, predResidual, acd, bModel0, bModel1, mModelPreds, v2T, v2TNeighbors, triangles, size, start, streamSize, mask, binarization, iteratorPred, exp_k, M, id, mModelValues, neighbors, normals, nPred, v;
-        iterator = this.m_iterator;
-        streamType = this.m_streamType;
-        acd = new module.ArithmeticDecoder();
-        bModel0 = new module.StaticBitModel();
-        bModel1 = new module.AdaptiveBitModel();
-        mModelPreds = new module.AdaptiveDataModel();
-        mModelPreds.SetAlphabet(local.O3DGC_SC3DMC_MAX_PREDICTION_NEIGHBORS + 1);
-        v2T = this.m_triangleListDecoder.GetVertexToTriangle();
-        v2TNeighbors = v2T.m_neighbors;
-        triangles = ifs.GetCoordIndex();
-        size = numIntArray * dimIntArray;
-        start = iterator.m_count;
-        streamSize = bstream.ReadUInt32(iterator, streamType);        // bitsream size
-        mask = bstream.ReadUChar(iterator, streamType);
-        binarization = (mask >>> 4) & 7;
-        predMode.m_value = mask & 7;
-        streamSize -= (iterator.m_count - start);
-        iteratorPred = new module.Iterator();
-        iteratorPred.m_count = iterator.m_count + streamSize;
-        exp_k = 0;
-        M = 0;
-        id = new module.SC3DMCTriplet(-1, -1, -1);
-        if (binarization !== local.O3DGC_SC3DMC_BINARIZATION_AC_EGC) {
-            return module.O3DGC_ERROR_CORRUPTED_STREAM;
-        }
-        buffer = bstream.GetBuffer(iterator, streamSize);
-        iterator.m_count += streamSize;
-        acd.SetBuffer(streamSize, buffer);
-        acd.StartDecoder();
-        exp_k = acd.ExpGolombDecode(0, bModel0, bModel1);
-        M = acd.ExpGolombDecode(0, bModel0, bModel1);
-        mModelValues = new module.AdaptiveDataModel();
-        mModelValues.SetAlphabet(M + 2);
-        neighbors = this.m_neighbors;
-        normals = this.m_normals;
-        nPred = new module.NumberRef();
-        testPredEnabled = predMode.m_value !== local.O3DGC_SC3DMC_NO_PREDICTION;
-        for (v = 0; v < numIntArray; ++v) {
-            nPred.m_value = 0;
-            if (v2T.GetNumNeighbors(v) > 0 && testPredEnabled) {
-                u_begin = v2T.Begin(v);
-                u_end = v2T.End(v);
-                for (u = u_begin; u < u_end; ++u) {
-                    ta = v2TNeighbors[u];
-                    if (ta < 0) {
-                        break;
-                    }
-                    DeltaPredictors(triangles, ta, v, nPred, neighbors, dimIntArray, intArray, stride);
-                }
-            }
-            if (nPred.m_value > 1) {
-                bestPred = acd.DecodeAdaptiveDataModel(mModelPreds);
-                for (i = 0; i < dimIntArray; ++i) {
-                    predResidual = acd.DecodeIntACEGC(mModelValues, bModel0, bModel1, exp_k, M);
-                    intArray[v * stride + i] = predResidual + neighbors[bestPred].m_pred[i];
-                }
-            } else if (v > 0 && predMode.m_value !== local.O3DGC_SC3DMC_NO_PREDICTION) {
-                for (i = 0; i < dimIntArray; ++i) {
-                    predResidual = acd.DecodeIntACEGC(mModelValues, bModel0, bModel1, exp_k, M);
-                    intArray[v * stride + i] = predResidual + intArray[(v - 1) * stride + i];
-                }
-            } else {
-                for (i = 0; i < dimIntArray; ++i) {
-                    predResidual = acd.DecodeUIntACEGC(mModelValues, bModel0, bModel1, exp_k, M);
-                    intArray[v * stride + i] = predResidual;
-                }
-            }
-        }
-        iterator.m_count = iteratorPred.m_count;
-        return module.O3DGC_OK;
-    };
-    module.SC3DMCDecoder.prototype.DecodeIntArrayASCII = function (intArray,
-                                                                   numIntArray,
-                                                                   dimIntArray,
-                                                                   stride,
-                                                                   ifs,
-                                                                   predMode,
-                                                                   bstream) {
-        var testPredEnabled, iterator, streamType, predResidual, v2T, v2TNeighbors, triangles, size, start, streamSize, mask, binarization, iteratorPred, id, neighbors, normals, nPred, v, u_begin, u_end, u, ta, i, bestPred;
-        iterator = this.m_iterator;
-        streamType = this.m_streamType;
-        v2T = this.m_triangleListDecoder.GetVertexToTriangle();
-        v2TNeighbors = v2T.m_neighbors;
-        triangles = ifs.GetCoordIndex();
-        size = numIntArray * dimIntArray;
-        start = iterator.m_count;
-        streamSize = bstream.ReadUInt32(iterator, streamType);        // bitsream size
-        mask = bstream.ReadUChar(iterator, streamType);
-        binarization = (mask >>> 4) & 7;
-        predMode.m_value = mask & 7;
-        streamSize -= (iterator.m_count - start);
-        iteratorPred = new module.Iterator();
-        iteratorPred.m_count = iterator.m_count + streamSize;
-        id = new module.SC3DMCTriplet(-1, -1, -1);
-        if (binarization !== local.O3DGC_SC3DMC_BINARIZATION_ASCII) {
-            return module.O3DGC_ERROR_CORRUPTED_STREAM;
-        }
-        bstream.ReadUInt32(iteratorPred, streamType);        // predictors bitsream size
-        neighbors = this.m_neighbors;
-        normals = this.m_normals;
-        nPred = new module.NumberRef();
-        testPredEnabled = predMode.m_value !== local.O3DGC_SC3DMC_NO_PREDICTION;
-        for (v = 0; v < numIntArray; ++v) {
-            nPred.m_value = 0;
-            if (v2T.GetNumNeighbors(v) > 0 && testPredEnabled) {
-                u_begin = v2T.Begin(v);
-                u_end = v2T.End(v);
-                for (u = u_begin; u < u_end; ++u) {
-                    ta = v2TNeighbors[u];
-                    if (ta < 0) {
-                        break;
-                    }
-                    DeltaPredictors(triangles, ta, v, nPred, neighbors, dimIntArray, intArray, stride);
-                }
-            }
-            if (nPred.m_value > 1) {
-                bestPred = bstream.ReadUCharASCII(iteratorPred);
-                for (i = 0; i < dimIntArray; ++i) {
-                    predResidual = bstream.ReadIntASCII(iterator);
-                    intArray[v * stride + i] = predResidual + neighbors[bestPred].m_pred[i];
-                }
-            } else if (v > 0 && predMode.m_value !== local.O3DGC_SC3DMC_NO_PREDICTION) {
-                for (i = 0; i < dimIntArray; ++i) {
-                    predResidual = bstream.ReadIntASCII(iterator);
-                    intArray[v * stride + i] = predResidual + intArray[(v - 1) * stride + i];
-                }
-            } else {
-                for (i = 0; i < dimIntArray; ++i) {
-                    predResidual = bstream.ReadUIntASCII(iterator);
-                    intArray[v * stride + i] = predResidual;
-                }
-            }
-        }
-        iterator.m_count = iteratorPred.m_count;
-        return module.O3DGC_OK;
-    };
-    module.SC3DMCDecoder.prototype.DecodeIntArray = function (intArray,
-                                                              numIntArray,
-                                                              dimIntArray,
-                                                              stride,
-                                                              ifs,
-                                                              predMode,
-                                                              bstream) {
-        if (this.m_streamType === local.O3DGC_STREAM_TYPE_ASCII) {
-            return this.DecodeIntArrayASCII(intArray, numIntArray, dimIntArray, stride, ifs, predMode, bstream);
-        }
-        return this.DecodeIntArrayBinary(intArray, numIntArray, dimIntArray, stride, ifs, predMode, bstream);
-    };
-    function ComputeNormals(triangles, ntris, coords, nvert, normals) {
-        var t3, v, n, t, a, b, c, d1, d2, n0;
-        n0 = new module.Vec3();
-        d1 = new module.Vec3();
-        d2 = new module.Vec3();
-        n = nvert * 3;
-        for (v = 0; v < n; ++v) {
-            normals[v] = 0;
-        }
-        for (t = 0; t < ntris; ++t) {
-            t3 = t * 3;
-            a = triangles[t3] * 3;
-            b = triangles[t3 + 1] * 3;
-            c = triangles[t3 + 2] * 3;
-            d1.m_x = coords[b] - coords[a];
-            d1.m_y = coords[b + 1] - coords[a + 1];
-            d1.m_z = coords[b + 2] - coords[a + 2];
-            d2.m_x = coords[c] - coords[a];
-            d2.m_y = coords[c + 1] - coords[a + 1];
-            d2.m_z = coords[c + 2] - coords[a + 2];
-            n0.m_x = d1.m_y * d2.m_z - d1.m_z * d2.m_y;
-            n0.m_y = d1.m_z * d2.m_x - d1.m_x * d2.m_z;
-            n0.m_z = d1.m_x * d2.m_y - d1.m_y * d2.m_x;
-            normals[a] += n0.m_x;
-            normals[a + 1] += n0.m_y;
-            normals[a + 2] += n0.m_z;
-            normals[b] += n0.m_x;
-            normals[b + 1] += n0.m_y;
-            normals[b + 2] += n0.m_z;
-            normals[c] += n0.m_x;
-            normals[c + 1] += n0.m_y;
-            normals[c + 2] += n0.m_z;
-        }
-    }
-    module.SC3DMCDecoder.prototype.ProcessNormals = function (ifs) {
-        var v3, v2, nvert, normalSize, normals, quantFloatArray, orientation, triangles, n0, n1, v, rna0, rnb0, ni1, norm0;
-        nvert = ifs.GetNNormal();
-
-        normalSize = ifs.GetNNormal() * 3;
-        if (this.m_normalsSize < normalSize) {
-            this.m_normalsSize = normalSize;
-            this.m_normals = new Float32Array(this.m_normalsSize);
-        }
-        normals = this.m_normals;
-        quantFloatArray = this.m_quantFloatArray;
-        orientation = this.m_orientation;
-        triangles = ifs.GetCoordIndex();
-        ComputeNormals(triangles, ifs.GetNCoordIndex(), quantFloatArray, nvert, normals);
-        n0 = new module.Vec3();
-        n1 = new module.Vec3();
-        for (v = 0; v < nvert; ++v) {
-            v3 = 3 * v;
-            n0.m_x = normals[v3];
-            n0.m_y = normals[v3 + 1];
-            n0.m_z = normals[v3 + 2];
-            norm0 = Math.sqrt(n0.m_x * n0.m_x + n0.m_y * n0.m_y + n0.m_z * n0.m_z);
-            if (norm0 === 0.0) {
-                norm0 = 1.0;
-            }
-            SphereToCube(n0, n1);
-            rna0 = n1.m_x / norm0;
-            rnb0 = n1.m_y / norm0;
-            ni1 = n1.m_z + orientation[v];
-            orientation[v] = ni1;
-            if ((ni1 >>> 1) !== (n1.m_z >>> 1)) {
-                rna0 = 0.0;
-                rnb0 = 0.0;
-            }
-            v2 = v * 2;
-            normals[v2] = rna0;
-            normals[v2 + 1] = rnb0;
-        }
-        return module.O3DGC_OK;
-    };
-    module.SC3DMCDecoder.prototype.IQuantize = function (floatArray,
-                                                         numFloatArray,
-                                                         dimFloatArray,
-                                                         stride,
-                                                         minFloatArray,
-                                                         maxFloatArray,
-                                                         nQBits,
-                                                         predMode) {
-        var v, nin, nout, orientation, normals, CubeToSphere;
-        if (predMode.m_value === local.O3DGC_SC3DMC_SURF_NORMALS_PREDICTION) {
-            CubeToSphere = local.CubeToSphere;
-            orientation = this.m_orientation;
-            normals = this.m_normals;
-            nin = new module.Vec3(0, 0, 0);
-            nout = new module.Vec3(0, 0, 0);
-            this.IQuantizeFloatArray(floatArray, numFloatArray, dimFloatArray, stride, this.m_minNormal, this.m_maxNormal, nQBits + 1);
-            for (v = 0; v < numFloatArray; ++v) {
-                nin.m_x = floatArray[stride * v] + normals[2 * v];
-                nin.m_y = floatArray[stride * v + 1] + normals[2 * v + 1];
-                nin.m_z = orientation[v];
-                CubeToSphere[nin.m_z](nin, nout);
-                floatArray[stride * v] = nout.m_x;
-                floatArray[stride * v + 1] = nout.m_y;
-                floatArray[stride * v + 2] = nout.m_z;
-            }
-        } else {
-            this.IQuantizeFloatArray(floatArray, numFloatArray, dimFloatArray, stride, minFloatArray, maxFloatArray, nQBits);
-        }
-    };
-    module.SC3DMCDecoder.prototype.DecodeFloatArrayBinary = function (floatArray,
-                                                                      numFloatArray,
-                                                                      dimFloatArray,
-                                                                      stride,
-                                                                      minFloatArray,
-                                                                      maxFloatArray,
-                                                                      nQBits,
-                                                                      ifs,
-                                                                      predMode,
-                                                                      bstream) {
-        var maxNPred, testPredEnabled, testParaPredEnabled, bestPred, dModel, buffer, quantFloatArray, neighbors, normals, nPred, ta, i, v, u, u_begin, u_end, iterator, orientation, streamType, predResidual, acd, bModel0, bModel1, mModelPreds, v2T, v2TNeighbors, triangles, size, start, streamSize, mask, binarization, iteratorPred, exp_k, M, mModelValues;
-        iterator = this.m_iterator;
-        orientation = this.m_orientation;
-        streamType = this.m_streamType;
-        acd = new module.ArithmeticDecoder();
-        bModel0 = new module.StaticBitModel();
-        bModel1 = new module.AdaptiveBitModel();
-        mModelPreds = new module.AdaptiveDataModel();
-        maxNPred = local.O3DGC_SC3DMC_MAX_PREDICTION_NEIGHBORS;
-        mModelPreds.SetAlphabet(maxNPred + 1);
-        v2T = this.m_triangleListDecoder.GetVertexToTriangle();
-        v2TNeighbors = v2T.m_neighbors;
-        triangles = ifs.GetCoordIndex();
-        size = numFloatArray * dimFloatArray;
-        start = iterator.m_count;
-        streamSize = bstream.ReadUInt32(iterator, streamType);
-        mask = bstream.ReadUChar(iterator, streamType);
-        binarization = (mask >>> 4) & 7;
-        predMode.m_value = mask & 7;
-        streamSize -= (iterator.m_count - start);
-        iteratorPred = new module.Iterator();
-        iteratorPred.m_count = iterator.m_count + streamSize;
-        exp_k = 0;
-        M = 0;
-        if (binarization !== local.O3DGC_SC3DMC_BINARIZATION_AC_EGC) {
-            return module.O3DGC_ERROR_CORRUPTED_STREAM;
-        }
-        buffer = bstream.GetBuffer(iterator, streamSize);
-        iterator.m_count += streamSize;
-        acd.SetBuffer(streamSize, buffer);
-        acd.StartDecoder();
-        exp_k = acd.ExpGolombDecode(0, bModel0, bModel1);
-        M = acd.ExpGolombDecode(0, bModel0, bModel1);
-        mModelValues = new module.AdaptiveDataModel();
-        mModelValues.SetAlphabet(M + 2);
-        if (predMode.m_value === local.O3DGC_SC3DMC_SURF_NORMALS_PREDICTION) {
-            if (this.m_orientationSize < size) {
-                this.m_orientationSize = size;
-                this.m_orientation = new Int8Array(this.m_orientationSize);
-                orientation = this.m_orientation;
-            }
-            dModel = new module.AdaptiveDataModel();
-            dModel.SetAlphabet(12);
-            for (i = 0; i < numFloatArray; ++i) {
-                orientation[i] = UIntToInt(acd.DecodeAdaptiveDataModel(dModel));
-            }
-            this.ProcessNormals(ifs);
-            dimFloatArray = 2;
-        }
-        if (this.m_quantFloatArraySize < size) {
-            this.m_quantFloatArraySize = size;
-            this.m_quantFloatArray = new Int32Array(this.m_quantFloatArraySize);
-        }
-        quantFloatArray = this.m_quantFloatArray;
-        neighbors = this.m_neighbors;
-        normals = this.m_normals;
-        nPred = new module.NumberRef();
-        testPredEnabled = predMode.m_value !== local.O3DGC_SC3DMC_NO_PREDICTION;
-        testParaPredEnabled = predMode.m_value === local.O3DGC_SC3DMC_PARALLELOGRAM_PREDICTION;
-        for (v = 0; v < numFloatArray; ++v) {
-            nPred.m_value = 0;
-            if (v2T.GetNumNeighbors(v) > 0 && testPredEnabled) {
-                u_begin = v2T.Begin(v);
-                u_end = v2T.End(v);
-                if (testParaPredEnabled) {
-                    for (u = u_begin; u < u_end; ++u) {
-                        ta = v2TNeighbors[u];
-                        if (ta < 0) {
-                            break;
-                        }
-                        ParallelogramPredictors(triangles, ta, v, nPred, neighbors, dimFloatArray, quantFloatArray, stride, v2T, v2TNeighbors);
-                    }
-                }
-                if (nPred.m_value < maxNPred) {
-                    for (u = u_begin; u < u_end; ++u) {
-                        ta = v2TNeighbors[u];
-                        if (ta < 0) {
-                            break;
-                        }
-                        DeltaPredictors(triangles, ta, v, nPred, neighbors, dimFloatArray, quantFloatArray, stride);
-                    }
-                }
-            }
-            if (nPred.m_value > 1) {
-                bestPred = acd.DecodeAdaptiveDataModel(mModelPreds);
-                for (i = 0; i < dimFloatArray; ++i) {
-                    predResidual = acd.DecodeIntACEGC(mModelValues, bModel0, bModel1, exp_k, M);
-                    quantFloatArray[v * stride + i] = predResidual + neighbors[bestPred].m_pred[i];
-                }
-            } else if (v > 0 && testPredEnabled) {
-                for (i = 0; i < dimFloatArray; ++i) {
-                    predResidual = acd.DecodeIntACEGC(mModelValues, bModel0, bModel1, exp_k, M);
-                    quantFloatArray[v * stride + i] = predResidual + quantFloatArray[(v - 1) * stride + i];
-                }
-            } else {
-                for (i = 0; i < dimFloatArray; ++i) {
-                    predResidual = acd.DecodeUIntACEGC(mModelValues, bModel0, bModel1, exp_k, M);
-                    quantFloatArray[v * stride + i] = predResidual;
-                }
-            }
-        }
-        iterator.m_count = iteratorPred.m_count;
-        this.IQuantize(floatArray, numFloatArray, dimFloatArray, stride, minFloatArray, maxFloatArray, nQBits, predMode);
-        return module.O3DGC_OK;
-    };
-    module.SC3DMCDecoder.prototype.DecodeFloatArrayASCII = function (floatArray,
-                                                                     numFloatArray,
-                                                                     dimFloatArray,
-                                                                     stride,
-                                                                     minFloatArray,
-                                                                     maxFloatArray,
-                                                                     nQBits,
-                                                                     ifs,
-                                                                     predMode,
-                                                                     bstream) {
-        var maxNPred, testPredEnabled, testParaPredEnabled, iterator, orientation, streamType, predResidual, v2T, v2TNeighbors, triangles, size, start, streamSize, mask, binarization, iteratorPred, quantFloatArray, neighbors, normals, nPred, v, u, u_begin, u_end, ta, i, bestPred;
-        maxNPred = local.O3DGC_SC3DMC_MAX_PREDICTION_NEIGHBORS;
-        iterator = this.m_iterator;
-        orientation = this.m_orientation;
-        streamType = this.m_streamType;
-        v2T = this.m_triangleListDecoder.GetVertexToTriangle();
-        v2TNeighbors = v2T.m_neighbors;
-        triangles = ifs.GetCoordIndex();
-        size = numFloatArray * dimFloatArray;
-        start = iterator.m_count;
-        streamSize = bstream.ReadUInt32(iterator, streamType);
-        mask = bstream.ReadUChar(iterator, streamType);
-        binarization = (mask >>> 4) & 7;
-        predMode.m_value = mask & 7;
-        streamSize -= (iterator.m_count - start);
-        iteratorPred = new module.Iterator();
-        iteratorPred.m_count = iterator.m_count + streamSize;
-        if (binarization !== local.O3DGC_SC3DMC_BINARIZATION_ASCII) {
-            return module.O3DGC_ERROR_CORRUPTED_STREAM;
-        }
-        bstream.ReadUInt32(iteratorPred, streamType);
-        if (predMode.m_value === local.O3DGC_SC3DMC_SURF_NORMALS_PREDICTION) {
-            if (this.m_orientationSize < numFloatArray) {
-                this.m_orientationSize = numFloatArray;
-                this.m_orientation = new Int8Array(this.m_orientationSize);
-                orientation = this.m_orientation;
-            }
-            for (i = 0; i < numFloatArray; ++i) {
-                orientation[i] = bstream.ReadIntASCII(iterator);
-            }
-            this.ProcessNormals(ifs);
-            dimFloatArray = 2;
-        }
-        if (this.m_quantFloatArraySize < size) {
-            this.m_quantFloatArraySize = size;
-            this.m_quantFloatArray = new Int32Array(this.m_quantFloatArraySize);
-        }
-        quantFloatArray = this.m_quantFloatArray;
-        neighbors = this.m_neighbors;
-        normals = this.m_normals;
-        nPred = new module.NumberRef();
-        testPredEnabled = predMode.m_value !== local.O3DGC_SC3DMC_NO_PREDICTION;
-        testParaPredEnabled = predMode.m_value === local.O3DGC_SC3DMC_PARALLELOGRAM_PREDICTION;
-        for (v = 0; v < numFloatArray; ++v) {
-            nPred.m_value = 0;
-            if (v2T.GetNumNeighbors(v) > 0 && testPredEnabled) {
-                u_begin = v2T.Begin(v);
-                u_end = v2T.End(v);
-                if (testParaPredEnabled) {
-                    for (u = u_begin; u < u_end; ++u) {
-                        ta = v2TNeighbors[u];
-                        if (ta < 0) {
-                            break;
-                        }
-                        ParallelogramPredictors(triangles, ta, v, nPred, neighbors, dimFloatArray, quantFloatArray, stride, v2T, v2TNeighbors);
-                    }
-                }
-                if (nPred.m_value < maxNPred) {
-                    for (u = u_begin; u < u_end; ++u) {
-                        ta = v2TNeighbors[u];
-                        if (ta < 0) {
-                            break;
-                        }
-                        DeltaPredictors(triangles, ta, v, nPred, neighbors, dimFloatArray, quantFloatArray, stride);
-                    }
-                }
-            }
-            if (nPred.m_value > 1) {
-                bestPred = bstream.ReadUCharASCII(iteratorPred);
-                for (i = 0; i < dimFloatArray; ++i) {
-                    predResidual = bstream.ReadIntASCII(iterator);
-                    quantFloatArray[v * stride + i] = predResidual + neighbors[bestPred].m_pred[i];
-                }
-            } else if (v > 0 && predMode.m_value !== local.O3DGC_SC3DMC_NO_PREDICTION) {
-                for (i = 0; i < dimFloatArray; ++i) {
-                    predResidual = bstream.ReadIntASCII(iterator);
-                    quantFloatArray[v * stride + i] = predResidual + quantFloatArray[(v - 1) * stride + i];
-                }
-            } else {
-                for (i = 0; i < dimFloatArray; ++i) {
-                    predResidual = bstream.ReadUIntASCII(iterator);
-                    quantFloatArray[v * stride + i] = predResidual;
-                }
-            }
-        }
-        iterator.m_count = iteratorPred.m_count;
-        this.IQuantize(floatArray, numFloatArray, dimFloatArray, stride, minFloatArray, maxFloatArray, nQBits, predMode);
-        return module.O3DGC_OK;
-    };
-    module.SC3DMCDecoder.prototype.DecodeFloatArray = function (floatArray,
-                                                                numFloatArray,
-                                                                dimFloatArray,
-                                                                stride,
-                                                                minFloatArray,
-                                                                maxFloatArray,
-                                                                nQBits,
-                                                                ifs,
-                                                                predMode,
-                                                                bstream) {
-        if (this.m_streamType === local.O3DGC_STREAM_TYPE_ASCII) {
-            return this.DecodeFloatArrayASCII(floatArray, numFloatArray, dimFloatArray, stride, minFloatArray, maxFloatArray, nQBits, ifs, predMode, bstream);
-        }
-        return this.DecodeFloatArrayBinary(floatArray, numFloatArray, dimFloatArray, stride, minFloatArray, maxFloatArray, nQBits, ifs, predMode, bstream);
-    };
-    module.SC3DMCDecoder.prototype.IQuantizeFloatArray = function (floatArray, numFloatArray, dimFloatArray, stride, minFloatArray, maxFloatArray, nQBits) {
-        var idelta, quantFloatArray, d, r, v;
-        idelta = this.m_idelta;
-        quantFloatArray = this.m_quantFloatArray;
-        for (d = 0; d < dimFloatArray; ++d) {
-            r = maxFloatArray[d] - minFloatArray[d];
-            if (r > 0.0) {
-                idelta[d] = r / (((1 << nQBits) >>> 0) - 1);
-            } else {
-                idelta[d] = 1.0;
-            }
-        }
-        for (v = 0; v < numFloatArray; ++v) {
-            for (d = 0; d < dimFloatArray; ++d) {
-                floatArray[v * stride + d] = quantFloatArray[v * stride + d] * idelta[d] + minFloatArray[d];
-            }
-        }
-        return module.O3DGC_OK;
-    };
-    module.SC3DMCDecoder.prototype.DecodePlayload = function (ifs, bstream) {
-        var params, iterator, stats, predMode, timer, ret, a;
-        params = this.m_params;
-        iterator = this.m_iterator;
-        stats = this.m_stats;
-        predMode = new module.NumberRef();
-        timer = new module.Timer();
-        ret = module.O3DGC_OK;
-        this.m_triangleListDecoder.SetStreamType(this.m_streamType);
-        stats.m_streamSizeCoordIndex = iterator.m_count;
-        timer.Tic();
-        this.m_triangleListDecoder.Decode(ifs.GetCoordIndex(), ifs.GetNCoordIndex(), ifs.GetNCoord(), bstream, iterator);
-        timer.Toc();
-        stats.m_timeCoordIndex = timer.GetElapsedTime();
-        stats.m_streamSizeCoordIndex = iterator.m_count - stats.m_streamSizeCoordIndex;
-        // decode coord
-        stats.m_streamSizeCoord = iterator.m_count;
-        timer.Tic();
-        if (ifs.GetNCoord() > 0) {
-            ret = this.DecodeFloatArray(ifs.GetCoord(), ifs.GetNCoord(), 3, 3, ifs.GetCoordMinArray(), ifs.GetCoordMaxArray(), params.GetCoordQuantBits(), ifs, predMode, bstream);
-            params.SetCoordPredMode(predMode.m_value);
-        }
-        if (ret !== module.O3DGC_OK) {
-            return ret;
-        }
-        timer.Toc();
-        stats.m_timeCoord = timer.GetElapsedTime();
-        stats.m_streamSizeCoord = iterator.m_count - stats.m_streamSizeCoord;
-
-        // decode Normal
-        stats.m_streamSizeNormal = iterator.m_count;
-        timer.Tic();
-        if (ifs.GetNNormal() > 0) {
-            ret = this.DecodeFloatArray(ifs.GetNormal(), ifs.GetNNormal(), 3, 3, ifs.GetNormalMinArray(), ifs.GetNormalMaxArray(), params.GetNormalQuantBits(), ifs, predMode, bstream);
-            params.SetNormalPredMode(predMode.m_value);
-        }
-        if (ret !== module.O3DGC_OK) {
-            return ret;
-        }
-        timer.Toc();
-        stats.m_timeNormal = timer.GetElapsedTime();
-        stats.m_streamSizeNormal = iterator.m_count - stats.m_streamSizeNormal;
-
-        // decode FloatAttributes
-        for (a = 0; a < ifs.GetNumFloatAttributes(); ++a) {
-            stats.m_streamSizeFloatAttribute[a] = iterator.m_count;
-            timer.Tic();
-            ret = this.DecodeFloatArray(ifs.GetFloatAttribute(a), ifs.GetNFloatAttribute(a), ifs.GetFloatAttributeDim(a), ifs.GetFloatAttributeDim(a), ifs.GetFloatAttributeMinArray(a), ifs.GetFloatAttributeMaxArray(a), params.GetFloatAttributeQuantBits(a), ifs, predMode, bstream);
-            params.SetFloatAttributePredMode(a, predMode.m_value);
-            timer.Toc();
-            stats.m_timeFloatAttribute[a] = timer.GetElapsedTime();
-            stats.m_streamSizeFloatAttribute[a] = iterator.m_count - stats.m_streamSizeFloatAttribute[a];
-        }
-        if (ret !== module.O3DGC_OK) {
-            return ret;
-        }
-        // decode IntAttributes
-        for (a = 0; a < ifs.GetNumIntAttributes(); ++a) {
-            stats.m_streamSizeIntAttribute[a] = iterator.m_count;
-            timer.Tic();
-            ret = this.DecodeIntArray(ifs.GetIntAttribute(a), ifs.GetNIntAttribute(a), ifs.GetIntAttributeDim(a), ifs.GetIntAttributeDim(a), ifs, predMode, bstream);
-            params.SetIntAttributePredMode(a, predMode.m_value);
-            timer.Toc();
-            stats.m_timeIntAttribute[a] = timer.GetElapsedTime();
-            stats.m_streamSizeIntAttribute[a] = iterator.m_count - stats.m_streamSizeIntAttribute[a];
-        }
-        if (ret !== module.O3DGC_OK) {
-            return ret;
-        }
-        timer.Tic();
-        this.m_triangleListDecoder.Reorder();
-        timer.Toc();
-        stats.m_timeReorder = timer.GetElapsedTime();
-        return ret;
-    };
-    // DVEncodeParams class
-    module.DVEncodeParams = function () {
-        this.m_encodeMode = local.O3DGC_DYNAMIC_VECTOR_ENCODE_MODE_LIFT;
-        this.m_streamTypeMode = local.O3DGC_STREAM_TYPE_ASCII;
-        this.m_quantBits = 10;
-    };
-    module.DVEncodeParams.prototype.GetStreamType = function () {
-        return this.m_streamTypeMode;
-    };
-    module.DVEncodeParams.prototype.GetEncodeMode = function () {
-        return this.m_encodeMode;
-    };
-    module.DVEncodeParams.prototype.GetQuantBits = function () {
-        return this.m_quantBits;
-    };
-    module.DVEncodeParams.prototype.SetStreamType = function (streamTypeMode) {
-        this.m_streamTypeMode = streamTypeMode;
-    };
-    module.DVEncodeParams.prototype.SetEncodeMode = function (encodeMode) {
-        this.m_encodeMode = encodeMode;
-    };
-    module.DVEncodeParams.prototype.SetQuantBits = function (quantBits) {
-        this.m_quantBits = quantBits;
-    };
-    // DynamicVector class
-    module.DynamicVector = function () {
-        this.m_num = 0;
-        this.m_dim = 0;
-        this.m_stride = 0;
-        this.m_max = {};
-        this.m_min = {};
-        this.m_vectors = {};
-    };
-    module.DynamicVector.prototype.GetNVector = function () {
-        return this.m_num;
-    };
-    module.DynamicVector.prototype.GetDimVector = function () {
-        return this.m_dim;
-    };
-    module.DynamicVector.prototype.GetStride = function () {
-        return this.m_stride;
-    };
-    module.DynamicVector.prototype.GetMinArray = function () {
-        return this.m_min;
-    };
-    module.DynamicVector.prototype.GetMaxArray = function () {
-        return this.m_max;
-    };
-    module.DynamicVector.prototype.GetVectors = function () {
-        return this.m_vectors;
-    };
-    module.DynamicVector.prototype.GetMin = function (j) {
-        return this.m_min[j];
-    };
-    module.DynamicVector.prototype.GetMax = function (j) {
-        return this.m_max[j];
-    };
-    module.DynamicVector.prototype.SetNVector = function (num) {
-        this.m_num = num;
-    };
-    module.DynamicVector.prototype.SetDimVector = function (dim) {
-        this.m_dim = dim;
-    };
-    module.DynamicVector.prototype.SetStride = function (stride) {
-        this.m_stride = stride;
-    };
-    module.DynamicVector.prototype.SetMinArray = function (min) {
-        this.m_min = min;
-    };
-    module.DynamicVector.prototype.SetMaxArray = function (max) {
-        this.m_max = max;
-    };
-    module.DynamicVector.prototype.SetMin = function (j, min) {
-        this.m_min[j] = min;
-    };
-    module.DynamicVector.prototype.SetMax = function (j, max) {
-        this.m_max[j] = max;
-    };
-    module.DynamicVector.prototype.SetVectors = function (vectors) {
-        this.m_vectors = vectors;
-    };
-    // DynamicVectorDecoder class
-    module.DynamicVectorDecoder = function () {
-        this.m_streamSize = 0;
-        this.m_maxNumVectors = 0;
-        this.m_numVectors = 0;
-        this.m_dimVectors = 0;
-        this.m_quantVectors = {};
-        this.m_iterator = new module.Iterator();
-        this.m_streamType = local.O3DGC_STREAM_TYPE_UNKOWN;
-        this.m_params = new module.DVEncodeParams();
-    };
-    module.DynamicVectorDecoder.prototype.GetStreamType = function () {
-        return this.m_streamType;
-    };
-    module.DynamicVectorDecoder.prototype.GetIterator = function () {
-        return this.m_iterator;
-    };
-    module.DynamicVectorDecoder.prototype.SetStreamType = function (streamType) {
-        this.m_streamType = streamType;
-    };
-    module.DynamicVectorDecoder.prototype.SetIterator = function (iterator) {
-        this.m_iterator = iterator;
-    };
-    module.DynamicVectorDecoder.prototype.IUpdate = function (data, shift, size) {
-        var p, size1;
-        size1 = size - 1;
-        p = 2;
-        data[shift] -= data[shift + 1] >> 1;
-        while (p < size1) {
-            data[shift + p] -= (data[shift + p - 1] + data[shift + p + 1] + 2) >> 2;
-            p += 2;
-        }
-        if (p === size1) {
-            data[shift + p] -= data[shift + p - 1] >> 1;
-        }
-        return module.O3DGC_OK;
-    };
-    module.DynamicVectorDecoder.prototype.IPredict = function (data, shift, size) {
-        var p, size1;
-        size1 = size - 1;
-        p = 1;
-        while (p < size1) {
-            data[shift + p] += (data[shift + p - 1] + data[shift + p + 1] + 1) >> 1;
-            p += 2;
-        }
-        if (p === size1) {
-            data[shift + p] += data[shift + p - 1];
-        }
-        return module.O3DGC_OK;
-    };
-    module.DynamicVectorDecoder.prototype.Merge = function (data, shift, size) {
-        var i, h, a, b, tmp;
-        h = (size >> 1) + (size & 1);
-        a = h - 1;
-        b = h;
-        while (a > 0) {
-            for (i = a; i < b; i += 2) {
-                tmp = data[shift + i];
-                data[shift + i] = data[shift + i + 1];
-                data[shift + i + 1] = tmp;
-            }
-            --a;
-            ++b;
-        }
-        return module.O3DGC_OK;
-    };
-    module.DynamicVectorDecoder.prototype.ITransform = function (data, shift, size) {
-        var n, even, k, i;
-        n = size;
-        even = 0;
-        k = 0;
-        even += ((n & 1) << k++) >>> 0;
-        while (n > 1) {
-            n = (n >> 1) + ((n & 1) >>> 0);
-            even += ((n & 1) << k++) >>> 0;
-        }
-        for (i = k - 2; i >= 0; --i) {
-            n = ((n << 1) >>> 0) - (((even >>> i) & 1)) >>> 0;
-            this.Merge(data, shift, n);
-            this.IUpdate(data, shift, n);
-            this.IPredict(data, shift, n);
-        }
-        return module.O3DGC_OK;
-    };
-    module.DynamicVectorDecoder.prototype.IQuantize = function (floatArray,
-                                                       numFloatArray,
-                                                       dimFloatArray,
-                                                       stride,
-                                                       minFloatArray,
-                                                       maxFloatArray,
-                                                       nQBits) {
-        var quantVectors, r, idelta, size, d, v;
-        quantVectors = this.m_quantVectors;
-        size = numFloatArray * dimFloatArray;
-        for (d = 0; d < dimFloatArray; ++d) {
-            r = maxFloatArray[d] - minFloatArray[d];
-            if (r > 0.0) {
-                idelta = r / (((1 << nQBits) >>> 0) - 1);
-            } else {
-                idelta = 1.0;
-            }
-            for (v = 0; v < numFloatArray; ++v) {
-                floatArray[v * stride + d] = quantVectors[v + d * numFloatArray] * idelta + minFloatArray[d];
-            }
-        }
-        return module.O3DGC_OK;
-    };
-    module.DynamicVectorDecoder.prototype.DecodeHeader = function (dynamicVector, bstream) {
-        var iterator, c0, start_code, streamType;
-        iterator = this.m_iterator;
-        c0 = iterator.m_count;
-        start_code = bstream.ReadUInt32(iterator, local.O3DGC_STREAM_TYPE_BINARY);
-        if (start_code !== local.O3DGC_DV_START_CODE) {
-            iterator.m_count = c0;
-            start_code = bstream.ReadUInt32(iterator, local.O3DGC_STREAM_TYPE_ASCII);
-            if (start_code !== local.O3DGC_DV_START_CODE) {
-                return module.O3DGC_ERROR_CORRUPTED_STREAM;
-            }
-            this.m_streamType = local.O3DGC_STREAM_TYPE_ASCII;
-        } else {
-            this.m_streamType = local.O3DGC_STREAM_TYPE_BINARY;
-        }
-        streamType = this.m_streamType;
-        this.m_streamSize = bstream.ReadUInt32(iterator, streamType);
-        this.m_params.SetEncodeMode(bstream.ReadUChar(iterator, streamType));
-        dynamicVector.SetNVector(bstream.ReadUInt32(iterator, streamType));
-        if (dynamicVector.GetNVector() > 0) {
-            dynamicVector.SetDimVector(bstream.ReadUInt32(iterator, streamType));
-            this.m_params.SetQuantBits(bstream.ReadUChar(iterator, streamType));
-        }
-        return module.O3DGC_OK;
-    };
-    module.DynamicVectorDecoder.prototype.DecodePlayload = function (dynamicVector, bstream) {
-        var size, iterator, streamType, ret, start, streamSize, dim, num, j, acd, bModel0, bModel1, exp_k, M, buffer, mModelValues, quantVectors, v, d;
-        iterator = this.m_iterator;
-        streamType = this.m_streamType;
-        ret = module.O3DGC_OK;
-        start = iterator.m_count;
-        streamSize = bstream.ReadUInt32(iterator, streamType);
-        dim = dynamicVector.GetDimVector();
-        num = dynamicVector.GetNVector();
-        size = dim * num;
-        for (j = 0; j < dynamicVector.GetDimVector(); ++j) {
-            dynamicVector.SetMin(j, bstream.ReadFloat32(iterator, streamType));
-            dynamicVector.SetMax(j, bstream.ReadFloat32(iterator, streamType));
-        }
-        acd = new module.ArithmeticDecoder();
-        bModel0 = new module.StaticBitModel();
-        bModel1 = new module.AdaptiveBitModel();
-        streamSize -= (iterator.m_count - start);
-        exp_k = 0;
-        M = 0;
-        if (streamType === local.O3DGC_STREAM_TYPE_BINARY) {
-            buffer = bstream.GetBuffer(iterator, streamSize);
-            iterator.m_count += streamSize;
-            acd.SetBuffer(streamSize, buffer);
-            acd.StartDecoder();
-            exp_k = acd.ExpGolombDecode(0, bModel0, bModel1);
-            M = acd.ExpGolombDecode(0, bModel0, bModel1);
-        }
-        mModelValues = new module.AdaptiveDataModel();
-        mModelValues.SetAlphabet(M + 2);
-        if (this.m_maxNumVectors < size) {
-            this.m_maxNumVectors = size;
-            this.m_quantVectors = new Int32Array(this.m_maxNumVectors);
-        }
-        quantVectors = this.m_quantVectors;
-        if (streamType === local.O3DGC_STREAM_TYPE_ASCII) {
-            for (v = 0; v < num; ++v) {
-                for (d = 0; d < dim; ++d) {
-                    quantVectors[d * num + v] = bstream.ReadIntASCII(iterator);
-                }
-            }
-        } else {
-            for (v = 0; v < num; ++v) {
-                for (d = 0; d < dim; ++d) {
-                    quantVectors[d * num + v] = acd.DecodeIntACEGC(mModelValues, bModel0, bModel1, exp_k, M);
-                }
-            }
-        }
-        for (d = 0; d < dim; ++d) {
-            this.ITransform(quantVectors, d * num, num);
-        }
-        this.IQuantize(dynamicVector.GetVectors(), num, dim,
-                       dynamicVector.GetStride(), dynamicVector.GetMinArray(),
-                       dynamicVector.GetMaxArray(), this.m_params.GetQuantBits());
-        return ret;
-    };
-
-    return module;
-})();
-
-
-/**
- * 	SEA3D - o3dgc
- * 	@author Sunag / http://www.sunag.com.br/
- */
-
-//'use strict';
-
-//
-//	Lossy Compression
-//
-
-SEA3D.GeometryGC = function ( name, data, sea3d ) {
-
-	this.name = name;
-	this.data = data;
-	this.sea3d = sea3d;
-
-	var i;
-	var attrib = data.readUShort();
-	var uvIDs = [], jointID, weightID;
-
-	this.isBig = ( attrib & 1 ) != 0;
-
-	data.readVInt = this.isBig ? data.readUInt : data.readUShort;
-
-	// Geometry Flags
-	// ..
-	// 1 isBig
-	// 2 groups
-	// 4 uv
-	// 8 tangent
-	// 16 colors
-	// 32 joints
-	// 64 morph
-	// 128 vertex-animation
-	// ..
-
-	if ( attrib & 2 ) {
-
-		this.groups = [];
-
-		var numGroups = data.readUByte(),
-			groupOffset = 0;
-
-		for ( i = 0; i < numGroups; i ++ )		{
-
-			var groupLength = data.readVInt() * 3;
-
-			this.groups.push( {
-				start: groupOffset,
-				count: groupLength,
-			} );
-
-			groupOffset += groupLength;
-
-		}
-
-	} else {
-
-		this.groups = [];
-
-	}
-
-	if ( attrib & 4 ) {
-
-		this.uv = [];
-
-		var uvCount = data.readUByte();
-
-		for ( i = 0; i < uvCount; i ++ ) {
-
-			uvIDs[ i ] = data.readUByte();
-
-		}
-
-	}
-
-	if ( attrib & 32 ) {
-
-		jointID = data.readUByte();
-		weightID = data.readUByte();
-
-	}
-
-	var size = data.readUInt();
-	var bytes = data.concat( data.position, size );
-
-	var bstream = new o3dgc.BinaryStream( bytes.buffer );
-
-	var decoder = new o3dgc.SC3DMCDecoder();
-	var ifs = new o3dgc.IndexedFaceSet();
-
-	decoder.DecodeHeader( ifs, bstream );
-
-	var numIndexes = ifs.GetNCoordIndex();
-	var numVertex = ifs.GetNCoord();
-
-	if ( ! this.groups.length ) this.groups.push( { start: 0, count: numIndexes * 3 } );
-
-	this.indexes = this.isBig ? new Uint32Array( numIndexes * 3 ) : new Uint16Array( numIndexes * 3 );
-	this.vertex = new Float32Array( numVertex * 3 );
-
-	ifs.SetCoordIndex( this.indexes );
-	ifs.SetCoord( this.vertex );
-
-	if ( ifs.GetNNormal() > 0 ) {
-
-		this.normal = new Float32Array( numVertex * 3 );
-		ifs.SetNormal( this.normal );
-
-	}
-
-	for ( i = 0; i < uvIDs.length; i ++ ) {
-
-		this.uv[ i ] = new Float32Array( numVertex * 2 );
-		ifs.SetFloatAttribute( uvIDs[ i ], this.uv[ i ] );
-
-	}
-
-	if ( jointID !== undefined ) {
-
-		this.jointPerVertex = ifs.GetIntAttributeDim( jointID );
-
-		this.joint = new Uint16Array( numVertex * this.jointPerVertex );
-		this.weight = new Float32Array( numVertex * this.jointPerVertex );
-
-		ifs.SetIntAttribute( jointID, this.joint );
-		ifs.SetFloatAttribute( weightID, this.weight );
-
-	}
-
-	// decode mesh
-
-	decoder.DecodePlayload( ifs, bstream );
-
-};
-
-SEA3D.GeometryGC.prototype.type = "s3D";
-
-//
-//	Geometry Update
-//
-
-SEA3D.GeometryUpdateGC = function ( name, data, sea3d ) {
-
-	this.name = name;
-	this.data = data;
-	this.sea3d = sea3d;
-
-	this.index = data.readUInt();
-	this.bytes = data.concat( data.position, data.length - data.position );
-
-};
-
-SEA3D.GeometryUpdateGC.prototype.type = "us3D";
-
-//
-//	Updaters
-//
-
-THREE.SEA3D.prototype.readGeometryUpdateGC = function ( sea ) {
-
-	var obj = this.file.objects[ sea.index ],
-		geo = obj.tag;
-
-	var seaUpdate = new SEA3D.GeometryGC( "", sea.bytes, sea.sea3d );
-	seaUpdate.tag = geo;
-
-	this.readGeometryBuffer( seaUpdate );
-
-};
-
-//
-//	Extension
-//
-
-THREE.SEA3D.EXTENSIONS_LOADER.push( {
-
-	setTypeRead: function () {
-
-		this.file.addClass( SEA3D.GeometryGC, true );
-		this.file.addClass( SEA3D.GeometryUpdateGC, true );
-
-		this.file.typeRead[ SEA3D.GeometryGC.prototype.type ] = this.readGeometryBuffer;
-		this.file.typeRead[ SEA3D.GeometryUpdateGC.prototype.type ] = this.readGeometryUpdateGC;
-
-	}
-
-} );
 

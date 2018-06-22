@@ -2,7 +2,7 @@ var main = ( function () {
 
 'use strict';
 
-var modelName = 'avatar.tjs';
+var modelName = 'avatar2';//.tjs
 var envmame = 'studio';
 var path = './assets/'
 
@@ -26,6 +26,7 @@ var textures = [
     'metalmuscl.png',
     'transition.png',
     'eye_m.png', 'eye_w.png', 'eye_n.png', 'eye_l.png',
+    'UV_Grid_Sm.jpg',
 
 ];
 
@@ -45,9 +46,9 @@ main = {
     //   INIT
     // --------------------------
 
-    init: function ( container ) {
+    init: function ( container, forceGL1 ) {
 
-        view.init( container );
+        view.init( container, forceGL1 );
         gui.init( container );
         //shader.init();
 
@@ -152,14 +153,21 @@ main = {
     switchModel: function () {
 
         var currentPlay = '';
+        var matset = null;
 
         if( main.model !== null ) {
+            matset = main.model.settings;
             currentPlay = main.model.currentPlay;
             main.model.removeTo( scene );
         }
 
         isMan = isMan ? false : true;
         main.model = isMan ? man : woman;
+
+        if(matset!==null){ 
+            main.model.settings = matset;
+            main.model.updateSetting();
+        }
 
         main.model.addTo( scene );
 

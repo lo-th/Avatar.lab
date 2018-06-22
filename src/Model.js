@@ -10,12 +10,13 @@ var Model = function ( type, meshs, morph ) {
     this.settings = {
 
         type:'Standard',
+        color:0xffffff,
         muscles: 0.1,
         metalness: 0.1,
         roughness: 0.4,
         skinAlpha:0.1,
         oamap: 1,
-        lightmap:1,
+        lightmap:0.6,
         shininess:60,
         opacity:1,
         reflectivity:0.1,
@@ -581,6 +582,9 @@ Model.prototype = {
 
         m = this.mats[0];
 
+        if( m.color !== undefined ) m.color = new THREE.Color( set.color );
+        
+
         if( m.normalScale !== undefined ) m.normalScale = new THREE.Vector2( set.muscles, set.muscles );
         if( m.lightMapIntensity !== undefined ) m.lightMapIntensity = set.lightmap;
         if( m.aoMapIntensity !== undefined ) m.aoMapIntensity = set.oamap;
@@ -591,6 +595,7 @@ Model.prototype = {
         if( m.opacity !== undefined ) m.opacity = set.opacity;
         if( m.transparent !== undefined ) m.transparent = true;
         if( m.reflectivity !== undefined ) m.reflectivity = set.reflectivity;
+        if( m.shadowSide !== undefined ) m.shadowSide = true;
         
         //if( m.alphaTest !== undefined ) m.alphaTest = 0.9;
         
@@ -620,13 +625,13 @@ Model.prototype = {
 
     },
 
-    setTextures: function ( txt ) {
+    setTextures: function ( txt, debug ) {
 
         if( txt !== undefined ) this.txt = txt;
 
         var m = this.mats[0];
 
-        if( m.map !== undefined ) m.map = this.txt.avatar_c;
+        if( m.map !== undefined ) m.map = debug ? this.txt.UV_Grid_Sm : this.txt.avatar_c;
         if( m.envMap !== undefined ) m.envMap = view.getEnvmap();
         //if( m.alphaMap !== undefined ) m.alphaMap = this.type === 'man' ? this.txt.avatar_skin_n_m : this.txt.avatar_skin_n_w;
         if( m.normalMap !== undefined ) m.normalMap = this.type === 'man' ? this.txt.avatar_n_m : this.txt.avatar_n_w;
@@ -655,6 +660,7 @@ Model.prototype = {
         var set = this.settings;
         var m = this.mats[0];
 
+        if( m.color !== undefined ) m.color.setHex( set.color );
         if( m.normalScale !== undefined ) m.normalScale.set( set.muscles, set.muscles );
         if( m.aoMapIntensity !== undefined ) m.aoMapIntensity = set.oamap;
         if( m.lightMapIntensity !== undefined ) m.lightMapIntensity = set.lightmap;

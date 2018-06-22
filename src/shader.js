@@ -37,7 +37,25 @@ var map = [
 
 ];
 
-/*var normalPart = [
+/*var blur = [
+
+    'vec3 blur1Color = texture2D( tBlur1, vUv ).xyz;',
+    'vec3 blur2Color = texture2D( tBlur2, vUv ).xyz;',
+    'vec3 blur3Color = texture2D( tBlur3, vUv ).xyz;',
+    'vec3 blur4Color = texture2D( tBlur4, vUv ).xyz;',
+
+    'outgoingLight = vec3( vec3( 0.22,  0.437, 0.635 ) * nonblurColor + ',
+        'vec3( 0.101, 0.355, 0.365 ) * blur1Color + ',
+        'vec3( 0.119, 0.208, 0.0 )   * blur2Color + ',
+        'vec3( 0.114, 0.0,   0.0 )   * blur3Color + ',
+        'vec3( 0.444, 0.0,   0.0 )   * blur4Color );',
+
+    'outgoingLight *= sqrt( colDiffuse.xyz );',
+    'outgoingLight += ambientLightColor * diffuse * colDiffuse.xyz + totalSpecularLight;',
+
+];
+
+var normalPart = [
 
     '#ifdef USE_NORMALMAP',
         'uniform sampler2D normalMap;',
@@ -131,14 +149,43 @@ shader = {
 
             name = shader.name;
             uniforms = shader.uniforms;
+
+
             vertex = shader.vertexShader;
             fragment = shader.fragmentShader;
 
             fragment = fragment.replace( '#include <map_fragment>', map.join("\n") );
-            fragment = fragment.replace( '#include <normal_fragment>', normal.join("\n") );
+            //fragment = fragment.replace( '#include <normal_fragment>', normal.join("\n") );
             fragment = fragment.replace( '#include <alphamap_fragment>', '' );
             fragment = fragment.replace( '#include <emissivemap_fragment>', '' );
+
+            /*if(view.isGL2){
+
+                vertex = '#version 300 es\n' + vertex;
+                vertex = vertex.replace(/attribute /g, "in ");
+                vertex = vertex.replace(/varying /g, "out ");
+                vertex = vertex.replace(/transpose/g, "transposition");
+
+                fragment = '#version 300 es\n' + fragment;
+                fragment = fragment.replace('uniform vec3 cameraPosition;', "uniform vec3 cameraPosition;\nout vec4 FragColor_gl;\n");
+                fragment = fragment.replace('#extension GL_OES_standard_derivatives : enable', "");// FRAGMENT_SHADER_DERIVATIVE_HINT ?
+                fragment = fragment.replace(/varying /g, "in ");
+                fragment = fragment.replace(/transpose/g, "transposition");
+                fragment = fragment.replace(/gl_FragColor/g, "FragColor_gl");
+                fragment = fragment.replace(/texture2D/g, "texture");
+                fragment = fragment.replace(/textureCube/g, "texture");
+                
+            }*/
+
+            //vertex = '#version 300 es\n' + vertex;
+
+            //
+
+
+            shader.vertexShader = vertex;
             shader.fragmentShader = fragment;
+
+           // console.log(shader.vertexShader)
 
             return shader;
 
