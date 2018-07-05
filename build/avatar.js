@@ -69072,7 +69072,7 @@ var models = [
 
 ];
 
-var textures = [
+/*var textures = [
 
     'envmap/' + envmame + '.jpg',
     'avatar_c.png', 
@@ -69084,6 +69084,29 @@ var textures = [
     'muscular.png',
     'metalmuscl.png',
     'transition.png',
+    'eye_m.png', 'eye_w.png', 'eye_n.png', 'eye_l.png',
+    'UV_Grid_Sm.jpg',
+
+];*/
+
+var mq = 'low/';
+var mt = '.jpg';
+
+var textures = [
+
+    'envmap/' + envmame + '.jpg',
+    
+    'avatar_id.png',
+    'transition.png',
+
+    mq+'avatar_c'+mt, 
+    mq+'avatar_ao'+mt,
+    mq+'avatar_n_m'+mt, mq+'avatar_n_w'+mt, 
+    mq+'avatar_skin_n_m'+mt, mq+'avatar_skin_n_w'+mt, 
+    mq+'avatar_l_m'+mt, mq+'avatar_l_w'+mt, 
+    mq+'muscular.png',
+    mq+'metalmuscl'+mt,
+    
     'eye_m.png', 'eye_w.png', 'eye_n.png', 'eye_l.png',
     'UV_Grid_Sm.jpg',
 
