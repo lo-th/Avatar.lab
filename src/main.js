@@ -131,6 +131,8 @@ main = {
 
         main.addAnimation( 'base', p.base );
 
+        //
+
         main.switchModel();
         main.model.play('idle');
         main.loadTextures();
@@ -206,8 +208,11 @@ main = {
 
     loadAnimation: function ( data, name, type ) {
 
+        
+
     	if( type === 'z' ) data = SEA3D.File.LZMAUncompress( data );
         name = name.substring( 0, name.lastIndexOf('.') );
+        //console.log( data, type )
         main.applyAnimation( name, bvhLoader.parse( data ) );
 
     },
