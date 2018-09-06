@@ -183,6 +183,9 @@ var Model = function ( type, meshs, morph ) {
     this.eye_l = meshs.eye_left.clone();
     this.eye_r = meshs.eye_right.clone();
 
+    this.eye_r.up.set(0,0,1);
+    console.log(this.eye_l.up, this.eye_r.up)
+
     this.eyes.add( this.eye_l );
     this.eyes.add( this.eye_r );
     this.eyes.add( this.eyeTarget );
@@ -484,8 +487,17 @@ Model.prototype = {
         }
         
         this.eyeTarget.position.set(-3.54+(-v.y*3), (-v.x*3), -10);
-        this.eye_l.lookAt( this.eyeTarget.position.clone().add(new THREE.Vector3(0,-1.4,0)) );
-        this.eye_r.lookAt( this.eyeTarget.position.clone().add(new THREE.Vector3(0,1.4,0)) );
+        //this.eye_l.lookAt( this.eyeTarget.position.clone().add(new THREE.Vector3(0,-1.4,0)) );
+       // this.eye_r.lookAt( this.eyeTarget.position.clone().add(new THREE.Vector3(0,1.4,0)) );
+
+        var m = new THREE.Matrix4();
+
+        m.lookAt( this.eyeTarget.position.clone().add(new THREE.Vector3(0,-1.4,0)), this.eye_l.position, this.eye_l.up );
+        this.eye_l.quaternion.setFromRotationMatrix( m );
+
+        m.lookAt( this.eyeTarget.position.clone().add(new THREE.Vector3(0,1.4,0)), this.eye_r.position, this.eye_r.up );
+        this.eye_r.quaternion.setFromRotationMatrix( m );
+		//a.setRotationFromMatrix( m );
 
     },
 

@@ -48,27 +48,28 @@ view = {
     isGrid: false,
     videoSize: [1920/3,1080/3],
 
-    update: function (  ) {
+    update: function ( d ) {
 
-        var delta = clock.getDelta();
-        if( main.model ) main.model.update( delta );
+        //var delta = clock.getDelta();
+        if( main.model ) main.model.update( d ); //delta );
         
     },
 
-    render: function () {
+    render: function ( time ) {
 
         requestAnimationFrame( view.render );
 
         TWEEN.update();
 
-        t.now = ( typeof performance === 'undefined' ? Date : performance ).now();
+        t.now = time;// !== undefined ? time : 0;//( typeof performance === 'undefined' ? Date : performance ).now();
+
         t.delta = t.now - t.then;
 
         if ( t.delta > t.inter ) {
 
             t.then = t.now - ( t.delta % t.inter );
 
-            view.update( t.delta );
+            view.update( t.delta * 0.001 );
 
             renderer.render( scene, camera );
 
@@ -332,9 +333,9 @@ view = {
             Cineon: THREE.CineonToneMapping
         };
 
-        clock = new THREE.Clock();
+        //clock = new THREE.Clock();
 
-        t.then = ( typeof performance === 'undefined' ? Date : performance ).now();
+        //t.then = ( typeof performance === 'undefined' ? Date : performance ).now();
         t.inter = 1000 / this.framerate;
 
         view.testMobile();
