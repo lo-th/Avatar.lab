@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<!-- saved from url=(0014)about:internet -->
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Avatar 2.0</title>
+<meta name="Description" content="" />
+<meta name="Keywords"  content="" />
+<meta http-equiv="X-UA-Compatible" content="IE=11" />
+<meta http-equiv="Pragma" content="no-cache">
+<link rel="shortcut icon" href="favicon.ico">
+<style>
+* { 
+    margin: 0; padding: 0; border: 0; 
+    /*-webkit-user-select: none; -khtml-user-select: none; -moz-user-select: -moz-none; -o-user-select: none; 
+    box-sizing:border-box; -moz-box-sizing:border-box; -webkit-box-sizing:border-box;
+    user-select: none;*/
+}
+body { 
+
+    font-family: Consolas, Monaco, monospace;
+    font-size: 11px; 
+    color:#000;
+    background: #222322; 
+    /*overflow:hidden; */
+    
+}
+
+#container{ position:absolute; width:100%; height:100%; }
+
+</style>
+
+
+<script src="src/libs/three.js"></script>
+<script src="src/libs/sea3d.js"></script>
+<script src="src/libs/tween.js"></script>
+<script src="src/libs/uil.js"></script>
+
+<script src="src/libs/capture/CCapture.js"></script>
+<script src="src/libs/capture/Whammy.js"></script>
+<script src="src/libs/capture/download.js"></script>
+
+<script src="src/controls/OrbitControls.js"></script>
+<script src="src/controls/TransformControls.js"></script>
+
+<script src="src/shaders/BleachBypassShader.js"></script>
+<script src="src/shaders/ConvolutionShader.js"></script>
+<script src="src/shaders/CopyShader.js"></script>
+
+<script src="src/postprocessing/EffectComposer.js"></script>
+<script src="src/postprocessing/SSAARenderPass.js"></script>
+<script src="src/postprocessing/RenderPass.js"></script>
+<script src="src/postprocessing/BloomPass.js"></script>
+<script src="src/postprocessing/TexturePass.js"></script>
+<script src="src/postprocessing/ShaderPass.js"></script>
+<script src="src/postprocessing/MaskPass.js"></script>
+
+<script src="src/BVHLoader.js"></script>
+<script src="src/Model.js"></script>
+
+<script src="src/math.js"></script>
+<script src="src/pool.js"></script>
+<script src="src/shader.js"></script>
+<script src="src/skeleton.js"></script>
+<script src="src/view.js"></script>
+<script src="src/gui.js"></script>
+<script src="src/main.js"></script>
+
+</head>
+<body>
+<div id='container'></div>
+
+<script>
+
+var container = document.getElementById('container');
+main.init( container );
+
+</script>
+</body>
+</html>
