@@ -2075,6 +2075,8 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 	Object.assign( Quaternion.prototype, {
 
+		isQuaternion: true,
+
 		set: function ( x, y, z, w ) {
 
 			this._x = x;
@@ -12790,6 +12792,9 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 				data.envMap = this.envMap.toJSON( meta ).uuid;
 				data.reflectivity = this.reflectivity; // Scale behind envMap
 
+				if ( this.combine !== undefined ) data.combine = this.combine;
+				if ( this.envMapIntensity !== undefined ) data.envMapIntensity = this.envMapIntensity;
+
 			}
 
 			if ( this.gradientMap && this.gradientMap.isTexture ) {
@@ -14629,7 +14634,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 					boxMesh = new Mesh(
 						new BoxBufferGeometry( 1, 1, 1 ),
 						new ShaderMaterial( {
-							uniforms: ShaderLib.cube.uniforms,
+							uniforms: UniformsUtils.clone( ShaderLib.cube.uniforms ),
 							vertexShader: ShaderLib.cube.vertexShader,
 							fragmentShader: ShaderLib.cube.fragmentShader,
 							side: BackSide,
@@ -14663,7 +14668,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 					planeMesh = new Mesh(
 						new PlaneBufferGeometry( 2, 2 ),
 						new ShaderMaterial( {
-							uniforms: ShaderLib.background.uniforms,
+							uniforms: UniformsUtils.clone( ShaderLib.background.uniforms ),
 							vertexShader: ShaderLib.background.vertexShader,
 							fragmentShader: ShaderLib.background.fragmentShader,
 							side: FrontSide,
@@ -15638,14 +15643,22 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 	 * @author Artur Trzesiok
 	 */
 
-	function Texture3D( data, width, height, depth, format, type, mapping, wrapS, wrapT, magFilter, minFilter, anisotropy, encoding ) {
+	function Texture3D( data, width, height, depth ) {
 
-		Texture.call( this, null, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy, encoding );
+		// We're going to add .setXXX() methods for setting properties later.
+		// Users can still set in Texture3D directly.
+		//
+		//	var texture = new THREE.Texture3D( data, width, height, depth );
+		// 	texture.anisotropy = 16;
+		//
+		// See #14839
+
+		Texture.call( this, null );
 
 		this.image = { data: data, width: width, height: height, depth: depth };
 
-		this.magFilter = magFilter !== undefined ? magFilter : NearestFilter;
-		this.minFilter = minFilter !== undefined ? minFilter : NearestFilter;
+		this.magFilter = NearestFilter;
+		this.minFilter = NearestFilter;
 
 		this.generateMipmaps = false;
 		this.flipY = false;
@@ -31769,7 +31782,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 
 		this.color.copy( source.color );
 
-		this.matcap = source.map;
+		this.matcap = source.matcap;
 
 		this.map = source.map;
 
@@ -37158,6 +37171,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 			if ( json.fog !== undefined ) material.fog = json.fog;
 			if ( json.flatShading !== undefined ) material.flatShading = json.flatShading;
 			if ( json.blending !== undefined ) material.blending = json.blending;
+			if ( json.combine !== undefined ) material.combine = json.combine;
 			if ( json.side !== undefined ) material.side = json.side;
 			if ( json.opacity !== undefined ) material.opacity = json.opacity;
 			if ( json.transparent !== undefined ) material.transparent = json.transparent;
@@ -37291,6 +37305,7 @@ var define, process, UIL, WebGL2RenderingContext, module, exports, CCapture, ato
 			if ( json.specularMap !== undefined ) material.specularMap = getTexture( json.specularMap );
 
 			if ( json.envMap !== undefined ) material.envMap = getTexture( json.envMap );
+			if ( json.envMapIntensity !== undefined ) material.envMapIntensity = json.envMapIntensity;
 
 			if ( json.reflectivity !== undefined ) material.reflectivity = json.reflectivity;
 
@@ -66254,575 +66269,21 @@ Object.defineProperties( THREE.OrbitControls.prototype, {
 } );
 
 /**
- * @author alteredq / http://alteredqualia.com/
- */
-
-THREE.EffectComposer = function ( renderer, renderTarget ) {
-
-	this.renderer = renderer;
-
-	if ( renderTarget === undefined ) {
-
-		var parameters = {
-			minFilter: THREE.LinearFilter,
-			magFilter: THREE.LinearFilter,
-			format: THREE.RGBAFormat,
-			stencilBuffer: false
-		};
-
-		var size = renderer.getDrawingBufferSize();
-		renderTarget = new THREE.WebGLRenderTarget( size.width, size.height, parameters );
-		renderTarget.texture.name = 'EffectComposer.rt1';
-
-	}
-
-	this.renderTarget1 = renderTarget;
-	this.renderTarget2 = renderTarget.clone();
-	this.renderTarget2.texture.name = 'EffectComposer.rt2';
-
-	this.writeBuffer = this.renderTarget1;
-	this.readBuffer = this.renderTarget2;
-
-	this.passes = [];
-
-	// dependencies
-
-	if ( THREE.CopyShader === undefined ) {
-
-		console.error( 'THREE.EffectComposer relies on THREE.CopyShader' );
-
-	}
-
-	if ( THREE.ShaderPass === undefined ) {
-
-		console.error( 'THREE.EffectComposer relies on THREE.ShaderPass' );
-
-	}
-
-	this.copyPass = new THREE.ShaderPass( THREE.CopyShader );
-
-};
-
-Object.assign( THREE.EffectComposer.prototype, {
-
-	swapBuffers: function () {
-
-		var tmp = this.readBuffer;
-		this.readBuffer = this.writeBuffer;
-		this.writeBuffer = tmp;
-
-	},
-
-	addPass: function ( pass ) {
-
-		this.passes.push( pass );
-
-		var size = this.renderer.getDrawingBufferSize();
-		pass.setSize( size.width, size.height );
-
-	},
-
-	insertPass: function ( pass, index ) {
-
-		this.passes.splice( index, 0, pass );
-
-	},
-
-	render: function ( delta ) {
-
-		var maskActive = false;
-
-		var pass, i, il = this.passes.length;
-
-		for ( i = 0; i < il; i ++ ) {
-
-			pass = this.passes[ i ];
-
-			if ( pass.enabled === false ) continue;
-
-			pass.render( this.renderer, this.writeBuffer, this.readBuffer, delta, maskActive );
-
-			if ( pass.needsSwap ) {
-
-				if ( maskActive ) {
-
-					var context = this.renderer.context;
-
-					context.stencilFunc( context.NOTEQUAL, 1, 0xffffffff );
-
-					this.copyPass.render( this.renderer, this.writeBuffer, this.readBuffer, delta );
-
-					context.stencilFunc( context.EQUAL, 1, 0xffffffff );
-
-				}
-
-				this.swapBuffers();
-
-			}
-
-			if ( THREE.MaskPass !== undefined ) {
-
-				if ( pass instanceof THREE.MaskPass ) {
-
-					maskActive = true;
-
-				} else if ( pass instanceof THREE.ClearMaskPass ) {
-
-					maskActive = false;
-
-				}
-
-			}
-
-		}
-
-	},
-
-	reset: function ( renderTarget ) {
-
-		if ( renderTarget === undefined ) {
-
-			var size = this.renderer.getDrawingBufferSize();
-
-			renderTarget = this.renderTarget1.clone();
-			renderTarget.setSize( size.width, size.height );
-
-		}
-
-		this.renderTarget1.dispose();
-		this.renderTarget2.dispose();
-		this.renderTarget1 = renderTarget;
-		this.renderTarget2 = renderTarget.clone();
-
-		this.writeBuffer = this.renderTarget1;
-		this.readBuffer = this.renderTarget2;
-
-	},
-
-	setSize: function ( width, height ) {
-
-		this.renderTarget1.setSize( width, height );
-		this.renderTarget2.setSize( width, height );
-
-		for ( var i = 0; i < this.passes.length; i ++ ) {
-
-			this.passes[ i ].setSize( width, height );
-
-		}
-
-	}
-
-} );
-
-
-THREE.Pass = function () {
-
-	// if set to true, the pass is processed by the composer
-	this.enabled = true;
-
-	// if set to true, the pass indicates to swap read and write buffer after rendering
-	this.needsSwap = true;
-
-	// if set to true, the pass clears its buffer before rendering
-	this.clear = false;
-
-	// if set to true, the result of the pass is rendered to screen
-	this.renderToScreen = false;
-
-};
-
-Object.assign( THREE.Pass.prototype, {
-
-	setSize: function ( width, height ) {},
-
-	render: function ( renderer, writeBuffer, readBuffer, delta, maskActive ) {
-
-		console.error( 'THREE.Pass: .render() must be implemented in derived pass.' );
-
-	}
-
-} );
-
-/**
-*
-* Supersample Anti-Aliasing Render Pass
-*
-* @author bhouston / http://clara.io/
-*
-* This manual approach to SSAA re-renders the scene ones for each sample with camera jitter and accumulates the results.
-*
-* References: https://en.wikipedia.org/wiki/Supersampling
-*
-*/
-
-THREE.SSAARenderPass = function ( scene, camera, clearColor, clearAlpha ) {
-
-	THREE.Pass.call( this );
-
-	this.scene = scene;
-	this.camera = camera;
-
-	this.sampleLevel = 4; // specified as n, where the number of samples is 2^n, so sampleLevel = 4, is 2^4 samples, 16.
-	this.unbiased = true;
-
-	// as we need to clear the buffer in this pass, clearColor must be set to something, defaults to black.
-	this.clearColor = ( clearColor !== undefined ) ? clearColor : 0x000000;
-	this.clearAlpha = ( clearAlpha !== undefined ) ? clearAlpha : 0;
-
-	if ( THREE.CopyShader === undefined ) console.error( "THREE.SSAARenderPass relies on THREE.CopyShader" );
-
-	var copyShader = THREE.CopyShader;
-	this.copyUniforms = THREE.UniformsUtils.clone( copyShader.uniforms );
-
-	this.copyMaterial = new THREE.ShaderMaterial(	{
-		uniforms: this.copyUniforms,
-		vertexShader: copyShader.vertexShader,
-		fragmentShader: copyShader.fragmentShader,
-		premultipliedAlpha: true,
-		transparent: true,
-		blending: THREE.AdditiveBlending,
-		depthTest: false,
-		depthWrite: false
-	} );
-
-	this.camera2 = new THREE.OrthographicCamera( - 1, 1, 1, - 1, 0, 1 );
-	this.scene2	= new THREE.Scene();
-	this.quad2 = new THREE.Mesh( new THREE.PlaneBufferGeometry( 2, 2 ), this.copyMaterial );
-	this.quad2.frustumCulled = false; // Avoid getting clipped
-	this.scene2.add( this.quad2 );
-
-};
-
-THREE.SSAARenderPass.prototype = Object.assign( Object.create( THREE.Pass.prototype ), {
-
-	constructor: THREE.SSAARenderPass,
-
-	dispose: function () {
-
-		if ( this.sampleRenderTarget ) {
-
-			this.sampleRenderTarget.dispose();
-			this.sampleRenderTarget = null;
-
-		}
-
-	},
-
-	setSize: function ( width, height ) {
-
-		if ( this.sampleRenderTarget )	this.sampleRenderTarget.setSize( width, height );
-
-	},
-
-	render: function ( renderer, writeBuffer, readBuffer ) {
-
-		if ( ! this.sampleRenderTarget ) {
-
-			this.sampleRenderTarget = new THREE.WebGLRenderTarget( readBuffer.width, readBuffer.height, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat } );
-			this.sampleRenderTarget.texture.name = "SSAARenderPass.sample";
-
-		}
-
-		var jitterOffsets = THREE.SSAARenderPass.JitterVectors[ Math.max( 0, Math.min( this.sampleLevel, 5 ) ) ];
-
-		var autoClear = renderer.autoClear;
-		renderer.autoClear = false;
-
-		var oldClearColor = renderer.getClearColor().getHex();
-		var oldClearAlpha = renderer.getClearAlpha();
-
-		var baseSampleWeight = 1.0 / jitterOffsets.length;
-		var roundingRange = 1 / 32;
-		this.copyUniforms[ "tDiffuse" ].value = this.sampleRenderTarget.texture;
-
-		var width = readBuffer.width, height = readBuffer.height;
-
-		// render the scene multiple times, each slightly jitter offset from the last and accumulate the results.
-		for ( var i = 0; i < jitterOffsets.length; i ++ ) {
-
-			var jitterOffset = jitterOffsets[ i ];
-
-			if ( this.camera.setViewOffset ) {
-
-				this.camera.setViewOffset( width, height,
-					jitterOffset[ 0 ] * 0.0625, jitterOffset[ 1 ] * 0.0625,   // 0.0625 = 1 / 16
-					width, height );
-
-			}
-
-			var sampleWeight = baseSampleWeight;
-
-			if ( this.unbiased ) {
-
-				// the theory is that equal weights for each sample lead to an accumulation of rounding errors.
-				// The following equation varies the sampleWeight per sample so that it is uniformly distributed
-				// across a range of values whose rounding errors cancel each other out.
-
-				var uniformCenteredDistribution = ( - 0.5 + ( i + 0.5 ) / jitterOffsets.length );
-				sampleWeight += roundingRange * uniformCenteredDistribution;
-
-			}
-
-			this.copyUniforms[ "opacity" ].value = sampleWeight;
-			renderer.setClearColor( this.clearColor, this.clearAlpha );
-			renderer.render( this.scene, this.camera, this.sampleRenderTarget, true );
-
-			if ( i === 0 ) {
-
-				renderer.setClearColor( 0x000000, 0.0 );
-
-			}
-
-			renderer.render( this.scene2, this.camera2, this.renderToScreen ? null : writeBuffer, ( i === 0 ) );
-
-		}
-
-		if ( this.camera.clearViewOffset ) this.camera.clearViewOffset();
-
-		renderer.autoClear = autoClear;
-		renderer.setClearColor( oldClearColor, oldClearAlpha );
-
-	}
-
-} );
-
-
-// These jitter vectors are specified in integers because it is easier.
-// I am assuming a [-8,8) integer grid, but it needs to be mapped onto [-0.5,0.5)
-// before being used, thus these integers need to be scaled by 1/16.
-//
-// Sample patterns reference: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476218%28v=vs.85%29.aspx?f=255&MSPPError=-2147217396
-THREE.SSAARenderPass.JitterVectors = [
-	[
-		[ 0, 0 ]
-	],
-	[
-		[ 4, 4 ], [ - 4, - 4 ]
-	],
-	[
-		[ - 2, - 6 ], [ 6, - 2 ], [ - 6, 2 ], [ 2, 6 ]
-	],
-	[
-		[ 1, - 3 ], [ - 1, 3 ], [ 5, 1 ], [ - 3, - 5 ],
-		[ - 5, 5 ], [ - 7, - 1 ], [ 3, 7 ], [ 7, - 7 ]
-	],
-	[
-		[ 1, 1 ], [ - 1, - 3 ], [ - 3, 2 ], [ 4, - 1 ],
-		[ - 5, - 2 ], [ 2, 5 ], [ 5, 3 ], [ 3, - 5 ],
-		[ - 2, 6 ], [ 0, - 7 ], [ - 4, - 6 ], [ - 6, 4 ],
-		[ - 8, 0 ], [ 7, - 4 ], [ 6, 7 ], [ - 7, - 8 ]
-	],
-	[
-		[ - 4, - 7 ], [ - 7, - 5 ], [ - 3, - 5 ], [ - 5, - 4 ],
-		[ - 1, - 4 ], [ - 2, - 2 ], [ - 6, - 1 ], [ - 4, 0 ],
-		[ - 7, 1 ], [ - 1, 2 ], [ - 6, 3 ], [ - 3, 3 ],
-		[ - 7, 6 ], [ - 3, 6 ], [ - 5, 7 ], [ - 1, 7 ],
-		[ 5, - 7 ], [ 1, - 6 ], [ 6, - 5 ], [ 4, - 4 ],
-		[ 2, - 3 ], [ 7, - 2 ], [ 1, - 1 ], [ 4, - 1 ],
-		[ 2, 1 ], [ 6, 2 ], [ 0, 4 ], [ 4, 4 ],
-		[ 2, 5 ], [ 7, 5 ], [ 5, 6 ], [ 3, 7 ]
-	]
-];
-
-/**
- * @author alteredq / http://alteredqualia.com/
- */
-
-THREE.RenderPass = function ( scene, camera, overrideMaterial, clearColor, clearAlpha ) {
-
-	THREE.Pass.call( this );
-
-	this.scene = scene;
-	this.camera = camera;
-
-	this.overrideMaterial = overrideMaterial;
-
-	this.clearColor = clearColor;
-	this.clearAlpha = ( clearAlpha !== undefined ) ? clearAlpha : 0;
-
-	this.clear = true;
-	this.clearDepth = false;
-	this.needsSwap = false;
-
-};
-
-THREE.RenderPass.prototype = Object.assign( Object.create( THREE.Pass.prototype ), {
-
-	constructor: THREE.RenderPass,
-
-	render: function ( renderer, writeBuffer, readBuffer, delta, maskActive ) {
-
-		var oldAutoClear = renderer.autoClear;
-		renderer.autoClear = false;
-
-		this.scene.overrideMaterial = this.overrideMaterial;
-
-		var oldClearColor, oldClearAlpha;
-
-		if ( this.clearColor ) {
-
-			oldClearColor = renderer.getClearColor().getHex();
-			oldClearAlpha = renderer.getClearAlpha();
-
-			renderer.setClearColor( this.clearColor, this.clearAlpha );
-
-		}
-
-		if ( this.clearDepth ) {
-
-			renderer.clearDepth();
-
-		}
-
-		renderer.render( this.scene, this.camera, this.renderToScreen ? null : readBuffer, this.clear );
-
-		if ( this.clearColor ) {
-
-			renderer.setClearColor( oldClearColor, oldClearAlpha );
-
-		}
-
-		this.scene.overrideMaterial = null;
-		renderer.autoClear = oldAutoClear;
-	}
-
-} );
-
-/**
- * @author alteredq / http://alteredqualia.com/
- */
-
-THREE.ShaderPass = function ( shader, textureID ) {
-
-	THREE.Pass.call( this );
-
-	this.textureID = ( textureID !== undefined ) ? textureID : "tDiffuse";
-
-	if ( shader instanceof THREE.ShaderMaterial ) {
-
-		this.uniforms = shader.uniforms;
-
-		this.material = shader;
-
-	} else if ( shader ) {
-
-		this.uniforms = THREE.UniformsUtils.clone( shader.uniforms );
-
-		this.material = new THREE.ShaderMaterial( {
-
-			defines: Object.assign( {}, shader.defines ),
-			uniforms: this.uniforms,
-			vertexShader: shader.vertexShader,
-			fragmentShader: shader.fragmentShader
-
-		} );
-
-	}
-
-	this.camera = new THREE.OrthographicCamera( - 1, 1, 1, - 1, 0, 1 );
-	this.scene = new THREE.Scene();
-
-	this.quad = new THREE.Mesh( new THREE.PlaneBufferGeometry( 2, 2 ), null );
-	this.quad.frustumCulled = false; // Avoid getting clipped
-	this.scene.add( this.quad );
-
-};
-
-THREE.ShaderPass.prototype = Object.assign( Object.create( THREE.Pass.prototype ), {
-
-	constructor: THREE.ShaderPass,
-
-	render: function( renderer, writeBuffer, readBuffer, delta, maskActive ) {
-
-		if ( this.uniforms[ this.textureID ] ) {
-
-			this.uniforms[ this.textureID ].value = readBuffer.texture;
-
-		}
-
-		this.quad.material = this.material;
-
-		if ( this.renderToScreen ) {
-
-			renderer.render( this.scene, this.camera );
-
-		} else {
-
-			renderer.render( this.scene, this.camera, writeBuffer, this.clear );
-
-		}
-
-	}
-
-} );
-
-/**
- * @author alteredq / http://alteredqualia.com/
+ * @author herzig / http://github.com/herzig
+ * @author Mugen87 / https://github.com/Mugen87
  *
- * Full-screen textured quad shader
+ * Description: reads BVH files and outputs a single THREE.Skeleton and an THREE.AnimationClip
+ *
+ * Currently only supports bvh files containing a single root.
+ *
  */
 
-THREE.CopyShader = {
+THREE.BVHLoader = function ( manager ) {
 
-	uniforms: {
-
-		"tDiffuse": { value: null },
-		"opacity":  { value: 1.0 }
-
-	},
-
-	vertexShader: [
-
-		"varying vec2 vUv;",
-
-		"void main() {",
-
-			"vUv = uv;",
-			"gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
-
-		"}"
-
-	].join( "\n" ),
-
-	fragmentShader: [
-
-		"uniform float opacity;",
-
-		"uniform sampler2D tDiffuse;",
-
-		"varying vec2 vUv;",
-
-		"void main() {",
-
-			"vec4 texel = texture2D( tDiffuse, vUv );",
-			"gl_FragColor = opacity * texel;",
-
-		"}"
-
-	].join( "\n" )
-
-};
-
-/**
-* @author herzig / http://github.com/herzig
-*
-* Description: reads BVH files and outputs a single THREE.Skeleton and an THREE.AnimationClip
-*
-* Currently only supports bvh files containing a single root.
-*
-*/
-
-THREE.BVHLoader = function( manager ) {
-
-	this.numFrames = 0;
-	this.frameTime = 0;
-
-
+	this.manager = ( manager !== undefined ) ? manager : THREE.DefaultLoadingManager;
 
 	this.animateBonePositions = true;
 	this.animateBoneRotations = true;
-
-	this.manager = ( manager !== undefined ) ? manager : THREE.DefaultLoadingManager;
 
 };
 
@@ -66835,33 +66296,30 @@ THREE.BVHLoader.prototype = {
 		var scope = this;
 
 		var loader = new THREE.FileLoader( scope.manager );
-		loader.setResponseType( 'arraybuffer' );
-		loader.load( url, function( buffer ) {
+		loader.load( url, function ( text ) {
 
-			onLoad( scope.parse( buffer ) );
+			onLoad( scope.parse( text ) );
 
 		}, onProgress, onError );
 
 	},
 
-	parse: function ( buffer ) {
-
-		var self = this;
-        var hipToFoot = 0;
+	parse: function ( text ) {
 
 		/*
 			reads a string array (lines) from a BVH file
 			and outputs a skeleton structure including motion data
 
 			returns thee root node:
-			{ name: "", channels: [], children: [] }
+			{ name: '', channels: [], children: [] }
 		*/
 		function readBvh( lines ) {
 
 			// read model structure
-			if ( nextLine( lines ) !== "HIERARCHY" ) {
 
-				throw "HIERARCHY expected";
+			if ( nextLine( lines ) !== 'HIERARCHY' ) {
+
+				console.error( 'THREE.BVHLoader: HIERARCHY expected.' );
 
 			}
 
@@ -66869,40 +66327,41 @@ THREE.BVHLoader.prototype = {
 			var root = readNode( lines, nextLine( lines ), list );
 
 			// read motion data
-			if ( nextLine( lines ) != "MOTION" ) {
 
-				throw "MOTION  expected";
+			if ( nextLine( lines ) !== 'MOTION' ) {
+
+				console.error( 'THREE.BVHLoader: MOTION expected.' );
 
 			}
 
 			// number of frames
+
 			var tokens = nextLine( lines ).split( /[\s]+/ );
 			var numFrames = parseInt( tokens[ 1 ] );
+
 			if ( isNaN( numFrames ) ) {
 
-				throw "Failed to read number of frames.";
+				console.error( 'THREE.BVHLoader: Failed to read number of frames.' );
 
 			}
-
-			self.numFrames = numFrames;
 
 			// frame time
+
 			tokens = nextLine( lines ).split( /[\s]+/ );
 			var frameTime = parseFloat( tokens[ 2 ] );
+
 			if ( isNaN( frameTime ) ) {
 
-				throw "Failed to read frame time.";
+				console.error( 'THREE.BVHLoader: Failed to read frame time.' );
 
 			}
 
-			self.frameTime = frameTime;
-
 			// read frame data line by line
-			for ( var i = 0; i < numFrames; ++ i ) {
+
+			for ( var i = 0; i < numFrames; i ++ ) {
 
 				tokens = nextLine( lines ).split( /[\s]+/ );
-
-				readFrameData( tokens, i * frameTime, root, list );
+				readFrameData( tokens, i * frameTime, root );
 
 			}
 
@@ -66923,64 +66382,62 @@ THREE.BVHLoader.prototype = {
 		function readFrameData( data, frameTime, bone ) {
 
 			// end sites have no motion data
-			if ( bone.type === "ENDSITE" ) {
 
-				return;
-
-			}
+			if ( bone.type === 'ENDSITE' ) return;
 
 			// add keyframe
+
 			var keyframe = {
 				time: frameTime,
-				position: { x: 0, y: 0, z: 0 },
-				rotation: new THREE.Quaternion(),
+				position: new THREE.Vector3(),
+				rotation: new THREE.Quaternion()
 			};
 
 			bone.frames.push( keyframe );
 
 			var quat = new THREE.Quaternion();
 
-            var torad = 0.0174532925199432957; // Math.PI / 180
-
 			var vx = new THREE.Vector3( 1, 0, 0 );
 			var vy = new THREE.Vector3( 0, 1, 0 );
 			var vz = new THREE.Vector3( 0, 0, 1 );
 
 			// parse values for each channel in node
-			for ( var i = 0; i < bone.channels.length; ++ i ) {
+
+			for ( var i = 0; i < bone.channels.length; i ++ ) {
 
 				switch ( bone.channels[ i ] ) {
 
-				case "Xposition":
-					keyframe.position.x = parseFloat( data.shift().trim() );
-					break;
-				case "Yposition":
-					keyframe.position.y = parseFloat( data.shift().trim() );
-					break;
-				case "Zposition":
-					keyframe.position.z = parseFloat( data.shift().trim() );
-					break;
-				case "Xrotation":
-					quat.setFromAxisAngle( vx, parseFloat( data.shift().trim() ) * torad );
-					keyframe.rotation.multiply( quat );
-					break;
-				case "Yrotation":
-					quat.setFromAxisAngle( vy, parseFloat( data.shift().trim() ) * torad );
-					keyframe.rotation.multiply( quat );
-					break;
-				case "Zrotation":
-					quat.setFromAxisAngle( vz, parseFloat( data.shift().trim() ) * torad );
-					keyframe.rotation.multiply( quat );
-					break;
-				default:
-					throw "invalid channel type";
+					case 'Xposition':
+						keyframe.position.x = parseFloat( data.shift().trim() );
+						break;
+					case 'Yposition':
+						keyframe.position.y = parseFloat( data.shift().trim() );
+						break;
+					case 'Zposition':
+						keyframe.position.z = parseFloat( data.shift().trim() );
+						break;
+					case 'Xrotation':
+						quat.setFromAxisAngle( vx, parseFloat( data.shift().trim() ) * Math.PI / 180 );
+						keyframe.rotation.multiply( quat );
+						break;
+					case 'Yrotation':
+						quat.setFromAxisAngle( vy, parseFloat( data.shift().trim() ) * Math.PI / 180 );
+						keyframe.rotation.multiply( quat );
+						break;
+					case 'Zrotation':
+						quat.setFromAxisAngle( vz, parseFloat( data.shift().trim() ) * Math.PI / 180 );
+						keyframe.rotation.multiply( quat );
+						break;
+					default:
+						console.warn( 'THREE.BVHLoader: Invalid channel type.' );
 
 				}
 
 			}
 
 			// parse child nodes
-			for ( var i = 0; i < bone.children.length; ++ i ) {
+
+			for ( var i = 0; i < bone.children.length; i ++ ) {
 
 				readFrameData( data, frameTime, bone.children[ i ] );
 
@@ -66988,29 +66445,28 @@ THREE.BVHLoader.prototype = {
 
 		}
 
-
-
 		/*
 		 Recursively parses the HIERACHY section of the BVH file
 
 		 - lines: all lines of the file. lines are consumed as we go along.
-		 - firstline: line containing the node type and name e.g. "JOINT hip"
+		 - firstline: line containing the node type and name e.g. 'JOINT hip'
 		 - list: collects a flat list of nodes
 
 		 returns: a BVH node including children
 		*/
-		function readNode( lines, firstline, list, isEnd ) {
+		function readNode( lines, firstline, list ) {
 
-			var node = { name: "", type: "", frames: [] };
+			var node = { name: '', type: '', frames: [] };
 			list.push( node );
 
-			// parse node type and name.
+			// parse node type and name
+
 			var tokens = firstline.split( /[\s]+/ );
 
-			if ( tokens[ 0 ].toUpperCase() === "END" && tokens[ 1 ].toUpperCase() === "SITE" ) {
+			if ( tokens[ 0 ].toUpperCase() === 'END' && tokens[ 1 ].toUpperCase() === 'SITE' ) {
 
-				node.type = "ENDSITE";
-				node.name = "ENDSITE"; // bvh end sites have no name
+				node.type = 'ENDSITE';
+				node.name = 'ENDSITE'; // bvh end sites have no name
 
 			} else {
 
@@ -67019,54 +66475,51 @@ THREE.BVHLoader.prototype = {
 
 			}
 
-			if ( nextLine( lines ) != "{" ) {
+			if ( nextLine( lines ) !== '{' ) {
 
-				throw "Expected opening { after type & name";
+				console.error( 'THREE.BVHLoader: Expected opening { after type & name' );
 
 			}
 
 			// parse OFFSET
+
 			tokens = nextLine( lines ).split( /[\s]+/ );
 
-			if ( tokens[ 0 ] !== "OFFSET" ) {
+			if ( tokens[ 0 ] !== 'OFFSET' ) {
 
-				throw "Expected OFFSET, but got: " + tokens[ 0 ];
-
-			}
-
-			if ( tokens.length != 4 ) {
-
-				throw "OFFSET: Invalid number of values";
+				console.error( 'THREE.BVHLoader: Expected OFFSET but got: ' + tokens[ 0 ] );
 
 			}
 
-			var offset = {
-				x: parseFloat( tokens[ 1 ] ),
-				y: parseFloat( tokens[ 2 ] ),
-				z: parseFloat( tokens[ 3 ] )
-			};
+			if ( tokens.length !== 4 ) {
+
+				console.error( 'THREE.BVHLoader: Invalid number of values for OFFSET.' );
+
+			}
+
+			var offset = new THREE.Vector3(
+				parseFloat( tokens[ 1 ] ),
+				parseFloat( tokens[ 2 ] ),
+				parseFloat( tokens[ 3 ] )
+			);
 
 			if ( isNaN( offset.x ) || isNaN( offset.y ) || isNaN( offset.z ) ) {
 
-				throw "OFFSET: Invalid values";
+				console.error( 'THREE.BVHLoader: Invalid values of OFFSET.' );
 
 			}
 
 			node.offset = offset;
 
-            if( node.name == 'lThigh' || node.name == 'lShin' || node.name == 'lFoot' || isEnd ) hipToFoot += offset.y;
-            //if(  node.name == 'lShin' || node.name == 'lFoot' || isEnd ) hipToFoot += offset.y;
-
-            //if(isEnd) console.log( hipToFoot );
-
 			// parse CHANNELS definitions
-			if ( node.type != "ENDSITE" ) {
+
+			if ( node.type !== 'ENDSITE' ) {
 
 				tokens = nextLine( lines ).split( /[\s]+/ );
 
-				if ( tokens[ 0 ] != "CHANNELS" ) {
+				if ( tokens[ 0 ] !== 'CHANNELS' ) {
 
-					throw "Expected CHANNELS definition";
+					console.error( 'THREE.BVHLoader: Expected CHANNELS definition.' );
 
 				}
 
@@ -67076,41 +66529,25 @@ THREE.BVHLoader.prototype = {
 
 			}
 
-            var isEndFoot = node.name == 'lFoot' ? true : false;
-
 			// read children
+
 			while ( true ) {
 
 				var line = nextLine( lines );
 
-				if ( line === "}" ) {
+				if ( line === '}' ) {
 
 					return node;
 
 				} else {
 
-					node.children.push( readNode( lines, line, list, isEndFoot ) );
+					node.children.push( readNode( lines, line, list ) );
 
 				}
 
 			}
 
 		}
-
-        function getHeight(){
-
-            /*var node, name;
-
-            for(var i=0; i<list.length; i++ ){
-
-                node = list[i];
-                name = node.name;
-
-            }*/
-
-
-            
-        }
 
 		/*
 			recursively converts the internal bvh node structure to a THREE.Bone hierarchy
@@ -67120,18 +66557,23 @@ THREE.BVHLoader.prototype = {
 
 			returns the root THREE.Bone
 		*/
-
 		function toTHREEBone( source, list ) {
 
 			var bone = new THREE.Bone();
+
+			///
+			bone.userData.offset = source.offset;
+			///
+
+
 			list.push( bone );
 
 			bone.position.add( source.offset );
 			bone.name = source.name;
 
-			if ( source.type != "ENDSITE" ) {
+			if ( source.type !== 'ENDSITE' ) {
 
-				for ( var i = 0; i < source.children.length; ++ i ) {
+				for ( var i = 0; i < source.children.length; i ++ ) {
 
 					bone.add( toTHREEBone( source.children[ i ], list ) );
 
@@ -67150,24 +66592,26 @@ THREE.BVHLoader.prototype = {
 
 			returns: a THREE.AnimationClip containing position and quaternion tracks
 		*/
-
 		function toTHREEAnimation( bones ) {
 
 			var tracks = [];
 
 			// create a position and quaternion animation track for each node
-			for ( var i = 0; i < bones.length; ++ i ) {
+
+			for ( var i = 0; i < bones.length; i ++ ) {
 
 				var bone = bones[ i ];
 
-				if ( bone.type == "ENDSITE" ) continue;
+				if ( bone.type === 'ENDSITE' )
+					continue;
 
 				// track data
+
 				var times = [];
 				var positions = [];
 				var rotations = [];
 
-				for ( var j = 0; j < bone.frames.length; ++ j ) {
+				for ( var j = 0; j < bone.frames.length; j ++ ) {
 
 					var frame = bone.frames[ j ];
 
@@ -67175,6 +66619,7 @@ THREE.BVHLoader.prototype = {
 
 					// the animation system animates the position property,
 					// so we have to add the joint offset to all values
+
 					positions.push( frame.position.x + bone.offset.x );
 					positions.push( frame.position.y + bone.offset.y );
 					positions.push( frame.position.z + bone.offset.z );
@@ -67188,25 +66633,19 @@ THREE.BVHLoader.prototype = {
 
 				if ( scope.animateBonePositions ) {
 
-					tracks.push( new THREE.VectorKeyframeTrack(
-						".bones[" + bone.name + "].position", times, positions ) );
+					tracks.push( new THREE.VectorKeyframeTrack( '.bones[' + bone.name + '].position', times, positions ) );
 
 				}
 
 				if ( scope.animateBoneRotations ) {
 
-					tracks.push( new THREE.QuaternionKeyframeTrack(
-						".bones[" + bone.name + "].quaternion", times, rotations ) );
+					tracks.push( new THREE.QuaternionKeyframeTrack( '.bones[' + bone.name + '].quaternion', times, rotations ) );
 
 				}
 
 			}
 
-			var clip = new THREE.AnimationClip( "animation", - 1, tracks );
-			clip.frames = self.numFrames;
-			clip.frameTime = self.frameTime;
-
-			return clip;
+			return new THREE.AnimationClip( 'animation', - 1, tracks );
 
 		}
 
@@ -67224,15 +66663,6 @@ THREE.BVHLoader.prototype = {
 
 		var scope = this;
 
-		// convert buffer to ASCII string
-		var text = "";
-		var raw = new Uint8Array( buffer );
-		for ( var i = 0; i < raw.length; ++ i ) {
-
-			text += String.fromCharCode( raw[ i ] );
-
-		}
-
 		var lines = text.split( /[\r\n]+/g );
 
 		var bones = readBvh( lines );
@@ -67244,320 +66674,414 @@ THREE.BVHLoader.prototype = {
 
 		return {
 			skeleton: new THREE.Skeleton( threeBones ),
-			clip: threeClip,
-            leg: hipToFoot
+			clip: threeClip
 		};
 
-	},
+	}
 
+};
 
-	// ADDON
+/**
+* @author lth / https://github.com/lo-th
+*
+* Description: reads BVH files and outputs a single THREE.Skeleton and an THREE.AnimationClip
+*
+*/
 
+THREE.BVHLoader.prototype.parseData = function( data ){
 
-	findTime: function( times, value ){
+    if (typeof data === 'string' || data instanceof String) return this.parse( data );
+    else return this.parse( new TextDecoder("utf-8").decode( new Uint8Array( data ) ) );
 
-        var lng = times.length, i, t, n = 0;
+};
 
-        for( i=0; i<lng; i++ ){
+THREE.BVHLoader.prototype.findTime = function( times, value ){
 
-            t = times[i];
-            if( t > value ) break;
-            n = i;
+    var lng = times.length, i, t, n = 0;
 
-        }
+    for( i=0; i<lng; i++ ){
 
-        return n;
-
-    },
-
-    applyToModel: function ( model, clip, tPose, seq, leg ) {
-
-        leg = leg || 1;
-        var hipos = model.userData.posY || 1;
-        var ratio = hipos / Math.abs( leg );
-
-        var lng, lngB, lngS, n, i, j, k, bone, name, tmptime, tracks;
-
-
-
-        var modelName = model.name;
-
-        //console.log(model.position)
-        //model.position.copy(position)
-
-        var utils = THREE.AnimationUtils;
-
-        var bones = model.skeleton.bones;
-        var baseTracks = clip.tracks;
-        var nodeTracks = []; // 0:position, 1:quaternion
-
-        var times, positions, resultPositions, rotations, resultRotations, pos, rot;
-
-        var matrixWorldInv = new THREE.Matrix4().getInverse( model.matrixWorld );
-
-       // var pp = new THREE.Vector3(0,0,0).setFromMatrixPosition( model.matrixWorld );
-        //console.log(pp)
-        //if(rootMatrix) matrixWorldInv = rootMatrix.clone();
-
-        var globalQuat = new THREE.Quaternion();
-        var globalPos = new THREE.Vector3();
-        var globalMtx = new THREE.Matrix4();
-        var localMtx = new THREE.Matrix4();
-        var parentMtx;
-        
-        var resultQuat = new THREE.Quaternion();
-        var resultPos = new THREE.Vector3();
-        var resultScale = new THREE.Vector3();
-
-       // var testPos = new THREE.Vector3();
-       // var hipPos = new THREE.Vector3();
-        //var minY = 10000;
-        //var maxY = 0;
-        //var distance = 0;
-
-
-        //py = py || 0;
-
-        
-
-        //rootMtx.setPosition( new THREE.Vector3(0,0,0) );
-
-        // 1° get bones worldMatxix in Tpose
-
-        if( tPose === undefined ){
-
-            tPose = [];
-            lngB = bones.length;
-
-            for( i = 0; i < lngB; i++ ){ 
-
-                tPose[i] = bones[ i ].matrixWorld.clone();
-
-            }
-
-        }
-
-        // 2° find same name bones track 
-
-        lngB = bones.length
-
-        for ( i = 0; i < lngB; ++ i ) {
-
-            bone = bones[ i ];
-            name = bone.name;
-
-            if( name === 'root' ) bone.matrixWorld.copy( tPose[i] );
-            if( name === 'hip' ) bone.matrixWorld.copy( tPose[i] );
-
-            nodeTracks[ i ] = this.findBoneTrack( name, baseTracks );
-
-        }
-
-        // 3° divide track in sequency
-
-        var fp = Math.floor(clip.frameTime * 1000);
-        var frametime = 1/30;
-        if( fp === 33 ) frametime = 1/30;
-        if( fp === 16 ) frametime = 1/60;
-        if( fp === 11 ) frametime = 1/90;
-        if( fp === 8 ) frametime = 1/120;
-
-        //clip.frameTime;
-
-        var clipName = clip.name;
-        var clipStart = 0;
-        var clipEnd = 0;
-        var timeStart = 0;
-        var timeEnd = 0;
-        var startId = 0;
-        var endId = 0;
-        var clipLoop = 1;
-
-        var hipId;
-
-        var sequences = [[ clip.name, 0, clip.frames ]];
-
-        if(seq.length) sequences = seq;
-
-        lngS = sequences.length;
-
-        for( k = 0; k < lngS; k++ ){
-
-            clipName = sequences[k][0];
-            clipStart = sequences[k][1];
-            clipEnd = sequences[k][2];//+1;
-            clipLoop = sequences[k][3] !== undefined ? sequences[k][3] : 1;
-
-            timeStart = clipStart * frametime;
-            timeEnd = clipEnd * frametime;
-
-            tracks = [];
-
-            // 4° copy track to track with correct matrix
-
-            lngB = bones.length;
-
-            for ( i = 0; i < lngB; i ++ ) {
-
-                bone = bones[ i ];
-                name = bone.name;
-
-                if( name === 'hip' ) hipId = i;
-
-                if( nodeTracks[i].length === 2 ){
-
-                    parentMtx = bone.parent ? bone.parent.matrixWorld : matrixWorldInv;
-
-                    // rotation
-
-                    rot = nodeTracks[i][1];
-
-                    startId = this.findTime( baseTracks[rot].times, timeStart );
-                    endId = this.findTime( baseTracks[rot].times, timeEnd ) + 1;
-
-                    tmptime = utils.arraySlice( baseTracks[rot].times, startId, endId );
-                    rotations = utils.arraySlice( baseTracks[rot].values, startId * 4, endId * 4 );
-
-                    resultRotations = [];
-                    times = [];
-
-
-                    lng  = tmptime.length;
-
-                    for( j = 0; j < lng; j ++ ){
-
-                        times[j] = tmptime[j] - timeStart;
-
-                        n = j*4;
-
-                        globalQuat.set( rotations[n], rotations[n+1], rotations[n+2], rotations[n+3] );
-
-                        globalMtx.identity().makeRotationFromQuaternion( globalQuat );
-                        globalMtx.multiply( tPose[i] );
-
-                        localMtx.identity().getInverse( parentMtx );
-                        localMtx.multiply( globalMtx );
-                        localMtx.decompose( resultPos, resultQuat, resultScale );
-
-                        resultQuat.normalize();
-
-                        resultRotations[n] = resultQuat.x;
-                        resultRotations[n+1] = resultQuat.y;
-                        resultRotations[n+2] = resultQuat.z;
-                        resultRotations[n+3] = resultQuat.w;
-
-                    }
-
-                    if( times.length > 0 ) tracks.push( new THREE.QuaternionKeyframeTrack( ".bones[" + name + "].quaternion", times, resultRotations ) );
-
-                }
-
-            }
-
-            // HIP position 
-
-            i = hipId;
-            bone = bones[ i ];
-            name = bone.name;
-
-            if( nodeTracks[i].length === 2 ){
-
-                parentMtx = bone.parent ? bone.parent.matrixWorld : matrixWorldInv;
-
-                pos = nodeTracks[i][0];
-                
-                startId = this.findTime( baseTracks[pos].times, timeStart );
-                endId = this.findTime( baseTracks[pos].times, timeEnd ) + 1;
-
-                tmptime = utils.arraySlice( baseTracks[pos].times, startId, endId );
-                positions = utils.arraySlice( baseTracks[pos].values, startId * 3, endId * 3 );
-
-                times = [];
-                resultPositions = [];
-
-                lng = tmptime.length;
-
-                for( j = 0; j < lng; j++ ){
-
-                    times[j] = tmptime[j] - timeStart;
-
-                    n = j*3;
-
-                    globalPos.set( positions[n], positions[n+1], positions[n+2] );
-                    globalPos.set( positions[n], positions[n+1] * ratio, positions[n+2] );
-                    //globalPos.multiplyScalar( ratio );
-
-                    globalMtx.identity();
-                    globalMtx.setPosition( globalPos );
-                   
-                    localMtx.identity().getInverse( parentMtx );
-                    localMtx.multiply( globalMtx );
-
-                    localMtx.decompose( resultPos, resultQuat, resultScale );
-
-                    resultPositions[n] = resultPos.x;
-                    resultPositions[n+1] = resultPos.y;
-                    resultPositions[n+2] = resultPos.z;
-
-                }
-
-                if( times.length > 0 ) tracks.push( new THREE.VectorKeyframeTrack( ".bones[" + name + "].position", times, resultPositions ) );
-
-            }
-
-
-
-
-            //}
-
-            // 5° apply new clip to model
-
-            //var newClip = new THREE.AnimationClip( clipName, timeEnd-timeStart, tracks );
-            var newClip = new THREE.AnimationClip( clipName, -1, tracks );
-            newClip.frameTime = frametime;
-            newClip.repeat = clipLoop === 1 ? true : false;
-            newClip.timeScale = 1;
-
-            model.addAnimation( newClip );
-
-            //console.log( ratio );
-
-           // if( clipName === 'idle'){ model.playw( 'idle', 1 ); }
-            //else model.play( 0 );
-
-
-
-            
-
-        }
-
-        // replace model
-        //model.position.copy( oldPosition );
-
-    },
-
-    findBoneTrack: function( name, tracks ){
-
-        var n, nodeName, type, result = [];
-        for ( var i = 0; i < tracks.length; ++ i ) {
-
-            n = tracks[i].name;
-            nodeName = n.substring( n.indexOf('[')+1, n.indexOf(']') );
-            type = n.substring( n.lastIndexOf('.')+1 );
-
-            if( name === nodeName ){
-                if(type === 'position') result[0] = i;
-                else result[1] = i;
-            } 
-
-        }
-
-        return result;
+        t = times[i];
+        if( t > value ) break;
+        n = i;
 
     }
 
+    return n;
 
 };
+
+
+THREE.BVHLoader.prototype.findSize = function( target, source ){
+
+    
+    
+    var sourceLegDistance = 0;
+    var p = [];
+
+    if( source.getBoneByName('rShin').userData.offset ){
+
+        p[1] = new THREE.Vector3();
+        p[2] = source.getBoneByName('rShin').userData.offset.clone();
+        p[3] = source.getBoneByName('rFoot').userData.offset.clone();
+
+        sourceLegDistance = p[1].distanceTo( p[2] ) + p[1].distanceTo( p[3] );
+
+    } else {
+
+        var i = source.bones.length, b, n;
+        var v = new THREE.Vector3();
+
+        // force skeleton update
+        source.getBoneByName('hip').updateMatrixWorld( true );
+
+        while(i--){
+            b = source.bones[i];
+            n = -1;
+            if( b.name === 'rThigh' ) n = 1;
+            if( b.name === 'rShin' ) n = 2;
+            if( b.name === 'rFoot' ) n = 3;
+
+            if(n!==-1) p[n] = b.getWorldPosition( v.clone() );
+
+        }
+
+        sourceLegDistance = p[1].distanceTo( p[2] ) + p[2].distanceTo( p[3] );
+    }
+
+    //sourceLegDistance = -(p[2].y + p[3].y)
+
+
+    var targetLegDistance = this.sizes[ target.name ];
+
+    var ratio = (targetLegDistance / sourceLegDistance).toFixed(2) * 1.0;
+
+    //console.log(sourceLegDistance, targetLegDistance, ratio)
+
+    return ratio;
+
+};
+
+THREE.BVHLoader.prototype.addModel = function( model, options ){
+
+    if( this.tPose === undefined ) this.tPose = {};
+    if( this.sizes === undefined ) this.sizes = {};
+
+    var name = model.name;
+    var bones = model.skeleton.bones;
+    var lng = bones.length, i, b, n;
+    var v = new THREE.Vector3();
+    var pose = [], p = [];
+
+    for( i = 0; i < lng; i++ ){ 
+
+        b = bones[ i ];
+
+
+
+        // get id of parent bones
+        if( b.parent ) b.userData['id'] = bones.indexOf( b.parent );
+
+        if( options !== undefined ) this.renameBone( b, options.names );
+
+        n = -1;
+        if( b.name === 'rThigh' ) n = 1;
+        if( b.name === 'rShin' ) n = 2;
+        if( b.name === 'rFoot' ) n = 3; 
+        if( n!==-1 ) p[n] = b.getWorldPosition( v.clone() )
+
+
+
+        pose.push( b.matrixWorld.clone() );
+
+    }
+
+    this.tPose[name] = pose;
+    this.sizes[name] = p[1].distanceTo( p[2] ) + p[2].distanceTo( p[3] );
+
+};
+
+THREE.BVHLoader.prototype.renameBone = function( bone, names ){
+
+    for( var n in names ){
+        if( bone.name === n ) bone.name = names[n];
+    }
+
+};
+
+THREE.BVHLoader.prototype.applyToModel = function ( model, result, seq, Pos ) {
+
+    //leg = leg || 1;
+    //var hipos = model.userData.posY || 1;
+    //var ratio = hipos / Math.abs( leg );
+    //var model = this.model;
+
+    var tPose = this.tPose[ model.name ];
+
+    var decal = Pos || new THREE.Vector3();
+
+    var ratio = this.findSize( model, result.skeleton );
+
+    var clip = result.clip;
+
+    var lng, lngB, lngS, n, i, j, k, bone, name, tmptime, tracks; 
+
+    var utils = THREE.AnimationUtils;
+
+    var bones = model.skeleton.bones;
+    var baseTracks = clip.tracks;
+    var nodeTracks = []; // 0:position, 1:quaternion
+
+    var times, positions, resultPositions, rotations, resultRotations, pos, rot;
+
+    var matrixWorldInv = new THREE.Matrix4().getInverse( model.matrixWorld );
+
+   // var pp = new THREE.Vector3(0,0,0).setFromMatrixPosition( model.matrixWorld );
+    //console.log(pp)
+    //if(rootMatrix) matrixWorldInv = rootMatrix.clone();
+
+    var globalQuat = new THREE.Quaternion();
+    var globalPos = new THREE.Vector3();
+    var globalMtx = new THREE.Matrix4();
+    var localMtx = new THREE.Matrix4();
+    var parentMtx;
+    
+    var resultQuat = new THREE.Quaternion();
+    var resultPos = new THREE.Vector3();
+    var resultScale = new THREE.Vector3();
+
+    // 1° get bones worldMatxix in Tpose
+
+   // if( this.tPose === undefined ) 
+
+    
+
+
+    /*if( tPose === undefined ){
+
+        tPose = [];
+        lngB = bones.length;
+
+        for( i = 0; i < lngB; i++ ){ 
+
+            bone = bones[ i ];
+            name = bone.name;
+
+            if(name === 'spine1') bone.name = 'abdomen';
+            if(name === 'spine2') bone.name = 'chest';
+
+            //if( name !== 'hip' && name !== 'root' ) bone.rotation.set(0,0,0);
+            //if( name === 'lThigh' || name === 'rThigh' ) bone.rotation.set(0,0,0);
+
+            console.log( name, bone.rotation )
+            tPose[i] = bone.matrixWorld.clone();
+
+        }
+
+    }*/
+
+    // 2° find same name bones track 
+
+    lngB = bones.length
+
+    for ( i = 0; i < lngB; ++ i ) {
+
+        bone = bones[ i ];
+        name = bone.name;
+
+        if( name === 'root' ) bone.matrixWorld.copy( tPose[i] );
+        if( name === 'hip' ) bone.matrixWorld.copy( tPose[i] );
+
+        nodeTracks[ i ] = this.findBoneTrack( name, baseTracks );
+
+    }
+
+    // 3° divide track in sequency
+
+    var fp = Math.floor(clip.frameTime * 1000);
+    var frametime = 1/30;
+    if( fp === 33 ) frametime = 1/30;
+    if( fp === 16 ) frametime = 1/60;
+    if( fp === 11 ) frametime = 1/90;
+    if( fp === 8 ) frametime = 1/120;
+
+    //clip.frameTime;
+
+    var clipName = clip.name;
+    var clipStart = 0;
+    var clipEnd = 0;
+    var timeStart = 0;
+    var timeEnd = 0;
+    var startId = 0;
+    var endId = 0;
+    var clipLoop = 1;
+
+    var hipId;
+
+    var sequences = [[ clip.name, 0, clip.frames ]];
+
+    if(seq !== undefined ) if(seq.length) sequences = seq;
+
+    lngS = sequences.length;
+
+    for( k = 0; k < lngS; k++ ){
+
+        clipName = sequences[k][0];
+        clipStart = sequences[k][1];
+        clipEnd = sequences[k][2];//+1;
+        clipLoop = sequences[k][3] !== undefined ? sequences[k][3] : 1;
+
+        timeStart = clipStart * frametime;
+        timeEnd = clipEnd * frametime;
+
+        tracks = [];
+
+        // 4° copy track to track with correct matrix
+
+        lngB = bones.length;
+
+        for ( i = 0; i < lngB; i ++ ) {
+
+            bone = bones[ i ];
+            name = bone.name;
+
+            if( name === 'hip' ) hipId = i;
+
+            if( nodeTracks[i].length === 2 ){
+
+                //parentMtx = bone.parent ? bone.parent.matrixWorld : matrixWorldInv;
+                parentMtx = bone.parent ? tPose[ bone.userData.id ] : matrixWorldInv;
+
+                // rotation
+
+                rot = nodeTracks[i][1];
+
+                startId = this.findTime( baseTracks[rot].times, timeStart );
+                endId = this.findTime( baseTracks[rot].times, timeEnd ) + 1;
+
+                tmptime = utils.arraySlice( baseTracks[rot].times, startId, endId );
+                rotations = utils.arraySlice( baseTracks[rot].values, startId * 4, endId * 4 );
+
+                resultRotations = [];
+                times = [];
+
+                lng  = tmptime.length;
+
+                for( j = 0; j < lng; j ++ ){
+
+                    times[j] = tmptime[j] - timeStart;
+
+                    n = j*4;
+
+                    globalQuat.set( rotations[n], rotations[n+1], rotations[n+2], rotations[n+3] );
+
+                    globalMtx.identity().makeRotationFromQuaternion( globalQuat );
+                    globalMtx.multiply( tPose[i] );
+
+                    localMtx.identity().getInverse( parentMtx );
+                    localMtx.multiply( globalMtx );
+                    localMtx.decompose( resultPos, resultQuat, resultScale );
+
+                    resultQuat.normalize();
+
+                    resultRotations[n] = resultQuat.x;
+                    resultRotations[n+1] = resultQuat.y;
+                    resultRotations[n+2] = resultQuat.z;
+                    resultRotations[n+3] = resultQuat.w;
+
+                }
+
+                if( times.length > 0 ) tracks.push( new THREE.QuaternionKeyframeTrack( ".bones[" + name + "].quaternion", times, resultRotations ) );
+
+            }
+
+        }
+
+        // HIP position 
+
+        i = hipId;
+        bone = bones[ i ];
+        name = bone.name;
+
+        if( nodeTracks[i].length === 2 ){
+
+            parentMtx = bone.parent ? bone.parent.matrixWorld : matrixWorldInv;
+
+            pos = nodeTracks[i][0];
+            
+            startId = this.findTime( baseTracks[pos].times, timeStart );
+            endId = this.findTime( baseTracks[pos].times, timeEnd ) + 1;
+
+            tmptime = utils.arraySlice( baseTracks[pos].times, startId, endId );
+            positions = utils.arraySlice( baseTracks[pos].values, startId * 3, endId * 3 );
+
+            times = [];
+            resultPositions = [];
+
+            lng = tmptime.length;
+
+            for( j = 0; j < lng; j++ ){
+
+                times[j] = tmptime[j] - timeStart;
+
+                n = j*3;
+
+                globalPos.set( positions[n], positions[n+1], positions[n+2] );
+                globalPos.multiplyScalar( ratio );
+                globalPos.add(decal);
+
+                globalMtx.identity();
+                globalMtx.setPosition( globalPos );
+               
+                localMtx.identity().getInverse( parentMtx );
+                localMtx.multiply( globalMtx );
+
+                localMtx.decompose( resultPos, resultQuat, resultScale );
+
+                resultPositions[n] = resultPos.x;
+                resultPositions[n+1] = resultPos.y;
+                resultPositions[n+2] = resultPos.z;
+
+            }
+
+            if( times.length > 0 ) tracks.push( new THREE.VectorKeyframeTrack( ".bones[" + name + "].position", times, resultPositions ) );
+
+        }
+
+        // 5° apply new clip to model
+
+        var newClip = new THREE.AnimationClip( clipName, -1, tracks );
+        newClip.frameTime = frametime;
+        newClip.repeat = clipLoop === 1 ? true : false;
+        newClip.timeScale = 1;
+
+        if(model.addAnimation) model.addAnimation( newClip );
+        else return newClip;
+
+    }
+
+}
+
+THREE.BVHLoader.prototype.findBoneTrack = function( name, tracks ){
+
+    var n, nodeName, type, result = [];
+    for ( var i = 0; i < tracks.length; ++ i ) {
+
+        n = tracks[i].name;
+        nodeName = n.substring( n.indexOf('[')+1, n.indexOf(']') );
+        type = n.substring( n.lastIndexOf('.')+1 );
+
+        if( name === nodeName ){
+            if(type === 'position') result[0] = i;
+            else result[1] = i;
+        } 
+
+    }
+
+    return result;
+
+}
+
 
 'use strict';
 
@@ -67857,8 +67381,9 @@ var pool = ( function () {
 
             switch( type ){
 
-                case 'sea': case 'z': case 'bvh': case 'BVH': xhr.responseType = "arraybuffer"; break;
+                case 'sea': case 'z': xhr.responseType = "arraybuffer"; break;
                 case 'jpg': case 'png': xhr.responseType = 'blob'; break;
+                case 'bvh': case 'BVH': xhr.responseType = 'text'; break;
 
             }
             
@@ -68413,23 +67938,6 @@ var Model = function ( type, meshs, morph ) {
 
     this.colorBonesName = {
 
-        /*'0x000000': 'root', '0x1600e3': 'hip', '0x2600d8': 'abdomen', '0x86005e': 'chest', '0x880053': 'neck', '0xcb001d': 'head',
-        '0x0018ff': 'rThigh', '0x0014ff': 'rShin', '0x0015ff': 'rFoot', '0x0013ff': 'rToe',
-        '0x1818e7': 'lThigh', '0x1414eb': 'lShin', '0x1515ec': 'lFoot', '0x1313ee': 'lToe',
-        '0x0022ff': 'rCollar', '0x0020ff': 'rShldr', '0x001eff': 'rForeArm', '0x005dff': 'rHand',
-        '0x2222dd': 'lCollar', '0x2020df': 'lShldr', '0x1e1ee1': 'lForeArm', '0x5d5da4': 'lHand',
-        
-        '0x3e3ec1': 'lfinger00', '0x4343be': 'lfinger01', '0x4141c0': 'lfinger02',
-        '0x003eff': 'rfinger00', '0x0043ff': 'rfinger01', '0x0041ff': 'rfinger02',
-        '0x5454ab': 'lfinger10', '0x0056ff': 'rfinger11', '0x0058ff': 'rfinger12',
-        '0x0054ff': 'rfinger10', '0x5656a9': 'lfinger11', '0x5858a7': 'lfinger12',
-        '0x4e4eb1': 'lfinger20', '0x5050af': 'lfinger21', '0x0052ff': 'rfinger22',
-        '0x004eff': 'rfinger20', '0x0050ff': 'rfinger21', '0x5252ad': 'lfinger22',
-        '0x4848b7': 'lfinger30', '0x4a4ab5': 'lfinger31', '0x4c4cb3': 'lfinger32',
-        '0x0048ff': 'rfinger30', '0x004aff': 'rfinger31', '0x004cff': 'rfinger32',
-        '0x4242bd': 'lfinger40', '0x4444bb': 'lfinger41', '0x4646b9': 'lfinger42',
-        '0x0042ff': 'rfinger40', '0x0044ff': 'rfinger41', '0x0046ff': 'rfinger42',*/
-
         '0x000000': 'root', '0x2d00c8': 'hip', '0x5200b2': 'abdomen', '0xa3001c': 'chest', '0xa20015': 'neck', '0xb00002': 'head',
         '0x0030ff': 'rThigh', '0x002bff': 'rShin', '0x0029ff': 'rFoot', '0x0022ff': 'rToe',
         '0x3030cf': 'lThigh', '0x2b2bd6': 'lShin', '0x2929d8': 'lFoot', '0x2222dd': 'lToe',
@@ -68572,7 +68080,7 @@ var Model = function ( type, meshs, morph ) {
     this.eye_r = meshs.eye_right.clone();
 
     this.eye_r.up.set(0,0,1);
-    console.log(this.eye_l.up, this.eye_r.up)
+    //console.log(this.eye_l.up, this.eye_r.up)
 
     this.eyes.add( this.eye_l );
     this.eyes.add( this.eye_r );
@@ -68592,6 +68100,23 @@ var Model = function ( type, meshs, morph ) {
     this.setMaterial();
 
     this.mesh.position.copy( this.position );
+
+
+    if( this.type === 'man' ){
+        if(meshs.man_extra){ 
+            this.extra = meshs.man_extra.clone();
+            this.extra.material = this.mats[0];
+            this.extra.skeleton = this.mesh.skeleton;
+            this.root.add( this.extra );
+        }
+    } else {
+        if(meshs.man_extra){ 
+            this.extra = meshs.woman_extra.clone();
+            this.extra.material = this.mats[0];
+            this.extra.skeleton = this.mesh.skeleton;
+            this.root.add( this.extra );
+        }
+    }
 
 }
 
@@ -68980,6 +68505,8 @@ Model.prototype = {
         // define new material type
         this.mats = [ new THREE[ mtype ](), new THREE[ mtype ](), new THREE.MeshBasicMaterial() ];
 
+        // skin material 
+
         m = this.mats[0];
 
         if( m.color !== undefined ) m.color = new THREE.Color( set.color );
@@ -68995,7 +68522,7 @@ Model.prototype = {
         if( m.opacity !== undefined ) m.opacity = set.opacity;
         if( m.transparent !== undefined ) m.transparent = true;
         if( m.reflectivity !== undefined ) m.reflectivity = set.reflectivity;
-        if( m.shadowSide !== undefined ) m.shadowSide = true;
+        if( m.shadowSide !== undefined ) m.shadowSide = false;
         
         //if( m.alphaTest !== undefined ) m.alphaTest = 0.9;
         
@@ -69003,12 +68530,14 @@ Model.prototype = {
         if( m.skinning !== undefined ) m.skinning = true;
         if( ( m.morphTargets !== undefined) && this.isWithMorph ) m.morphTargets = true;
 
+        // eye material 
+
         m = this.mats[1];
 
         if( m.normalScale !== undefined ) m.normalScale = new THREE.Vector2( 0.5, 0.5 );
         if( m.metalness !== undefined ) m.metalness = 0.5;
         if( m.roughness !== undefined ) m.roughness = 0.1;
-        if( m.reflectivity !== undefined ) m.reflectivity = 0.5;
+        if( m.reflectivity !== undefined ) m.reflectivity = 1.0;//0.5;
 
         // apply material
         this.mesh.material = this.mats[0];
@@ -69531,9 +69060,10 @@ view = {
         //scene.add( transformer );
 
         // renderer.setClearColor( 0xff3333, 1 );
+        renderer.setClearColor( 0x232323, 1 );
 
-        if( this.isMobile ) renderer.setClearColor( 0x333333, 1 );
-        else renderer.setClearColor( 0x000000, 0 );
+        //if( this.isMobile ) renderer.setClearColor( 0x232323, 1 );
+        //else renderer.setClearColor( 0x000000, 0 );
 
         window.addEventListener( 'resize', this.resize, false );
 
@@ -69577,8 +69107,9 @@ view = {
 
             if( view.isGrid ) return;
 
-            grid = new THREE.GridHelper( 50, 20, 0xFFFFFF, 0xAAAAAA );
-            grid.material = new THREE.LineBasicMaterial( { vertexColors: THREE.VertexColors, transparent:true, opacity:0.25 } );
+            grid = new THREE.GridHelper( 200, 20, 0xFFFFFF, 0x505050 );
+            grid.material = new THREE.LineBasicMaterial( { vertexColors: THREE.VertexColors, transparent:true, opacity:0.25, depthTest:true, depthWrite:false } );
+
             scene.add( grid );
             view.isGrid = true;
 
@@ -69670,10 +69201,9 @@ view = {
             renderer.shadowMap.soft = view.isMobile ? false : true;
             renderer.shadowMap.type = view.isMobile ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
 
-            plane = new THREE.Mesh( new THREE.PlaneBufferGeometry( 200, 200, 1, 1 ), new THREE.ShadowMaterial({opacity:0.4}) );
+            plane = new THREE.Mesh( new THREE.PlaneBufferGeometry( 200, 200, 1, 1 ), new THREE.ShadowMaterial({opacity:0.3, depthTest:true, depthWrite:false }) );
             plane.geometry.applyMatrix( new THREE.Matrix4().makeRotationX( -Math.PI*0.5 ) );
-            plane.position.y = 0.5;
-            //plane.position.y = -62;
+            plane.position.y = 0.1;
             plane.castShadow = false;
             plane.receiveShadow = true;
             follow.add( plane );
@@ -69877,46 +69407,6 @@ view = {
     
 
 
-    // SHADER HACK
-
-    /*uniformPush : function( type, name, value ){
-
-        type = type || 'physical';
-        THREE.ShaderLib[type].uniforms[name] = value;
-        THREE['Mesh' + 'Standard' + 'Material'][name] = value;
-
-    },
-
-    shaderRemplace : function( type, shad, word, re ){
-
-        type = type || 'physical';
-        shad = shad || 'fragment';
-
-        THREE.ShaderLib[type][shad+'Shader'] = THREE.ShaderLib[type][shad+'Shader'].replace(word, re);
-
-    },
-
-    shaderPush : function( type, shad, add ){
-
-        type = type || 'physical';
-        shad = shad || 'fragment';
-
-        add.push(" ");
-        THREE.ShaderLib[type][shad+'Shader'] = add.join("\n") + THREE.ShaderLib[type][shad+'Shader'];
-
-    },
-
-    shaderMain : function( type, shad, add ){
-
-        type = type || 'physical';
-        shad = shad || 'fragment';
-
-        add.push("} ");
-
-        THREE.ShaderLib[type][shad+'Shader'] = THREE.ShaderLib[type][shad+'Shader'].substring( 0, THREE.ShaderLib[type][shad+'Shader'].length-2 );
-        THREE.ShaderLib[type][shad+'Shader'] += add.join("\n");
-
-    },*/
 
     // CAMERA AUTO CONTROL
 
@@ -70109,7 +69599,7 @@ var isOpen = false;
 
 var selectColor = '#db0bfa'
 
-var BB = [ 'X', 'VIEW', 'VIDEO', 'ANIMATION', 'MATERIAL', 'BONES' ];
+var BB = [ 'X', 'VIEW', 'ANIMATION', 'MATERIAL', 'BONES', 'VIDEO' ];
 
 var isMan = true;
 
@@ -70128,10 +69618,11 @@ gui = {
         switch( current ){
             //case 'close':  break;
             case 'view': gui.select(1); break;
-            case 'video': gui.select(2); break;
-            case 'animation': gui.select(3); break;
-            case 'material': gui.select(4); break;
-            case 'bones': gui.select(5); break;
+            
+            case 'animation': gui.select(2); break;
+            case 'material': gui.select(3); break;
+            case 'bones': gui.select(4); break;
+            case 'video': gui.select(5); break;
            // case 5: gui.morph(); break;
         }
 
@@ -70239,10 +69730,11 @@ gui = {
         switch( id ){
             case 0: gui.close(); break;
             case 1: gui.view(); break;
-            case 2: gui.video(); break;
-            case 3: gui.animation(); break;
-            case 4: gui.material(); break;
-            case 5: gui.bones(); break;
+            
+            case 2: gui.animation(); break;
+            case 3: gui.material(); break;
+            case 4: gui.bones(); break;
+            case 5: gui.video(); break;
            // case 5: gui.morph(); break;
         }
 
@@ -70653,7 +70145,7 @@ var main = ( function () {
 
 'use strict';
 
-var modelName = 'avatar2';//.tjs
+var modelName = 'avatar_test';//.tjs
 var envmame = 'studio';
 var path = './assets/'
 
@@ -70776,6 +70268,11 @@ main = {
         man = new Model( 'man', meshs, isMorph );
         woman = new Model( 'wom', meshs, isMorph );
 
+
+        // define tpose for skin model
+        bvhLoader.addModel(man.mesh);
+        bvhLoader.addModel(woman.mesh);
+
         main.setTimescale();
 
         // animation
@@ -70859,18 +70356,21 @@ main = {
 
     loadAnimation: function ( data, name, type ) {
 
-        
+        // lzma compress format
+    	if( type === 'z' || type === 'hex' ) data = SEA3D.File.LZMAUncompress( data );
 
-    	if( type === 'z' ) data = SEA3D.File.LZMAUncompress( data );
+
+
+
         name = name.substring( 0, name.lastIndexOf('.') );
         //console.log( data, type )
-        main.applyAnimation( name, bvhLoader.parse( data ) );
+        main.applyAnimation( name, bvhLoader.parseData( data ) );
 
     },
 
-    addAnimation: function ( name, buffer ) {
+    addAnimation: function ( name, data ) {
 
-        main.applyAnimation( name, bvhLoader.parse( buffer ) );
+        main.applyAnimation( name, bvhLoader.parseData( data ) );
 
     },
 
@@ -70878,14 +70378,18 @@ main = {
 
         if( main.animations.indexOf( name ) !== -1 ) return;
 
-        var leg = result.leg || 0;
+        //var leg = result.leg || 0;
+
+        //leg = 0
+
+        //console.log(leg)
         //var manRatio = man.hipPos.y / Math.abs(leg);
         ///var womRatio = woman.hipPos.y / Math.abs(leg);
 
         result.clip.name = name;
         var bvhClip = result.clip;
         var seq = [];
-        var decale = man.hipPos.y;
+        //var decale = man.hipPos.y;
 
         if( name === 'base' ){
 
@@ -70904,11 +70408,14 @@ main = {
         }
 
        
-        man.reset();
-        woman.reset();
+        //man.reset();
+        //woman.reset();
 
-        bvhLoader.applyToModel( man.mesh, bvhClip, man.poseMatrix, seq, leg );
-        bvhLoader.applyToModel( woman.mesh, bvhClip, woman.poseMatrix, seq, leg );
+        bvhLoader.applyToModel( man.mesh, result, seq );
+        bvhLoader.applyToModel( woman.mesh, result, seq );
+
+        //bvhLoader.applyToModel( man.mesh, bvhClip, man.poseMatrix, seq, leg );
+        //bvhLoader.applyToModel( woman.mesh, bvhClip, woman.poseMatrix, seq, leg );
 
         if( seq.length ){
             for( var i=0; i < seq.length; i++ ){ 

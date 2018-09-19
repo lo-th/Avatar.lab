@@ -25,23 +25,6 @@ var Model = function ( type, meshs, morph ) {
 
     this.colorBonesName = {
 
-        /*'0x000000': 'root', '0x1600e3': 'hip', '0x2600d8': 'abdomen', '0x86005e': 'chest', '0x880053': 'neck', '0xcb001d': 'head',
-        '0x0018ff': 'rThigh', '0x0014ff': 'rShin', '0x0015ff': 'rFoot', '0x0013ff': 'rToe',
-        '0x1818e7': 'lThigh', '0x1414eb': 'lShin', '0x1515ec': 'lFoot', '0x1313ee': 'lToe',
-        '0x0022ff': 'rCollar', '0x0020ff': 'rShldr', '0x001eff': 'rForeArm', '0x005dff': 'rHand',
-        '0x2222dd': 'lCollar', '0x2020df': 'lShldr', '0x1e1ee1': 'lForeArm', '0x5d5da4': 'lHand',
-        
-        '0x3e3ec1': 'lfinger00', '0x4343be': 'lfinger01', '0x4141c0': 'lfinger02',
-        '0x003eff': 'rfinger00', '0x0043ff': 'rfinger01', '0x0041ff': 'rfinger02',
-        '0x5454ab': 'lfinger10', '0x0056ff': 'rfinger11', '0x0058ff': 'rfinger12',
-        '0x0054ff': 'rfinger10', '0x5656a9': 'lfinger11', '0x5858a7': 'lfinger12',
-        '0x4e4eb1': 'lfinger20', '0x5050af': 'lfinger21', '0x0052ff': 'rfinger22',
-        '0x004eff': 'rfinger20', '0x0050ff': 'rfinger21', '0x5252ad': 'lfinger22',
-        '0x4848b7': 'lfinger30', '0x4a4ab5': 'lfinger31', '0x4c4cb3': 'lfinger32',
-        '0x0048ff': 'rfinger30', '0x004aff': 'rfinger31', '0x004cff': 'rfinger32',
-        '0x4242bd': 'lfinger40', '0x4444bb': 'lfinger41', '0x4646b9': 'lfinger42',
-        '0x0042ff': 'rfinger40', '0x0044ff': 'rfinger41', '0x0046ff': 'rfinger42',*/
-
         '0x000000': 'root', '0x2d00c8': 'hip', '0x5200b2': 'abdomen', '0xa3001c': 'chest', '0xa20015': 'neck', '0xb00002': 'head',
         '0x0030ff': 'rThigh', '0x002bff': 'rShin', '0x0029ff': 'rFoot', '0x0022ff': 'rToe',
         '0x3030cf': 'lThigh', '0x2b2bd6': 'lShin', '0x2929d8': 'lFoot', '0x2222dd': 'lToe',
@@ -184,7 +167,7 @@ var Model = function ( type, meshs, morph ) {
     this.eye_r = meshs.eye_right.clone();
 
     this.eye_r.up.set(0,0,1);
-    console.log(this.eye_l.up, this.eye_r.up)
+    //console.log(this.eye_l.up, this.eye_r.up)
 
     this.eyes.add( this.eye_l );
     this.eyes.add( this.eye_r );
@@ -204,6 +187,23 @@ var Model = function ( type, meshs, morph ) {
     this.setMaterial();
 
     this.mesh.position.copy( this.position );
+
+
+    if( this.type === 'man' ){
+        if(meshs.man_extra){ 
+            this.extra = meshs.man_extra.clone();
+            this.extra.material = this.mats[0];
+            this.extra.skeleton = this.mesh.skeleton;
+            this.root.add( this.extra );
+        }
+    } else {
+        if(meshs.man_extra){ 
+            this.extra = meshs.woman_extra.clone();
+            this.extra.material = this.mats[0];
+            this.extra.skeleton = this.mesh.skeleton;
+            this.root.add( this.extra );
+        }
+    }
 
 }
 
@@ -592,6 +592,8 @@ Model.prototype = {
         // define new material type
         this.mats = [ new THREE[ mtype ](), new THREE[ mtype ](), new THREE.MeshBasicMaterial() ];
 
+        // skin material 
+
         m = this.mats[0];
 
         if( m.color !== undefined ) m.color = new THREE.Color( set.color );
@@ -607,7 +609,7 @@ Model.prototype = {
         if( m.opacity !== undefined ) m.opacity = set.opacity;
         if( m.transparent !== undefined ) m.transparent = true;
         if( m.reflectivity !== undefined ) m.reflectivity = set.reflectivity;
-        if( m.shadowSide !== undefined ) m.shadowSide = true;
+        if( m.shadowSide !== undefined ) m.shadowSide = false;
         
         //if( m.alphaTest !== undefined ) m.alphaTest = 0.9;
         
@@ -615,12 +617,14 @@ Model.prototype = {
         if( m.skinning !== undefined ) m.skinning = true;
         if( ( m.morphTargets !== undefined) && this.isWithMorph ) m.morphTargets = true;
 
+        // eye material 
+
         m = this.mats[1];
 
         if( m.normalScale !== undefined ) m.normalScale = new THREE.Vector2( 0.5, 0.5 );
         if( m.metalness !== undefined ) m.metalness = 0.5;
         if( m.roughness !== undefined ) m.roughness = 0.1;
-        if( m.reflectivity !== undefined ) m.reflectivity = 0.5;
+        if( m.reflectivity !== undefined ) m.reflectivity = 1.0;//0.5;
 
         // apply material
         this.mesh.material = this.mats[0];

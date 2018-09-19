@@ -2,7 +2,7 @@ var main = ( function () {
 
 'use strict';
 
-var modelName = 'avatar2';//.tjs
+var modelName = 'avatar_test';//.tjs
 var envmame = 'studio';
 var path = './assets/'
 
@@ -125,6 +125,11 @@ main = {
         man = new Model( 'man', meshs, isMorph );
         woman = new Model( 'wom', meshs, isMorph );
 
+
+        // define tpose for skin model
+        bvhLoader.addModel(man.mesh);
+        bvhLoader.addModel(woman.mesh);
+
         main.setTimescale();
 
         // animation
@@ -208,18 +213,21 @@ main = {
 
     loadAnimation: function ( data, name, type ) {
 
-        
+        // lzma compress format
+    	if( type === 'z' || type === 'hex' ) data = SEA3D.File.LZMAUncompress( data );
 
-    	if( type === 'z' ) data = SEA3D.File.LZMAUncompress( data );
+
+
+
         name = name.substring( 0, name.lastIndexOf('.') );
         //console.log( data, type )
-        main.applyAnimation( name, bvhLoader.parse( data ) );
+        main.applyAnimation( name, bvhLoader.parseData( data ) );
 
     },
 
-    addAnimation: function ( name, buffer ) {
+    addAnimation: function ( name, data ) {
 
-        main.applyAnimation( name, bvhLoader.parse( buffer ) );
+        main.applyAnimation( name, bvhLoader.parseData( data ) );
 
     },
 
@@ -227,14 +235,18 @@ main = {
 
         if( main.animations.indexOf( name ) !== -1 ) return;
 
-        var leg = result.leg || 0;
+        //var leg = result.leg || 0;
+
+        //leg = 0
+
+        //console.log(leg)
         //var manRatio = man.hipPos.y / Math.abs(leg);
         ///var womRatio = woman.hipPos.y / Math.abs(leg);
 
         result.clip.name = name;
         var bvhClip = result.clip;
         var seq = [];
-        var decale = man.hipPos.y;
+        //var decale = man.hipPos.y;
 
         if( name === 'base' ){
 
@@ -253,11 +265,14 @@ main = {
         }
 
        
-        man.reset();
-        woman.reset();
+        //man.reset();
+        //woman.reset();
 
-        bvhLoader.applyToModel( man.mesh, bvhClip, man.poseMatrix, seq, leg );
-        bvhLoader.applyToModel( woman.mesh, bvhClip, woman.poseMatrix, seq, leg );
+        bvhLoader.applyToModel( man.mesh, result, seq );
+        bvhLoader.applyToModel( woman.mesh, result, seq );
+
+        //bvhLoader.applyToModel( man.mesh, bvhClip, man.poseMatrix, seq, leg );
+        //bvhLoader.applyToModel( woman.mesh, bvhClip, woman.poseMatrix, seq, leg );
 
         if( seq.length ){
             for( var i=0; i < seq.length; i++ ){ 

@@ -123,8 +123,9 @@ var pool = ( function () {
 
             switch( type ){
 
-                case 'sea': case 'z': case 'bvh': case 'BVH': xhr.responseType = "arraybuffer"; break;
+                case 'sea': case 'z': xhr.responseType = "arraybuffer"; break;
                 case 'jpg': case 'png': xhr.responseType = 'blob'; break;
+                case 'bvh': case 'BVH': xhr.responseType = 'text'; break;
 
             }
             

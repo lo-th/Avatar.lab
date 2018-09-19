@@ -370,9 +370,10 @@ view = {
         //scene.add( transformer );
 
         // renderer.setClearColor( 0xff3333, 1 );
+        renderer.setClearColor( 0x232323, 1 );
 
-        if( this.isMobile ) renderer.setClearColor( 0x333333, 1 );
-        else renderer.setClearColor( 0x000000, 0 );
+        //if( this.isMobile ) renderer.setClearColor( 0x232323, 1 );
+        //else renderer.setClearColor( 0x000000, 0 );
 
         window.addEventListener( 'resize', this.resize, false );
 
@@ -416,8 +417,9 @@ view = {
 
             if( view.isGrid ) return;
 
-            grid = new THREE.GridHelper( 50, 20, 0xFFFFFF, 0xAAAAAA );
-            grid.material = new THREE.LineBasicMaterial( { vertexColors: THREE.VertexColors, transparent:true, opacity:0.25 } );
+            grid = new THREE.GridHelper( 200, 20, 0xFFFFFF, 0x505050 );
+            grid.material = new THREE.LineBasicMaterial( { vertexColors: THREE.VertexColors, transparent:true, opacity:0.25, depthTest:true, depthWrite:false } );
+
             scene.add( grid );
             view.isGrid = true;
 
@@ -509,10 +511,9 @@ view = {
             renderer.shadowMap.soft = view.isMobile ? false : true;
             renderer.shadowMap.type = view.isMobile ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
 
-            plane = new THREE.Mesh( new THREE.PlaneBufferGeometry( 200, 200, 1, 1 ), new THREE.ShadowMaterial({opacity:0.4}) );
+            plane = new THREE.Mesh( new THREE.PlaneBufferGeometry( 200, 200, 1, 1 ), new THREE.ShadowMaterial({opacity:0.3, depthTest:true, depthWrite:false }) );
             plane.geometry.applyMatrix( new THREE.Matrix4().makeRotationX( -Math.PI*0.5 ) );
-            plane.position.y = 0.5;
-            //plane.position.y = -62;
+            plane.position.y = 0.1;
             plane.castShadow = false;
             plane.receiveShadow = true;
             follow.add( plane );
@@ -716,46 +717,6 @@ view = {
     
 
 
-    // SHADER HACK
-
-    /*uniformPush : function( type, name, value ){
-
-        type = type || 'physical';
-        THREE.ShaderLib[type].uniforms[name] = value;
-        THREE['Mesh' + 'Standard' + 'Material'][name] = value;
-
-    },
-
-    shaderRemplace : function( type, shad, word, re ){
-
-        type = type || 'physical';
-        shad = shad || 'fragment';
-
-        THREE.ShaderLib[type][shad+'Shader'] = THREE.ShaderLib[type][shad+'Shader'].replace(word, re);
-
-    },
-
-    shaderPush : function( type, shad, add ){
-
-        type = type || 'physical';
-        shad = shad || 'fragment';
-
-        add.push(" ");
-        THREE.ShaderLib[type][shad+'Shader'] = add.join("\n") + THREE.ShaderLib[type][shad+'Shader'];
-
-    },
-
-    shaderMain : function( type, shad, add ){
-
-        type = type || 'physical';
-        shad = shad || 'fragment';
-
-        add.push("} ");
-
-        THREE.ShaderLib[type][shad+'Shader'] = THREE.ShaderLib[type][shad+'Shader'].substring( 0, THREE.ShaderLib[type][shad+'Shader'].length-2 );
-        THREE.ShaderLib[type][shad+'Shader'] += add.join("\n");
-
-    },*/
 
     // CAMERA AUTO CONTROL
 

@@ -398,8 +398,8 @@ THREE.BVHLoader.prototype = {
 			}
 
 			var clip = new THREE.AnimationClip( "animation", - 1, tracks );
-			clip.frames = self.numFrames;
-			clip.frameTime = self.frameTime;
+			//clip.frames = self.numFrames;
+			//clip.frameTime = self.frameTime;
 
 			return clip;
 

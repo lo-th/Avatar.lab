@@ -10,7 +10,7 @@ var isOpen = false;
 
 var selectColor = '#db0bfa'
 
-var BB = [ 'X', 'VIEW', 'VIDEO', 'ANIMATION', 'MATERIAL', 'BONES' ];
+var BB = [ 'X', 'VIEW', 'ANIMATION', 'MATERIAL', 'BONES', 'VIDEO' ];
 
 var isMan = true;
 
@@ -29,10 +29,11 @@ gui = {
         switch( current ){
             //case 'close':  break;
             case 'view': gui.select(1); break;
-            case 'video': gui.select(2); break;
-            case 'animation': gui.select(3); break;
-            case 'material': gui.select(4); break;
-            case 'bones': gui.select(5); break;
+            
+            case 'animation': gui.select(2); break;
+            case 'material': gui.select(3); break;
+            case 'bones': gui.select(4); break;
+            case 'video': gui.select(5); break;
            // case 5: gui.morph(); break;
         }
 
@@ -140,10 +141,11 @@ gui = {
         switch( id ){
             case 0: gui.close(); break;
             case 1: gui.view(); break;
-            case 2: gui.video(); break;
-            case 3: gui.animation(); break;
-            case 4: gui.material(); break;
-            case 5: gui.bones(); break;
+            
+            case 2: gui.animation(); break;
+            case 3: gui.material(); break;
+            case 4: gui.bones(); break;
+            case 5: gui.video(); break;
            // case 5: gui.morph(); break;
         }
 
