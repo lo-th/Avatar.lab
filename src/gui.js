@@ -39,6 +39,8 @@ gui = {
 
     },
 
+    getDom: function () { return content; },
+
     init: function ( container ) {
 
         content = document.createElement( 'div' );

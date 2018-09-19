@@ -264,6 +264,8 @@ view = {
     getContent: function () { return content; },
     getMouse: function () { return mouse; },
 
+    getDom: function () { return renderer.domElement },
+
     getSetting: function () { return setting; },
 
     getWebGL: function ( force ) {

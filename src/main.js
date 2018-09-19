@@ -82,6 +82,39 @@ main = {
 
         main.loadModel();
 
+        var dom = view.getDom();//document.body;
+
+        dom.addEventListener( 'dragover', function(e){ e.preventDefault() }, false );
+        dom.addEventListener( 'dragend', function(e){ e.preventDefault() }, false );
+        dom.addEventListener( 'dragleave', function(e){ e.preventDefault()}, false );
+        dom.addEventListener( 'drop', main.dropAnimation, false );
+
+    },
+
+    dropAnimation: function ( e ){
+
+        e.preventDefault();
+
+        if (e.dataTransfer.items) {
+
+            var file = e.dataTransfer.files[0];
+
+        } else return;
+
+        var reader = new FileReader();
+        var fname = file.name;
+        var type = fname.substring(fname.lastIndexOf('.')+1, fname.length );
+
+        if( type === 'z' || type === 'hex' ) reader.readAsArrayBuffer( file );
+        else if ( type === 'bvh' || type === 'BVH' ) reader.readAsText( file );
+        else return;
+
+        reader.onload = function ( e ) {
+
+            main.loadAnimation( e.target.result, fname, type );
+
+        }.bind(this);
+
     },
 
     // --------------------------

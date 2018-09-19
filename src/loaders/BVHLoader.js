@@ -291,14 +291,11 @@ THREE.BVHLoader.prototype = {
 
 			var bone = new THREE.Bone();
 
-			///
-			bone.userData.offset = source.offset;
-			///
-
 
 			list.push( bone );
 
 			bone.position.add( source.offset );
+
 			bone.name = source.name;
 
 			if ( source.type !== 'ENDSITE' ) {
@@ -398,7 +395,11 @@ THREE.BVHLoader.prototype = {
 		var bones = readBvh( lines );
 
 		var threeBones = [];
-		toTHREEBone( bones[ 0 ], threeBones );
+
+		//
+		if(this.toBone) this.toBone( bones[ 0 ], threeBones );
+		else toTHREEBone( bones[ 0 ], threeBones );
+		//
 
 		var threeClip = toTHREEAnimation( bones );
 
@@ -407,6 +408,7 @@ THREE.BVHLoader.prototype = {
 			clip: threeClip
 		};
 
-	}
+	},
+
 
 };

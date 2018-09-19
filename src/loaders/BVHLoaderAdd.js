@@ -5,6 +5,97 @@
 *
 */
 
+
+/*
+    recursively converts the internal bvh node structure to a THREE.Bone hierarchy
+
+    source: the bvh root node
+    list: pass an empty array, collects a flat list of all converted THREE.Bones
+
+    returns the root THREE.Bone
+*/
+
+THREE.BVHLoader.prototype.toBone = function ( source, list ) {
+
+    
+
+    var bone = new THREE.Bone();
+
+    list.push( bone );
+
+    bone.position.add( source.offset );
+
+    ///
+    
+    var name = this.transposeName( source.name );
+    if( name === 'rShin' || name === 'rFoot' ) bone.userData.offset = source.offset;
+
+    ///
+
+    bone.name = name;
+
+    if ( source.type !== 'ENDSITE' ) {
+
+        for ( var i = 0; i < source.children.length; i ++ ) {
+
+            bone.add( this.toBone( source.children[ i ], list ) );
+
+        }
+
+    }
+
+    return bone;
+
+};
+
+/*
+    compatibility for multipe BVH source
+    transpose bvh name to standard TrueBones
+
+*/
+
+THREE.BVHLoader.prototype.transposeName = function( name ){
+
+    // center
+
+    if( name === 'Hips' || name==="SpineBase" ) name = 'hip';
+    if( name === 'upperback' || name === 'Spine1' || name==='SpineBase2' ) name = 'abdomen';
+    if( name === 'Chest' || name === 'SpineMid') name = 'chest';
+    if( name === 'Neck' || name === 'Neck2') name = 'neck';
+    if( name === 'Head' ) name = 'head';
+
+    // arm
+
+    if( name === 'RightCollar' || name === 'CollarRight' ) name = 'rCollar';
+    if( name === 'RightShoulder' || name ==='ShoulderRight' ) name = 'rShldr';
+    if( name === 'RightElbow' || name === 'ElbowRight' ) name = 'rForeArm';
+    if( name === 'RightHand' || name === 'HandRight' ) name = 'rHand';
+    
+    if( name === 'LeftCollar' || name === 'CollarLeft' ) name = 'lCollar';
+    if( name === 'LeftShoulder' || name ==='ShoulderLeft' ) name = 'lShldr';
+    if( name === 'LeftElbow' | name === 'ElbowLeft' ) name = 'lForeArm';
+    if( name === 'LeftHand' || name === 'HandLeft' ) name = 'lHand';
+
+    // leg
+
+    if( name === 'RightHip' || name === 'HipRight' ) name = 'rThigh';
+    if( name === 'RightKnee' || name === 'KneeRight' ) name = 'rShin';
+    if( name === 'RightAnkle' || name === 'AnkleRight' || name === 'RightFoot' || name === 'FootRight') name = 'rFoot';
+    if( name === 'RightToe' || name === 'RightLeft' ) name = 'rToe';
+
+    if( name === 'LeftHip' || name === 'HipLeft'  ) name = 'lThigh';
+    if( name === 'LeftKnee' || name === 'KneeLeft'  ) name = 'lShin';
+    if( name === 'LeftAnkle' || name === 'AnkleLeft' || name === 'LeftFoot' || name === 'LeftRight') name = 'lFoot';
+    if( name === 'LeftToe' || name === 'ToeLeft' ) name = 'lToe';
+
+    return name;
+    
+
+};
+
+
+///
+
 THREE.BVHLoader.prototype.parseData = function( data ){
 
     if (typeof data === 'string' || data instanceof String) return this.parse( data );
@@ -31,49 +122,51 @@ THREE.BVHLoader.prototype.findTime = function( times, value ){
 
 THREE.BVHLoader.prototype.findSize = function( target, source ){
 
-    
-    
-    var sourceLegDistance = 0;
-    var p = [];
+    var ratio = 0.5;
 
-    if( source.getBoneByName('rShin').userData.offset ){
+    var hip = source.getBoneByName('hip');
+    var thigh = source.getBoneByName('rThigh');
+    var shin = source.getBoneByName('rShin');
+    var foot = source.getBoneByName('rFoot');
 
-        p[1] = new THREE.Vector3();
-        p[2] = source.getBoneByName('rShin').userData.offset.clone();
-        p[3] = source.getBoneByName('rFoot').userData.offset.clone();
+    if( hip !== undefined && thigh !== undefined  && shin !== undefined  && foot !== undefined ){
 
-        sourceLegDistance = p[1].distanceTo( p[2] ) + p[1].distanceTo( p[3] );
+        var sourceLegDistance = 0;
+        var p = [];
 
-    } else {
+        if( shin.userData.offset ){
 
-        var i = source.bones.length, b, n;
-        var v = new THREE.Vector3();
+            p[1] = new THREE.Vector3();
+            p[2] = shin.userData.offset.clone();
+            p[3] = foot.userData.offset.clone();
 
-        // force skeleton update
-        source.getBoneByName('hip').updateMatrixWorld( true );
+            sourceLegDistance = p[1].distanceTo( p[2] ) + p[1].distanceTo( p[3] );
 
-        while(i--){
-            b = source.bones[i];
-            n = -1;
-            if( b.name === 'rThigh' ) n = 1;
-            if( b.name === 'rShin' ) n = 2;
-            if( b.name === 'rFoot' ) n = 3;
+        } else {
 
-            if(n!==-1) p[n] = b.getWorldPosition( v.clone() );
+            var i = source.bones.length, b, n;
+            var v = new THREE.Vector3();
+
+            // force skeleton update
+            hip.updateMatrixWorld( true );
+
+            p[1] = thigh.getWorldPosition( v.clone() );
+            p[2] = shin.getWorldPosition( v.clone() );
+            p[3] = foot.getWorldPosition( v.clone() );
+
+            sourceLegDistance = p[1].distanceTo( p[2] ) + p[2].distanceTo( p[3] );
 
         }
 
-        sourceLegDistance = p[1].distanceTo( p[2] ) + p[2].distanceTo( p[3] );
+        var targetLegDistance = this.sizes[ target.name ];
+
+        ratio = (targetLegDistance / sourceLegDistance).toFixed(2) * 1.0;
+
+    } else {
+
+        console.log( 'Bad bvh name = unexpected result !!' );
+
     }
-
-    //sourceLegDistance = -(p[2].y + p[3].y)
-
-
-    var targetLegDistance = this.sizes[ target.name ];
-
-    var ratio = (targetLegDistance / sourceLegDistance).toFixed(2) * 1.0;
-
-    //console.log(sourceLegDistance, targetLegDistance, ratio)
 
     return ratio;
 
@@ -117,6 +210,8 @@ THREE.BVHLoader.prototype.addModel = function( model, options ){
     this.sizes[name] = p[1].distanceTo( p[2] ) + p[2].distanceTo( p[3] );
 
 };
+
+
 
 THREE.BVHLoader.prototype.renameBone = function( bone, names ){
 
@@ -385,7 +480,7 @@ THREE.BVHLoader.prototype.findBoneTrack = function( name, tracks ){
     for ( var i = 0; i < tracks.length; ++ i ) {
 
         n = tracks[i].name;
-        nodeName = n.substring( n.indexOf('[')+1, n.indexOf(']') );
+        nodeName =  n.substring( n.indexOf('[')+1, n.indexOf(']') );
         type = n.substring( n.lastIndexOf('.')+1 );
 
         if( name === nodeName ){
