@@ -1,0 +1,73 @@
+{
+	"path":{
+		"model":"./assets/models/",
+		"texture":"./assets/textures/",
+		"bvh":"./assets/bvh/"
+	},
+
+	"environements":{
+		"list":["alley", "arches", "bridge", "castle", "cave", "church", "colors", "downtown", "factory", "gallery", "green", "lake", "loft", "milkyway", "mit", "night", "outside", "parking", "photo", "pisa", "place", "red", "river", "rock", "room", "snow", "street", "studio", "sunset", "tatami", "tokyo", "tonight", "tunnel", "veranda", "yellow"],
+		"name":"pisa",
+		"file":"envmap/pisa.hdr"
+	},
+
+	"postprocess":{
+		"sao":false,
+		"shadow":true,
+		"bloom":false,
+		"smaa":true
+	},
+
+	"animations":[
+		{ "file":"boxing.bvh" },
+		{ "file":"code.bvh" },
+		{ "file":"combo.bvh" },
+		{ "file":"finding.bvh" },
+		{ "file":"forward.bvh" },
+		{ "file":"idle1.bvh" },
+		{ "file":"idle2.bvh" },
+		{ "file":"idle3.bvh" },
+		{ "file":"idle4.bvh" },
+		{ "file":"idle5.bvh" },
+		{ "file":"idle6.bvh" },
+		{ "file":"jog.bvh" },
+		{ "file":"laught.bvh" },
+		{ "file":"phone.bvh" },
+		{ "file":"run.bvh" },
+		{ "file":"searching.bvh" },
+		{ "file":"spinning.bvh" },
+		{ "file":"swagged.bvh" },
+		{ "file":"walk.bvh" },
+		{ "file":"yelling.bvh" },
+		{ "file":"poses/pose1.bvh" },
+		{ "file":"poses/pose2.bvh" },
+		{ "file":"poses/pose3.bvh" },
+		{ "file":"poses/cross.bvh" },
+		{ "file":"poses/low.bvh" },
+		{ "file":"poses/jump.bvh" },
+		{ "file":"poses/dynamic.bvh" },
+		{ "file":"poses/stand.bvh" }
+	],
+
+	"materials":[
+		{ "name":"Avatar", "skinColor":true, "map":"avatar/avatar_c.jpg", "specular":"avatar/avatar_s.jpg", "subdermal":"avatar/avatar_u.jpg", "normalMap":"avatar/avatar_uv.jpg", "normalScale":1 }
+	],
+
+	"models":[
+
+		{ "type":"sea", "file":"skeleton.sea", "isRoot":true, "structure":"Male" },
+
+		{ "type":"sea", "file":"man.sea", "visible":true, "structure":"Male",
+			"elements":[
+				{ "name":"man", "material":"Avatar" }
+			]
+		},
+
+		{ "type":"sea", "file":"woman.sea", "visible":false, "structure":"Female",
+			"elements":[
+				{ "name":"woman", "material":"Avatar" }
+			]
+		}
+
+	]
+}

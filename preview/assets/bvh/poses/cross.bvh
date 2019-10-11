@@ -1,0 +1,130 @@
+HIERARCHY
+ROOT hip
+{
+OFFSET 0 97.45 0
+CHANNELS 6 Xposition Yposition Zposition Zrotation Xrotation Yrotation
+JOINT abdomen
+{
+OFFSET 0.27 7.23 -0.01
+CHANNELS 3 Zrotation Xrotation Yrotation
+JOINT chest
+{
+OFFSET -0 16.53 -0.76
+CHANNELS 3 Zrotation Xrotation Yrotation
+JOINT neck
+{
+OFFSET 0 36.46 -4.32
+CHANNELS 3 Zrotation Xrotation Yrotation
+JOINT head
+{
+OFFSET 0 10.45 2.78
+CHANNELS 3 Zrotation Xrotation Yrotation
+End Site
+{
+OFFSET 0 13.64 2.86
+}
+}
+}
+JOINT lCollar
+{
+OFFSET 3.05 30.96 -6.75
+CHANNELS 3 Zrotation Xrotation Yrotation
+JOINT lShldr
+{
+OFFSET 15.06 0.06 -0.44
+CHANNELS 3 Zrotation Xrotation Yrotation
+JOINT lForeArm
+{
+OFFSET 29.63 0.77 0.57
+CHANNELS 3 Zrotation Xrotation Yrotation
+JOINT lHand
+{
+OFFSET 27.17 0.78 2.11
+CHANNELS 3 Zrotation Xrotation Yrotation
+End Site
+{
+OFFSET 8.97 -0.32 0.14
+}
+}
+}
+}
+}
+JOINT rCollar
+{
+OFFSET -3.05 30.96 -6.75
+CHANNELS 3 Zrotation Xrotation Yrotation
+JOINT rShldr
+{
+OFFSET -15.06 0.06 -0.44
+CHANNELS 3 Zrotation Xrotation Yrotation
+JOINT rForeArm
+{
+OFFSET -29.63 0.77 0.57
+CHANNELS 3 Zrotation Xrotation Yrotation
+JOINT rHand
+{
+OFFSET -27.17 0.78 2.11
+CHANNELS 3 Zrotation Xrotation Yrotation
+End Site
+{
+OFFSET -8.97 -0.32 0.14
+}
+}
+}
+}
+}
+}
+}
+JOINT lThigh
+{
+OFFSET 8.73 0 0
+CHANNELS 3 Zrotation Xrotation Yrotation
+JOINT lShin
+{
+OFFSET -0.21 -43.63 -2.09
+CHANNELS 3 Zrotation Xrotation Yrotation
+JOINT lFoot
+{
+OFFSET -0.76 -43.30 -5.75
+CHANNELS 3 Zrotation Xrotation Yrotation
+JOINT lToe
+{
+OFFSET 2.46 -8.89 14.00
+CHANNELS 3 Zrotation Xrotation Yrotation
+End Site
+{
+OFFSET -0.03 -0.01 4.57
+}
+}
+}
+}
+}
+JOINT rThigh
+{
+OFFSET -8.73 0 0
+CHANNELS 3 Zrotation Xrotation Yrotation
+JOINT rShin
+{
+OFFSET 0.21 -43.63 -2.09
+CHANNELS 3 Zrotation Xrotation Yrotation
+JOINT rFoot
+{
+OFFSET 0.76 -43.30 -5.75
+CHANNELS 3 Zrotation Xrotation Yrotation
+JOINT rToe
+{
+OFFSET -2.37 -8.88 14.03
+CHANNELS 3 Zrotation Xrotation Yrotation
+End Site
+{
+OFFSET 0.03 0 4.57
+}
+}
+}
+}
+}
+}
+MOTION
+Frames: 1
+Frame Time: 0.03
+0 97.45 0 1.51 -11.71 -3.10 -0.33 3.57 3.86 -1.45 17.32 3.57 0 -8.92 0 -0.12 1.84 -7.53 -9.37 -0.12 -1.74 -19.01 24.02 -73.70 4.10 -1.26 -92.36 0 0 0 9.37 -0.12 1.74 13.77 21.70 63.81 -4.39 -2.21 111.48 0 0 0 2.56 15.30 -3.90 0.15 -1.00 -0 -5.68 -0.24 16.13 0.03 -0.10 9.99 -7.19 16.50 8.12 -0.71 -4.76 -0.01 6.64 1.01 -16.07 0 0 -9.99 
