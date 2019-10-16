@@ -3,4 +3,6 @@
 <p align="center">Project focus on advanced charater animation with sea3d and three.js<br>( contact me for high resolution textures )<br><br>
 <a href="http://lo-th.github.io/Avatar.lab/">LAUNCH</a><br></p>
 
-<p align="center"><a href="http://lo-th.github.io/Avatar.lab/"><img src="./assets/textures/perso.jpg"/></a></p>
+<p align="center"><a href="http://lo-th.github.io/Avatar.lab/"><img src="./assets/textures/perso.jpg"/></a><br></p>
+
+<p align="center"><a href="http://lo-th.github.io/Avatar.lab/preview/">PREVIEW NEXT VERSION</a></p>
